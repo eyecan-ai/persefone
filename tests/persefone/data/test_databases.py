@@ -66,13 +66,9 @@ class TestPandasDatabase(object):
 
     @classmethod
     def _verify_assertion_error_with_data(cls, data):
-        with pytest.raises(AssertionError) as exeception:
+        with pytest.raises(AssertionError):
             database = PandasDatabase(data=data)
-
-    @classmethod
-    def _verify_ket_error_with_data(cls, database, key, column):
-        with pytest.raises(KeyError) as exeception:
-            print(database.data.at[key, column])
+            print(database.size)
 
     def test_pandas_database(self):
         database = PandasDatabase(data=None)
@@ -126,7 +122,7 @@ class TestPandasDatabase(object):
                 for column in ['a', 'b']:
                     # Checks if INDEX is valid, if NOT Assertion error must be raised
                     if not database.is_valid_index(picks):
-                        with pytest.raises(AssertionError) as exeception:
+                        with pytest.raises(AssertionError):
                             picked = database[picks: picks + 1]
                         continue
                     else:
@@ -135,7 +131,7 @@ class TestPandasDatabase(object):
                         TestPandasDatabase._check_if_attrs_are_equal(database, picked)
                         pick_item = picked.data.iloc[0][column]
                         source_item = TestPandasDatabase._generate_item(picks)[column]
-                        assert np.isclose(pick_item, source_item), f"{pick_item} != {source_item}: Mismatch between DataFrame values and original values on single __getitem__ "
+                        assert np.isclose(pick_item, source_item), f"Mismatch between DataFrame values and original "
 
     def test_pandas_database_slice_multple_values(self):
         """Checks for slices multiple values consistency """
@@ -154,7 +150,7 @@ class TestPandasDatabase(object):
                 # Checks if INDEX is valid, if NOT Assertion error must be raised
                 # print("V"*20, r[0], r[1], not database.is_valid_index(r[0]) or not database.is_valid_index(r[1]))
                 if not database.is_valid_index(r[0]) or not database.is_valid_index(r[1]):
-                    with pytest.raises(AssertionError) as exeception:
+                    with pytest.raises(AssertionError):
                         slice_items = database[r[0]:r[1]]
                     continue
                 else:
@@ -166,7 +162,7 @@ class TestPandasDatabase(object):
                     for index in range(0, slice_size):
                         sum_target += slice_items.data.iloc[index][column]
                         sum_source += TestPandasDatabase._generate_item(index + r[0])[column]
-                    assert np.isclose(sum_target, sum_source), f"{sum_target} != {sum_source}. Mismatch between DataFrame values and original values on sliced __getitem__ "
+                    assert np.isclose(sum_target, sum_source), f"Mismatch between DataFrame values and original values on sliced pick."
 
     def test_pandas_database_split_size(self):
         """Checks for split size consistency """
@@ -283,18 +279,18 @@ class TestPandasDatabase(object):
             database2 = TestPandasDatabase._generate_random_database(fake_data_size, index=index).rebuild_indices()
 
             c = 'a'
-            assert database1.check_intersection(database2, subset=[c]), f"Intersection of two database with same value in column {c} must not be empty!"
-            assert database1.check_intersection(database1, subset=[c]), f"Intersection of database with itself in non unique column {c} must not be empty!"
+            assert database1.check_intersection(database2, subset=[c]), f"Intersection on column {c} must not be empty!"
+            assert database1.check_intersection(database1, subset=[c]), f"Intersection on non unique column {c} must not be empty!"
 
             c = 'unique_column'
-            assert not database1.check_intersection(database2, subset=[c]), f"Intersection of two database without same value in column {c} must be empty!"
-            assert database1.check_intersection(database1, subset=[c]), f"Intersection of database with itself in non unique column {c} must not be empty!"
+            assert not database1.check_intersection(database2, subset=[c]), f"Intersection on column {c} must be empty!"
+            assert database1.check_intersection(database1, subset=[c]), f"Intersection on non unique column {c} must not be empty!"
 
-            assert not database1.check_intersection(database2, subset='index'), "Intersection when two database have rebuilt indices has to be void!"
-            assert database1.check_intersection(database1, subset='index'), "Intersection of a datatabse with itself has not to be empty!"
-            assert database1.check_intersection(database1[:10], subset='index'), "Intersection of a datatabse with a subset of it has not to be empty!"
-            assert database1.check_intersection(database1[5], subset='index'), "Intersection of a datatabse with a subset of it has not to be empty!"
-            assert database1.check_intersection(database1[-5:], subset='index'), "Intersection of a datatabse with a subset of it has not to be empty!"
+            assert not database1.check_intersection(database2, subset='index'), "Intersection with rebuilt indices has to be void!"
+            assert database1.check_intersection(database1, subset='index'), "Intersection with itself has not to be empty!"
+            assert database1.check_intersection(database1[:10], subset='index'), "Intersection with a subset of it has not to be empty!"
+            assert database1.check_intersection(database1[5], subset='index'), "Intersection with a subset of it has not to be empty!"
+            assert database1.check_intersection(database1[-5:], subset='index'), "Intersection with a subset of it has not to be empty!"
 
     def test_grouping(self):
         """ Tests grouping counter feature """
@@ -305,7 +301,7 @@ class TestPandasDatabase(object):
             database1 = TestPandasDatabase._generate_random_database(fake_data_size, index=index).rebuild_indices()
 
             count_map = database1.count_grouped_values('oddity')
-            assert count_map['oddity'][0] != count_map['oddity'][1], "Oddity Test column grouped values must to be different if size of database is Odd"
+            assert count_map['oddity'][0] != count_map['oddity'][1], "Oddity Test column grouped values must to be different"
 
             count_map = database1.count_grouped_values('howmany_5')
             assert count_map['howmany_5'][2] == 486, "HOWMANY_5 Test column grouped value has to count 486 for items with 2 '5' within"
@@ -342,13 +338,16 @@ class TestPandasDatabase(object):
             assert database1.filter_rows_by_column_values('oddity', 0).size == half, f"evens items count must be {half}"
             TestPandasDatabase._check_different_database(database1, database1.filter_rows_by_column_values('oddity', 0))
             TestPandasDatabase._check_different_database(database1, database1.filter_rows_by_column_values('oddity', [0]))
-            assert database1.filter_rows_by_column_values('oddity', [0, 1]).size == fake_data_size, f"whole items count must be {fake_data_size}"
+            assert database1.filter_rows_by_column_values('oddity', [0, 1]).size == fake_data_size, f"whole items count is wrong"
 
             # Counts items filtered by test column "HOWMANY_5". counting rows it 0 or 1 '5' present, or the opposite
-            how_many_one5_or_two5 = 6561 + 2916
-            assert database1.filter_rows_by_column_values('howmany_5', [0, 1]).size == how_many_one5_or_two5, f"items with 0 or 1 '5' count is wrong!"
-            assert database1.filter_rows_by_column_values('howmany_5', [0, 1], negate=True).size == fake_data_size - how_many_one5_or_two5, f"items with more than 0 or 1 '5' count is wrong!"
-            assert database1.filter_rows_by_column_values('howmany_5', [0, 1, 'aa', 11, -23]).size == how_many_one5_or_two5, f"items with 0 or 1 '5' count is wrong!"
+            h5count = 6561 + 2916
+            assert database1.filter_rows_by_column_values(
+                'howmany_5', [0, 1]).size == h5count, f"items with 0 or 1 '5' count is wrong!"
+            assert database1.filter_rows_by_column_values(
+                'howmany_5', [0, 1], negate=True).size == fake_data_size - h5count, f"items with more than 0 or 1 '5' count is wrong!"
+            assert database1.filter_rows_by_column_values(
+                'howmany_5', [0, 1, 'aa', 11, -23]).size == h5count, f"items with 0 or 1 '5' count is wrong!"
 
             # Empty
             assert database1.filter_rows_by_column_values('howmany_5', [11]).size == 0, 'Database must be empty'
@@ -365,8 +364,6 @@ class TestPandasDatabase(object):
             database1 = TestPandasDatabase._generate_random_database(fake_data_size, index=index).rebuild_indices()
 
             # Checks for oddity consitency by filtering rows
-            half = int(fake_data_size / 2)
-
             odds, evens = database1.split_by_column_values('oddity', [1, 0])
             assert odds.size == odds_count, "odds size wrong!"
             assert evens.size == evens_count, "evens size wrong!"
@@ -408,5 +405,5 @@ class TestPandasDatabase(object):
             assert g22.size == 0, "Database must be empty!"
 
             # raise sumup exception
-            with pytest.raises(AssertionError) as exeception:
+            with pytest.raises(AssertionError):
                 g0, g1, g2, g3 = database1.split_by_column_values('howmany_5', [0, 1, 2, 3], check_sizes=True)

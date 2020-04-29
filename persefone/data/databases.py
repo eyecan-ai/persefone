@@ -64,7 +64,7 @@ class PandasDatabase(object):
         :type column_name: str
         :param list_of_values: list of values to split
         :type list_of_values: list
-        :param check_sizes: TRUE to check if parts sumup to original dataset; used when list_of_values map all possible values, defaults to False
+        :param check_sizes: TRUE to check if parts sumup to original dataset; used when list_of_values map all values, defaults to False
         :type check_sizes: bool, optional
         :return: tuple of new PandasDataset
         :rtype: tuple
@@ -78,7 +78,7 @@ class PandasDatabase(object):
             sizes.append(split.size)
         sizes = np.array(sizes)
         if check_sizes:
-            assert sizes.sum() == self.size, f"{self.__class__.__name__}.split_by_column_values: splits size not sum up to total size: {sizes}!"
+            assert sizes.sum() == self.size, f"{self.__class__.__name__}.split_by_column_values: splits size not sum up to total size!"
         return tuple(splits)
 
     def unique(self, column_name):
@@ -111,7 +111,7 @@ class PandasDatabase(object):
         return {column_name: counts_map}
 
     def split(self, percentage=0.8):
-        """Splits PandasDatabase in two PandasDatabase obejcts based on a percentage split value    
+        """Splits PandasDatabase in two PandasDatabase obejcts based on a percentage split value
 
         :param percentage: percentage split value, defaults to 0.8
         :type percentage: float, optional
@@ -199,8 +199,8 @@ class PandasDatabase(object):
         """
         if isinstance(idx, slice):
             if idx.start is not None and idx.stop is not None:
-                assert self.is_valid_index(idx.start), f"{self.__class__.__name__}.__getitem__: slice start {idx.start} must be in [0,size)!"
-                assert self.is_valid_index(idx.stop), f"{self.__class__.__name__}.__getitem__: slice stop {idx.stop} must be in [0,size)!"
+                assert self.is_valid_index(idx.start), f"{self.__class__.__name__}.__getitem__: slice start {idx.start} must be in [0,size)"
+                assert self.is_valid_index(idx.stop), f"{self.__class__.__name__}.__getitem__: slice stop {idx.stop} must be in [0,size)"
             sub = self.data[idx]  # .reset_index(drop=True)
             return PandasDatabase(data=sub, attrs=self.attrs)
         else:
