@@ -1,9 +1,9 @@
 import pandas as pd
 import numpy as np
-import os
 from pathlib import Path
 import time
 import uuid
+import yaml
 
 
 class PandasDatabase(object):
@@ -167,7 +167,7 @@ class PandasDatabase(object):
         for i in range(len(index)):
             remap[index[i]] = PandasDatabase.generate_random_id()
         newdata = self.data.rename(index=remap)
-        return PandasDatabase(data=newdata)
+        return PandasDatabase(data=newdata, attrs=self.attrs)
 
     def check_intersection(self, other: 'PandasDatabase', subset='index'):
         """Checks if two datasets has intersection based on index or target columns
@@ -252,48 +252,179 @@ class PandasDatabase(object):
         """
         return self + other
 
-    '''
-    def contains(self, other: "PandasDatabase"):
-        """Checks if this PandasDatabase contains values of another PandasDatabase ignoring indices
-
-        :param other: target PandasDatabase to test
-        :type other: PandasDatabase
-        :return: TRUE if all rows of target PandasDatabase are contained inside current PandasDatabase
-        :rtype: bool
-        """
-
-        return True
-    '''
-
     @classmethod
-    def from_csv(cls, csv_file, convert_relative_paths=['filename']):
-        data = pd.read_csv(csv_file)
-        if convert_relative_paths is not None:
-            for index, row in data.iterrows():
-                for relative_path_key in convert_relative_paths:
-                    try:
-                        p = data.at[index, relative_path_key]
-                        if not os.path.isabs(p):
-                            p = Path(csv_file).parent / p
-                            data.at[index, relative_path_key] = p
-                    except Exception:
-                        raise KeyError(f"{cls.__name__}.from_csv:'{relative_path_key}' invalid key for Relative Path manipulation!")
-        return PandasDatabase(data=data)
-
-    @classmethod
-    def from_csvs(cls, csv_files, convert_relative_paths=['filename']):
-        assert isinstance(csv_files, list), f"{cls.__name__}.from_csvs: 'csv_files' must be a list!"
-        datas = []
-        for csv_file in csv_files:
-            database = cls.from_csv(csv_file, convert_relative_paths=convert_relative_paths)
-            datas.append(database.data)
-        datas = pd.concat(datas, ignore_index=True)
-        return PandasDatabase(data=datas)
-
-    @classmethod
-    def from_array(cls, array: list):
-        return PandasDatabase(data=pd.DataFrame(array))
+    def from_array(cls, array: list, attrs: dict = {}):
+        return PandasDatabase(data=pd.DataFrame(array), attrs=attrs)
 
     @classmethod
     def generate_random_id(cls):
         return str(uuid.uuid1())  # TODO: attach a central logic to provide global UUID
+
+
+class PandasDatabaseIO(object):
+    """ PandasDatabase IO functions """
+
+    @classmethod
+    def build_metadata_filename_from_original_filename(cls, filename):
+        """Generates metadata filename based on input filename
+
+        :param filename: input filename
+        :type filename: str
+        :return: metadatada associated filename
+        :rtype: str
+        """
+        return str(filename) + ".meta.yml"
+
+    @classmethod
+    def save_pickle(cls, database: PandasDatabase, filename):
+        """Saves PICKLE binary version of PandasDatabase
+
+        :param database: input PandasDatabase
+        :type database: PandasDatabase
+        :param filename: output filename
+        :type filename: str, pathlib.Path
+        """
+        database.data.to_pickle(filename)
+        PandasDatabaseIO.save_metadata(database, filename)
+
+    @classmethod
+    def load_pickle(cls, filename):
+        """Loads PandasDatabase from PICKLE binary file
+
+        :param filename: input filename
+        :type filename: str, pathlib.Path
+        :return: loaded PandasDatabase
+        :rtype: PandasDatabase
+        """
+        data = pd.read_pickle(filename)
+        data.attrs = {}
+        metadata = PandasDatabaseIO.load_metadata(filename)
+        return PandasDatabase(data=data, attrs=metadata)
+
+    @classmethod
+    def save_csv(cls, database: PandasDatabase, filename):
+        """Saves CSV text version of PandasDatabase
+
+        :param database: input PandasDatabase
+        :type database: PandasDatabase
+        :param filename: output filename
+        :type filename: str, pathlib.Path
+        """
+        database.data.to_csv(filename)
+        PandasDatabaseIO.save_metadata(database, filename)
+
+    @classmethod
+    def load_csv(cls, filename):
+        """Loads PandasDatabase from CSV text file. Special columns
+        like lists or complex object will be loaded as strings!!!
+
+        :param filename: input filename
+        :type filename: str, pathlib.Path
+        :return: loaded PandasDatabase
+        :rtype: PandasDatabase
+        """
+
+        metadata = PandasDatabaseIO.load_metadata(filename)
+        index = None
+        dtype = {}
+        if 'index' in metadata:
+            index = metadata['index']
+            dtype[index] = str
+        data = pd.read_csv(filename, dtype=dtype)
+        if index is not None:
+            data = data.set_index(index)
+        data.attrs = {}
+        return PandasDatabase(data=data, attrs=metadata)
+
+    @classmethod
+    def save_metadata(cls, database: PandasDatabase, filename):
+        """Saves PandasDatabase metadata in separate YAML file
+
+        :param database: target PandasDatabase
+        :type database: PandasDatabase
+        :param filename: output filename of original saved PandasDatabase, metadata filename will be computed from that
+        :type filename: str, pathlib.Path
+        """
+        metafilename = PandasDatabaseIO.build_metadata_filename_from_original_filename(filename)
+        with open(metafilename, 'w') as outfile:
+            yaml.dump(database.data.attrs, outfile, default_flow_style=False)
+
+    @classmethod
+    def load_metadata(cls, filename):
+        """Loads PandasDatabase metadata from separate YAML file
+
+        :param filename: [description]
+        :type filename: input filename of original saved PandasDatabase, metadata filename will be computed from that
+        :return: metadata dictionary if any
+        :rtype: dict
+        """
+        metafilename = PandasDatabaseIO.build_metadata_filename_from_original_filename(filename)
+        if Path(metafilename).exists():
+            with open(metafilename) as f:
+                metadata = yaml.safe_load(f)
+                return metadata
+        return {}
+
+
+class PandasDatabaseGenerator(object):
+    """ Base class for PandasDatabase generator """
+
+
+class PandasDatabaseGeneratorUnderscoreNotation(PandasDatabaseGenerator):
+    """ PandasDatabase generator based on target folder with 'UNDERSCORE' notation """
+
+    @classmethod
+    def generate_from_folder(cls, folder, columns_lambdas={}):
+        """Generates a PandasDatabase from folder with 'UNDERSCORE' notation files
+
+        :param folder: target folder
+        :type folder: str, pathlib.Path
+        :param columns_lambdas: dict of lambads to manipulate corresponding filename.
+                                e.g: if files like "00000_label.txt" needs to be loaded as numpy integer the corresponding
+                                lambads will be: columns_lambdas={'label':lambda x: np.loadtxt(x).astype(int)}
+                                , defaults to {}
+        :type columns_lambdas: dict, optional
+        :return: [description]
+        :rtype: [type]
+        """
+
+        path = Path(folder)
+        files = list(sorted(path.glob('*')))
+        files = [x for x in files if not str(x.name).startswith('.')]
+        items_map = {}
+        for f in files:
+            name = f.name
+            stem = f.stem
+            chunks = stem.split('_')
+            if len(chunks) > 1:
+                key = chunks[0]
+                what = chunks[1]
+                tag = chunks[2] if len(chunks) > 2 else ''
+                # ext = f.suffix
+                subkey = what
+                if len(tag) > 0:
+                    subkey += f".{tag}"
+
+                if key not in items_map:
+                    items_map[key] = {}
+
+                obj = name
+                if what in columns_lambdas:
+                    obj = columns_lambdas[what](f)
+
+                items_map[key][subkey] = obj
+
+        items = []
+        for k, v in items_map.items():
+            item = {
+                'id': k
+            }
+            item.update(v)
+            items.append(item)
+        data = pd.DataFrame(items)
+        data = data.set_index('id')
+
+        attrs = {
+            'index': 'id'
+        }
+        return PandasDatabase(data=data, attrs=attrs)

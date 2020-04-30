@@ -1,7 +1,10 @@
 from persefone.data.databases import PandasDatabase
+from persefone.data.databases import PandasDatabaseGeneratorUnderscoreNotation
+from persefone.data.databases import PandasDatabaseIO
 import pandas as pd
 import pytest
 import numpy as np
+from pathlib import Path
 
 
 class TestPandasDatabase(object):
@@ -71,7 +74,7 @@ class TestPandasDatabase(object):
             print(database.size)
 
     def test_pandas_database(self):
-        database = PandasDatabase(data=None)
+        database = PandasDatabase(data=None, attrs=None)
         TestPandasDatabase._check_if_data_is_not_none(database)
         TestPandasDatabase._check_if_data_is_dataframe(database)
         TestPandasDatabase._check_if_data_size_is(database, 0)
@@ -94,6 +97,7 @@ class TestPandasDatabase(object):
         ]
 
         for database in databases:
+            assert len(str(database)) > 0, "String representation of database is empty!"
             TestPandasDatabase._check_if_data_size_is(database, fake_data_size)
 
             TestPandasDatabase._check_if_data_size_is(database[0], 1)
@@ -226,6 +230,18 @@ class TestPandasDatabase(object):
             TestPandasDatabase._check_different_database(database, s_database)
             TestPandasDatabase._check_if_attrs_are_equal(database, s_database)
             assert not database.data.index.equals(s_database.data.index), "After shuffling indices must be different"
+
+    def test_rebuild_indices(self):
+        """ Checks rebuild indices """
+        fake_data_size = 10000
+        databases = [
+            TestPandasDatabase._generate_random_database(fake_data_size, index=None),
+            TestPandasDatabase._generate_random_database(fake_data_size, index='name')
+        ]
+
+        for database in databases:
+            database_re = database.rebuild_indices()
+            assert database_re.attrs == database.attrs, "After rebuild indices attrs was lost!"
 
     def test_summation(self):
         """ Checks if sums among PandasDatabase are consistent """
@@ -407,3 +423,90 @@ class TestPandasDatabase(object):
             # raise sumup exception
             with pytest.raises(AssertionError):
                 g0, g1, g2, g3 = database1.split_by_column_values('howmany_5', [0, 1, 2, 3], check_sizes=True)
+
+
+class TestPandasDatabaseIO(object):
+
+    def _get_minimnist_folder(self):
+        import pathlib
+        return pathlib.Path(__file__).parent / '../../sample_data/minimnist'
+
+    @pytest.fixture(scope="session")
+    def dataset_file(self, tmpdir_factory):
+        fn = tmpdir_factory.mktemp("data").join("_database_file.data")
+        return fn
+
+    @pytest.fixture(scope="session")
+    def dataset_file_csv(self, tmpdir_factory):
+        fn = tmpdir_factory.mktemp("data").join("_database_file.csv")
+        return fn
+
+    def test_generate_dataset_from_images_folder(self):
+
+        minimnist_folder = self._get_minimnist_folder()
+        parent_folder = minimnist_folder.parent
+
+        columns_lambdas = {
+            'label': lambda x: np.loadtxt(x).astype(int).tolist(),
+            'points': lambda x: np.loadtxt(x).tolist(),
+        }
+
+        database = PandasDatabaseGeneratorUnderscoreNotation.generate_from_folder(folder=minimnist_folder, columns_lambdas=columns_lambdas)
+        database.attrs['base_folder'] = 'minimnist'
+
+        # PandasDatabaseIO.save_pickle(database, str(parent_folder / 'minimnist.data'))
+        # PandasDatabaseIO.save_pickle(database.rebuild_indices(), str(parent_folder / 'minimnist_reindexed.data'))
+
+        database_st = PandasDatabaseIO.load_pickle(str(parent_folder / 'minimnist.data'))
+        assert database.data.equals(database_st.data), "Databases must be equal!"
+        assert database.attrs == database_st.attrs, "Databases attributes must be equal!"
+
+    def test_pickle_io(self, dataset_file):
+
+        minimnist_folder = self._get_minimnist_folder()
+
+        columns_lambdas = {
+            'label': lambda x: np.loadtxt(x).astype(int).tolist(),
+            'points': lambda x: np.loadtxt(x).tolist(),
+        }
+
+        database = PandasDatabaseGeneratorUnderscoreNotation.generate_from_folder(folder=minimnist_folder, columns_lambdas=columns_lambdas)
+        database.attrs['base_folder'] = 'minimnist'
+
+        PandasDatabaseIO.save_pickle(database, dataset_file)
+
+        metadata_file = PandasDatabaseIO.build_metadata_filename_from_original_filename(dataset_file)
+
+        assert Path(dataset_file).exists(), "Metadatafile does not exist!"
+        assert Path(metadata_file).exists(), "Metadatafile does not exist!"
+
+        database_reloaded = PandasDatabaseIO.load_pickle(dataset_file)
+
+        assert database.data.equals(database_reloaded.data), "Datasets differ after reloading!"
+        assert database.attrs == database_reloaded.attrs, "Datasets metadatas differ after reloading!"
+
+    def test_csv_io(self, dataset_file_csv):
+
+        minimnist_folder = self._get_minimnist_folder()
+        # parent_folder = minimnist_folder.parent
+
+        columns_lambdas = {
+            'label': lambda x: np.loadtxt(x).astype(int).tolist(),
+            'points': lambda x: np.loadtxt(x).tolist(),
+        }
+
+        database = PandasDatabaseGeneratorUnderscoreNotation.generate_from_folder(folder=minimnist_folder, columns_lambdas=columns_lambdas)
+        database.attrs['base_folder'] = 'minimnist'
+
+        PandasDatabaseIO.save_csv(database, dataset_file_csv)
+
+        metadata_file = PandasDatabaseIO.build_metadata_filename_from_original_filename(dataset_file_csv)
+
+        assert Path(dataset_file_csv).exists(), "Metadatafile does not exist!"
+        assert Path(metadata_file).exists(), "Metadatafile does not exist!"
+
+        database_reloaded = PandasDatabaseIO.load_csv(dataset_file_csv)
+        assert database.attrs == database_reloaded.attrs, "Datasets metadatas differ after reloading!"
+
+        void_metadata = PandasDatabaseIO.load_metadata(dataset_file_csv + "_NPASDASDASODMASPDASDAS")
+        assert void_metadata == {}, "Strange metadata loaded with an invalid filename!"
