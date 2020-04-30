@@ -296,6 +296,8 @@ class PandasDatabaseIO(object):
         :return: loaded PandasDatabase
         :rtype: PandasDatabase
         """
+        if not Path(filename).exists():
+            raise OSError(f'{filename} not found')
         data = pd.read_pickle(filename)
         data.attrs = {}
         metadata = PandasDatabaseIO.load_metadata(filename)
@@ -389,6 +391,8 @@ class PandasDatabaseGeneratorUnderscoreNotation(PandasDatabaseGenerator):
         """
 
         path = Path(folder)
+        if not path.exists():
+            raise OSError(f'{path} not found!')
         files = list(sorted(path.glob('*')))
         files = [x for x in files if not str(x.name).startswith('.')]
         items_map = {}

@@ -1,0 +1,19 @@
+# inputs
+inputs:
+        image: {}
+        mask: {}
+        fake: {}
+# transforms
+transforms:
+        - augX.resize:
+                  size: [481, 516]
+                  always: True
+                  p: 0.1
+        - nonamespace:
+                  size: [481, 516]
+                  always: True
+                  p: 0.1
+        - aug.wrong_function_name:
+                  size: [481, 516]
+                  always: True
+                  p: 0.1

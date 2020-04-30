@@ -1,0 +1,20 @@
+# transforms
+transforms:
+        - aug.rotate:
+                  interpolation: "linear"
+                  border_mode: "constant"
+        - aug.rotate:
+                  interpolation: "none"
+                  border_mode: "reflect"
+        - aug.rotate:
+                  interpolation: "cubic"
+                  border_mode: "reflect101"
+        - aug.rotate:
+                  interpolation: "WRONG_NAME_TRANSFORMED_TO_DEFAULT"
+                  border_mode: "replicate"
+        - aug.rotate:
+                  interpolation: "WRONG_NAME_TRANSFORMED_TO_DEFAULT"
+                  border_mode: "wrap"
+        - aug.rotate:
+                  interpolation: "WRONG_NAME_TRANSFORMED_TO_DEFAULT"
+                  border_mode: "WRONG_NAME_TRANSFORMED_TO_DEFAULT"

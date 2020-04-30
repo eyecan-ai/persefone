@@ -429,7 +429,7 @@ class TestPandasDatabaseIO(object):
 
     def _get_minimnist_folder(self):
         import pathlib
-        return pathlib.Path(__file__).parent / '../../sample_data/minimnist'
+        return pathlib.Path(__file__).parent / '../../sample_data/datasets/minimnist'
 
     @pytest.fixture(scope="session")
     def dataset_file(self, tmpdir_factory):
@@ -450,6 +450,12 @@ class TestPandasDatabaseIO(object):
             'label': lambda x: np.loadtxt(x).astype(int).tolist(),
             'points': lambda x: np.loadtxt(x).tolist(),
         }
+
+        with pytest.raises(OSError):
+            PandasDatabaseGeneratorUnderscoreNotation.generate_from_folder(
+                folder=minimnist_folder / 'impossiblesubfolder_',
+                columns_lambdas=columns_lambdas
+            )
 
         database = PandasDatabaseGeneratorUnderscoreNotation.generate_from_folder(folder=minimnist_folder, columns_lambdas=columns_lambdas)
         database.attrs['base_folder'] = 'minimnist'
@@ -484,6 +490,9 @@ class TestPandasDatabaseIO(object):
 
         assert database.data.equals(database_reloaded.data), "Datasets differ after reloading!"
         assert database.attrs == database_reloaded.attrs, "Datasets metadatas differ after reloading!"
+
+        with pytest.raises(OSError):
+            PandasDatabaseIO.load_pickle(str(dataset_file)+"_impossiblesuffix_")
 
     def test_csv_io(self, dataset_file_csv):
 
