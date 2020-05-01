@@ -492,7 +492,7 @@ class TestPandasDatabaseIO(object):
         assert database.attrs == database_reloaded.attrs, "Datasets metadatas differ after reloading!"
 
         with pytest.raises(OSError):
-            PandasDatabaseIO.load_pickle(str(dataset_file)+"_impossiblesuffix_")
+            PandasDatabaseIO.load_pickle(str(dataset_file) + "_impossiblesuffix_")
 
     def test_csv_io(self, dataset_file_csv):
 
