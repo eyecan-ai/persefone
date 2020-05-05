@@ -68,7 +68,7 @@ class AlbumentationTransformsFactory(object):
     def _build_resize_transform(cls, **params):
         size = get_arg(params, 'size', [256, 256])
         p = get_arg(params, 'p', 1.0)
-        always = get_arg(params, 'always', True)
+        always = get_arg(params, 'always_apply', True)
         interpolation = cls._get_interpolation_value(get_arg(params, 'interpolation', 'none'))
         return A.Resize(
             height=size[1],
@@ -86,7 +86,7 @@ class AlbumentationTransformsFactory(object):
             border_mode=cls._get_borders_value(get_arg(params, 'border_mode', 'constant')),
             value=get_arg(params, 'value', 0),
             mask_value=get_arg(params, 'mask_value', 0),
-            always_apply=get_arg(params, 'always_apply', False),
+            always_apply=get_arg(params, 'always_apply', True),
             p=get_arg(params, 'p', 1.0)
         )
 
@@ -98,7 +98,7 @@ class AlbumentationTransformsFactory(object):
             y_min=box[1],
             x_max=box[2],
             y_max=box[3],
-            always_apply=get_arg(params, 'always_apply', False),
+            always_apply=get_arg(params, 'always_apply', True),
             p=get_arg(params, 'p', 1.0)
         )
 
@@ -108,7 +108,7 @@ class AlbumentationTransformsFactory(object):
         return A.RandomCrop(
             height=size[1],
             width=size[0],
-            always_apply=get_arg(params, 'always_apply', False),
+            always_apply=get_arg(params, 'always_apply', True),
             p=get_arg(params, 'p', 1.0)
         )
 
@@ -118,7 +118,7 @@ class AlbumentationTransformsFactory(object):
             brightness_limit=get_arg(params, 'brightness', 0.2),
             contrast_limit=get_arg(params, 'contrast', 0.1),
             brightness_by_max=get_arg(params, 'brighntess_by_max', True),
-            always_apply=get_arg(params, 'always_apply', False),
+            always_apply=get_arg(params, 'always_apply', True),
             p=get_arg(params, 'p', 1.0)
         )
 
@@ -126,7 +126,7 @@ class AlbumentationTransformsFactory(object):
     def _build_random_grid_shuffle(cls, **params):
         return A.RandomGridShuffle(
             grid=get_arg(params, 'grid', [3, 3]),
-            always_apply=get_arg(params, 'always_apply', False),
+            always_apply=get_arg(params, 'always_apply', True),
             p=get_arg(params, 'p', 1.0)
         )
 

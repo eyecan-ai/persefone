@@ -2,7 +2,7 @@ import pytest
 from persefone.transforms.factory import TransformsFactory, AlbumentationTransformsFactory
 
 
-@pytest.mark.debug
+@pytest.mark.transforms
 class TestTransformsFactory(object):
 
     @pytest.fixture

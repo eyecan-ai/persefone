@@ -1,0 +1,13 @@
+# inputs
+inputs:
+      image: {}
+# transforms
+transforms:
+    - aug.resize:
+        size: [256, 256]
+        always_apply: True
+    - aug.rotate:
+        limit: 45
+        border_mode: 'reflect'
+    - aug.random_crop:
+        size: [64,64]
