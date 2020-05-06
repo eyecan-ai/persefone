@@ -60,19 +60,3 @@ class TestColors(object):
         # Wrong palette
         palette = MaterialPalette(color_names=['thor_is_the_strongest_avenger'])
         assert palette.get_color(0).hex == '#000000', "Thor is not a color!"
-        """
-        color = p.get_color(1)
-
-        print(color.hex)
-        print(color.rgb)
-        print(color.has_alpha())
-
-        print(Color.rgb2hex(color.rgb))
-        print(Color.rgb2hex(color.rgb + (255,)))
-
-        print(Color.hex2rgb(color.hex))
-        print(Color.hex2rgb(color.hex + '77'))
-        color.add_alpha(a=0.5)
-        print(color.hex)
-        print(color.rgb)
-        """
