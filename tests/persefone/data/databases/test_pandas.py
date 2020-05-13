@@ -1,6 +1,6 @@
-from persefone.data.databases import PandasDatabase
-from persefone.data.databases import PandasDatabaseGeneratorUnderscoreNotation
-from persefone.data.databases import PandasDatabaseIO
+from persefone.data.databases.pandas import PandasDatabase
+from persefone.data.databases.pandas import PandasDatabaseGeneratorUnderscoreNotation
+from persefone.data.databases.pandas import PandasDatabaseIO
 import pandas as pd
 import pytest
 import numpy as np
@@ -427,10 +427,6 @@ class TestPandasDatabase(object):
 
 class TestPandasDatabaseIO(object):
 
-    def _get_minimnist_folder(self):
-        import pathlib
-        return pathlib.Path(__file__).parent / '../../sample_data/datasets/minimnist'
-
     @pytest.fixture(scope="session")
     def dataset_file(self, tmpdir_factory):
         fn = tmpdir_factory.mktemp("data").join("_database_file.data")
@@ -441,9 +437,8 @@ class TestPandasDatabaseIO(object):
         fn = tmpdir_factory.mktemp("data").join("_database_file.csv")
         return fn
 
-    def test_generate_dataset_from_images_folder(self):
+    def test_generate_dataset_from_images_folder(self, minimnist_folder):
 
-        minimnist_folder = self._get_minimnist_folder()
         parent_folder = minimnist_folder.parent
 
         columns_lambdas = {
@@ -467,9 +462,7 @@ class TestPandasDatabaseIO(object):
         assert database.data.equals(database_st.data), "Databases must be equal!"
         assert database.attrs == database_st.attrs, "Databases attributes must be equal!"
 
-    def test_pickle_io(self, dataset_file):
-
-        minimnist_folder = self._get_minimnist_folder()
+    def test_pickle_io(self, dataset_file, minimnist_folder):
 
         columns_lambdas = {
             'label': lambda x: np.loadtxt(x).astype(int).tolist(),
@@ -494,9 +487,8 @@ class TestPandasDatabaseIO(object):
         with pytest.raises(OSError):
             PandasDatabaseIO.load_pickle(str(dataset_file) + "_impossiblesuffix_")
 
-    def test_csv_io(self, dataset_file_csv):
+    def test_csv_io(self, dataset_file_csv, minimnist_folder):
 
-        minimnist_folder = self._get_minimnist_folder()
         # parent_folder = minimnist_folder.parent
 
         columns_lambdas = {
