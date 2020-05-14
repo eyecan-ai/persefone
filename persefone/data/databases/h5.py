@@ -5,6 +5,14 @@ from pathlib import Path
 import numpy as np
 import imageio
 import tqdm
+from types import SimpleNamespace
+import pandas as pd
+
+
+class H5DatasetCompressionMethods(object):
+
+    NONE = SimpleNamespace(name=None, opts=None)
+    GZIP = SimpleNamespace(name='gzip', opts=4)
 
 
 class H5Database(object):
@@ -16,12 +24,30 @@ class H5Database(object):
         :type filename: str
         """
         self.__filename = filename
-
         self.__readonly = get_arg(kwargs, "readonly", default=False)
-        self.__compression = get_arg(kwargs, "compression", default='gzip')
-        self.__compression_opts = get_arg(kwargs, "compression_opts", default=4)
-
         self.__handle = None
+
+    @classmethod
+    def purge_root_item(cls, root_item):
+        """Purge a root item string
+
+        :param root_item: input root item
+        :type root_item: str
+        :return: purge root item, remove invalid keys like empty strings
+        :rtype: [type]
+        """
+
+        if len(root_item) == 0:
+            root_item = '/'
+        if root_item == '//':
+            root_item = '/'
+        if root_item[0] != '/':
+            root_item = '/' + root_item
+        if root_item[-1] != '/':
+            root_item = root_item + '/'
+        if root_item == len(root_item) * root_item[0]:
+            root_item = '/'
+        return root_item
 
     def is_empty(self):
         """Checks if H5Database is empty
@@ -140,7 +166,7 @@ class H5Database(object):
                     data = group[name]
         return data
 
-    def create_data(self, group_key, name, shape, dtype=None, maxshape=None) -> h5py.Dataset:
+    def create_data(self, group_key, name, shape, dtype=None, maxshape=None, compression=H5DatasetCompressionMethods.NONE) -> h5py.Dataset:
         """Creates Dataset
 
         :param group_key: group key
@@ -153,24 +179,23 @@ class H5Database(object):
         :type dtype: numpy.dtype, optional
         :param maxshape: max allowed shape for resizable data, defaults to None
         :type maxshape: tuple, optional
+        :param compression: compressione type
+        :type compression: H5DatasetCompressionMethods type
         :raises Exception: Exception
         :return: created dataset
         :rtype: h5py.Dataset
         """
         data = None
         if self.is_open():
-            if self.readonly:
-                raise Exception()
-            else:
-                group = self.get_group(group_key, force_create=True)
-                data = group.create_dataset(
-                    name,
-                    shape=shape,
-                    maxshape=maxshape,
-                    dtype=dtype,
-                    compression=self.__compression,
-                    compression_opts=self.__compression_opts
-                )
+            group = self.get_group(group_key, force_create=True)
+            data = group.create_dataset(
+                name,
+                shape=shape,
+                maxshape=maxshape,
+                dtype=dtype,
+                compression=compression.name,
+                compression_opts=compression.opts
+            )
         return data
 
 
@@ -189,9 +214,17 @@ class H5DatabaseIO(object):
         """
         database = H5Database(filename=h5file, **kwargs)
 
+        compression = get_arg(kwargs, "compression", default=H5DatasetCompressionMethods.NONE.name)
+        compression_opts = get_arg(kwargs, "compression_opts", default=H5DatasetCompressionMethods.NONE.opts)
+        compression_method = SimpleNamespace(name=compression, opts=compression_opts)
+
+        root_item = get_arg(kwargs, "root_item", '/')
+        root_item = H5Database.purge_root_item(root_item)
+
         with database:
             tree = tree_from_underscore_notation_files(folder)
             for key, slots in tqdm.tqdm(tree.items()):
+                key = f'{root_item}{key}'
                 database.get_group(key)
                 for item_name, filename in slots.items():
                     loaded_data = cls.load_data_from_file(filename)
@@ -200,7 +233,8 @@ class H5DatabaseIO(object):
                             key,
                             item_name,
                             loaded_data.shape,
-                            loaded_data.dtype
+                            loaded_data.dtype,
+                            compression=compression_method
                         )
                         data[...] = loaded_data
 
@@ -228,3 +262,64 @@ class H5DatabaseIO(object):
         if data is not None:
             data = np.atleast_2d(data)
         return data
+
+
+class H5SimpleDatabase(H5Database):
+
+    DEFAULT_TABULAR_PRIVATE_TOKEN = '_'
+    DEFAULT_TABULAR_REFERENCE_TOKEN = '@'
+    DEFAULT_ROOT_ITEM = '/_items/'
+
+    def __init__(self, filename, **kwargs):
+        H5Database.__init__(self, filename=filename, **kwargs)
+        self.__root_item = get_arg(kwargs, 'root_item', H5SimpleDatabase.DEFAULT_ROOT_ITEM)
+        self.__root_item = H5SimpleDatabase.purge_root_item(self.__root_item)
+
+    @property
+    def root(self):
+        if self.is_open():
+            if self.__root_item == '/':
+                return self.handle
+            else:
+                return self.handle[self.__root_item]
+        return None
+
+    @property
+    def keys(self):
+        if self.is_open():
+            return list(self.root.keys())
+        else:
+            return []
+
+    def __len__(self):
+        return len(self.keys)
+
+    def __getitem__(self, idx):
+        if self.is_open():
+            key = self.keys[idx]
+            return self.root[key]
+
+    def _remove_root_item_from_key(self, key):
+        return key.replace(self.__root_item, '', 1)
+
+    def generate_tabular_representation(self, include_filename=True):
+        if self.is_open():
+            rows = []
+            for item in self:
+                row = dict(item.attrs)
+                row['id'] = self._remove_root_item_from_key(item.name)
+                row[H5SimpleDatabase.DEFAULT_TABULAR_REFERENCE_TOKEN] = item.name
+
+                for data in list(item.values()):
+                    simple_data_name = self._remove_root_item_from_key(data.name)
+                    data_key = f'{H5SimpleDatabase.DEFAULT_TABULAR_REFERENCE_TOKEN}{Path(simple_data_name).stem}'
+                    data_value = data.name
+                    row[data_key] = data_value
+
+                if include_filename:
+                    row[f'{H5SimpleDatabase.DEFAULT_TABULAR_PRIVATE_TOKEN}filename'] = self.filename
+                rows.append(row)
+
+            frame = pd.DataFrame(rows).set_index('id')
+            return frame
+        return None

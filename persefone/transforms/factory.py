@@ -5,7 +5,7 @@ import cv2
 import logging
 
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)  # TODO: Logger is always in DEBUG
 _logger = logging.getLogger()
 
 
@@ -58,10 +58,15 @@ class AlbumentationTransformsFactory(object):
         return {
             'resize': {'f': cls._build_resize_transform, 'targets': cls._targets_map()['spatial_full']},
             'rotate': {'f': cls._build_rotate_transform, 'targets': cls._targets_map()['spatial_full']},
+            'shift_scale_rotate': {'f': cls._build_random_shift_scale_rotate, 'targets': cls._targets_map()['spatial_full']},
             'crop': {'f': cls._build_crop_transform, 'targets': cls._targets_map()['spatial_full']},
             'random_crop': {'f': cls._build_random_crop_transform, 'targets': cls._targets_map()['spatial_full']},
             'random_brightness_contrast': {'f': cls._build_random_brightness_contrast, 'targets': cls._targets_map()['pixels']},
+            'random_hsv': {'f': cls._build_random_hsv, 'targets': cls._targets_map()['pixels']},
             'random_grid_shuffle': {'f': cls._build_random_grid_shuffle, 'targets': cls._targets_map()['spatial_half']},
+            'horizontal_flip': {'f': cls._build_horizontal_flip, 'targets': cls._targets_map()['spatial_full']},
+            'vertical_flip': {'f': cls._build_vertical_flip, 'targets': cls._targets_map()['spatial_full']},
+            'flip': {'f': cls._build_flip, 'targets': cls._targets_map()['spatial_full']},
         }
 
     @classmethod
@@ -123,9 +128,54 @@ class AlbumentationTransformsFactory(object):
         )
 
     @classmethod
+    def _build_random_hsv(cls, **params):
+        return A.HueSaturationValue(
+            hue_shift_limit=get_arg(params, 'hue_shift_limit', 0.1),
+            sat_shift_limit=get_arg(params, 'sat_shift_limit', 0.1),
+            val_shift_limit=get_arg(params, 'val_shift_limit', 0.1),
+            always_apply=get_arg(params, 'always_apply', True),
+            p=get_arg(params, 'p', 1.0)
+        )
+
+    @classmethod
+    def _build_random_shift_scale_rotate(cls, **params):
+        return A.ShiftScaleRotate(
+            shift_limit=get_arg(params, 'shift_limit', 0.1),
+            scale_limit=get_arg(params, 'scale_limit', 0.1),
+            rotate_limit=get_arg(params, 'rotate_limit', 5),
+            interpolation=cls._get_interpolation_value(get_arg(params, 'interpolation', 'linear')),
+            border_mode=cls._get_borders_value(get_arg(params, 'border_mode', 'replicate')),
+            value=get_arg(params, 'value', 0),
+            mask_value=get_arg(params, 'mask_value', 0),
+            always_apply=get_arg(params, 'always_apply', True),
+            p=get_arg(params, 'p', 1.0)
+        )
+
+    @classmethod
     def _build_random_grid_shuffle(cls, **params):
         return A.RandomGridShuffle(
             grid=get_arg(params, 'grid', [3, 3]),
+            always_apply=get_arg(params, 'always_apply', True),
+            p=get_arg(params, 'p', 1.0)
+        )
+
+    @classmethod
+    def _build_horizontal_flip(cls, **params):
+        return A.HorizontalFlip(
+            always_apply=get_arg(params, 'always_apply', True),
+            p=get_arg(params, 'p', 1.0)
+        )
+
+    @classmethod
+    def _build_vertical_flip(cls, **params):
+        return A.VerticalFlip(
+            always_apply=get_arg(params, 'always_apply', True),
+            p=get_arg(params, 'p', 1.0)
+        )
+
+    @classmethod
+    def _build_flip(cls, **params):
+        return A.Flip(
             always_apply=get_arg(params, 'always_apply', True),
             p=get_arg(params, 'p', 1.0)
         )

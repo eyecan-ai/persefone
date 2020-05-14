@@ -1,5 +1,6 @@
 import pytest
 from persefone.transforms.factory import TransformsFactory, AlbumentationTransformsFactory
+import numpy as np
 
 
 @pytest.mark.transforms
@@ -10,19 +11,9 @@ class TestTransformsFactory(object):
         import pathlib
         return pathlib.Path(__file__).parent / '../../sample_data/augmentations'
 
-    def test_load_full_configuration_sample(self, augmentations_folder):
-
-        cfg_file = augmentations_folder / 'full_augmentations.yml'
-        composition = TransformsFactory.parse_file(cfg_file)
-        composition_dict = composition.get_dict_with_id()
-
-        # Check for composition consistency
-        assert 'transforms' in composition_dict, "composition dict is wrong!"
-        transforms = composition_dict['transforms']
-
-        # Creates Expected Transforms List. Has to match with YAML Configuration file list
-        name_field = '__class_fullname__'
-        expected_transforms = [
+    @pytest.fixture(scope='session')
+    def expected_transforms(self):
+        return [
             {
                 'name': 'albumentations.augmentations.transforms.Resize',
                 'params': {'height': 516, 'width': 481, 'always_apply': True}
@@ -60,9 +51,63 @@ class TestTransformsFactory(object):
             {
                 'name': 'albumentations.augmentations.transforms.RandomGridShuffle',
                 'params': {'grid': [4, 4], 'p':0.6}
-            }
-
+            },
+            {
+                'name': 'albumentations.augmentations.transforms.HueSaturationValue',
+                'params': {
+                    'hue_shift_limit': (0.1, 0.2),
+                    'sat_shift_limit': (0.3, 0.4),
+                    'val_shift_limit': (0.5, 0.6),
+                    'p': 0.7,
+                    'always_apply': True
+                }
+            },
+            {
+                'name': 'albumentations.augmentations.transforms.HorizontalFlip',
+                'params': {'p': 0.8, 'always_apply': False}
+            },
+            {
+                'name': 'albumentations.augmentations.transforms.VerticalFlip',
+                'params': {'p': 0.9, 'always_apply': False}
+            },
+            {
+                'name': 'albumentations.augmentations.transforms.Flip',
+                'params': {'p': 0.10, 'always_apply': False}
+            },
+            {
+                'name': 'albumentations.augmentations.transforms.ShiftScaleRotate',
+                'params': {
+                    'shift_limit': (0.1, 0.2),
+                    'scale_limit': (0.3, 0.4),
+                    'rotate_limit': (-22, 22),
+                    'interpolation': AlbumentationTransformsFactory.INTERPOLATIONS['linear'],
+                    'border_mode': AlbumentationTransformsFactory.BORDERS['replicate'],
+                    'value': [200, 100, 90],
+                    'mask_value': 155,
+                    'p': 0.10,
+                    'always_apply': False
+                }
+            },
         ]
+
+    def _compare_param(self, p1, p2):
+        if isinstance(p1, list) or isinstance(p1, tuple):
+            return np.all(np.isclose(np.array(p1), np.array(p2)))
+        else:
+            return p1 == p2
+
+    def test_load_full_configuration_sample(self, augmentations_folder, expected_transforms):
+
+        cfg_file = augmentations_folder / 'full_augmentations.yml'
+        composition = TransformsFactory.parse_file(cfg_file)
+        composition_dict = composition.get_dict_with_id()
+
+        # Check for composition consistency
+        assert 'transforms' in composition_dict, "composition dict is wrong!"
+        transforms = composition_dict['transforms']
+
+        # Creates Expected Transforms List. Has to match with YAML Configuration file list
+        name_field = '__class_fullname__'
 
         # Check size of loaded transforms
         assert len(expected_transforms) == len(transforms), \
@@ -75,7 +120,7 @@ class TestTransformsFactory(object):
             assert t[name_field] == exp['name'], f"Transform name {t[name_field]} is wrong! Expected: {exp['name']}"
             for param, value in exp['params'].items():
                 assert param in t, f"Param {param} not found in transform {t}"
-                assert t[param] == value, f"{exp['name']}: Param {param}={t[param]} is wrong! Expected: {value}"
+                assert self._compare_param(t[param], value), f"{exp['name']}: Param {param}={t[param]} is wrong! Expected: {value}"
 
     def test_load_invalid_configuration_sample(self, augmentations_folder):
 

@@ -1,9 +1,10 @@
-from persefone.data.databases.h5 import H5Database, H5DatabaseIO
+from persefone.data.databases.h5 import H5Database, H5DatabaseIO, H5SimpleDatabase
 from persefone.utils.filesystem import tree_from_underscore_notation_files
 import pytest
 import numpy as np
 import uuid
 from pathlib import Path
+from types import SimpleNamespace
 
 
 class TestH5Database(object):
@@ -185,3 +186,49 @@ class TestH5DatabaseIO(object):
             print(config_name, f"size: {size}")
 
             Path(temp_dataset_file).unlink()
+
+
+class TestH5SimpleDatabase(object):
+
+    @pytest.fixture(scope="function")
+    def temp_dataset_file(self, tmpdir_factory):
+        fn = tmpdir_factory.mktemp("data").join("_h5dataset_temp.h5")
+        return fn
+
+    @pytest.fixture(scope="function")
+    def temp_tabular_file(self, tmpdir_factory):
+        fn = tmpdir_factory.mktemp("data").join("_tabular.csv")
+        return fn
+
+    def test_tabular_representation(self, temp_dataset_file, minimnist_folder, temp_tabular_file):
+
+        print(temp_dataset_file)
+
+        for root_item in ['///', '', '/', '_items', '/_items', '_items/', '/_items/', 'very_long-key!with#strange?chars']:
+
+            print(f"Testing root item: '{root_item}'")
+            H5DatabaseIO.generate_from_folder(
+                h5file=temp_dataset_file,
+                folder=minimnist_folder,
+                root_item=root_item
+            )
+
+            simple_database = H5SimpleDatabase(filename=temp_dataset_file, root_item=root_item)
+
+            assert len(simple_database.keys) == 0, "Keys must be empty when database is closed"
+
+            tabular = simple_database.generate_tabular_representation(include_filename=True)
+            assert tabular is None, "Closed database must generate None tabular representation"
+
+            with simple_database:
+                tabular = simple_database.generate_tabular_representation(include_filename=True)
+                assert len(simple_database) == len(tabular), 'Tabular representation size is wrong!'
+                tabular.to_csv(temp_tabular_file)
+                print("Stored CSV:", temp_tabular_file)
+                for key in simple_database.keys:
+                    assert key in tabular.index, f"Missing index {key} in tabular representation"
+                for key in tabular.index:
+                    assert key in tabular.index, f"Missing index {key} in database"
+
+            Path(temp_dataset_file).unlink()
+            # Path(temp_tabular_file).unlink()

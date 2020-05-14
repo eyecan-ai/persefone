@@ -4,6 +4,10 @@ from pathlib import Path
 import time
 import uuid
 import yaml
+import logging
+
+logging.basicConfig(level=logging.DEBUG)  # TODO: Logger is always in DEBUG
+_logger = logging.getLogger()
 
 
 class PandasDatabase(object):
@@ -263,6 +267,29 @@ class PandasDatabase(object):
 
 class PandasDatabaseIO(object):
     """ PandasDatabase IO functions """
+
+    @classmethod
+    def rename_index_inplace(cls, filename, old_index, new_index='id'):
+        """Renames inner index column of target pandas file
+
+        :param filename: target filename
+        :type filename: str
+        :param old_index: old index name, usually is 'Unamed: 0' when not previously set
+        :type old_index: str
+        :param new_index: new index name, defaults to 'id'
+        :type new_index: str, optional
+        """
+        database = PandasDatabaseIO.load_csv(filename)
+        try:
+            if database.data.index.name == old_index:
+                database.data.index.names = [new_index]
+            else:
+                database.data.rename(columns={old_index: new_index}, inplace=True)
+                database.set_index(new_index)
+            database.attrs['index'] = new_index
+            PandasDatabaseIO.save_csv(database, filename)
+        except Exception as e:
+            _logger.error(f'{cls.__name__}.rename_index_inplace: {e}')
 
     @classmethod
     def build_metadata_filename_from_original_filename(cls, filename):

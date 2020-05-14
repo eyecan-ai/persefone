@@ -437,31 +437,6 @@ class TestPandasDatabaseIO(object):
         fn = tmpdir_factory.mktemp("data").join("_database_file.csv")
         return fn
 
-    def test_generate_dataset_from_images_folder(self, minimnist_folder):
-
-        parent_folder = minimnist_folder.parent
-
-        columns_lambdas = {
-            'label': lambda x: np.loadtxt(x).astype(int).tolist(),
-            'points': lambda x: np.loadtxt(x).tolist(),
-        }
-
-        with pytest.raises(OSError):
-            PandasDatabaseGeneratorUnderscoreNotation.generate_from_folder(
-                folder=minimnist_folder / 'impossiblesubfolder_',
-                columns_lambdas=columns_lambdas
-            )
-
-        database = PandasDatabaseGeneratorUnderscoreNotation.generate_from_folder(folder=minimnist_folder, columns_lambdas=columns_lambdas)
-        database.attrs['base_folder'] = 'minimnist'
-
-        # PandasDatabaseIO.save_pickle(database, str(parent_folder / 'minimnist.data'))
-        # PandasDatabaseIO.save_pickle(database.rebuild_indices(), str(parent_folder / 'minimnist_reindexed.data'))
-
-        database_st = PandasDatabaseIO.load_pickle(str(parent_folder / 'minimnist.data'))
-        assert database.data.equals(database_st.data), "Databases must be equal!"
-        assert database.attrs == database_st.attrs, "Databases attributes must be equal!"
-
     def test_pickle_io(self, dataset_file, minimnist_folder):
 
         columns_lambdas = {
@@ -487,6 +462,9 @@ class TestPandasDatabaseIO(object):
         with pytest.raises(OSError):
             PandasDatabaseIO.load_pickle(str(dataset_file) + "_impossiblesuffix_")
 
+        with pytest.raises(OSError):
+            database = PandasDatabaseGeneratorUnderscoreNotation.generate_from_folder(folder=str(minimnist_folder)+"IMPOSSIBLE_TAG#", columns_lambdas=columns_lambdas)
+
     def test_csv_io(self, dataset_file_csv, minimnist_folder):
 
         # parent_folder = minimnist_folder.parent
@@ -511,3 +489,26 @@ class TestPandasDatabaseIO(object):
 
         void_metadata = PandasDatabaseIO.load_metadata(dataset_file_csv + "_NPASDASDASODMASPDASDAS")
         assert void_metadata == {}, "Strange metadata loaded with an invalid filename!"
+
+    def test_csv_rename(self, dataset_file, minimnist_folder):
+
+        columns_lambdas = {
+            'label': lambda x: np.loadtxt(x).astype(int).tolist(),
+            'points': lambda x: np.loadtxt(x).tolist(),
+        }
+
+        database = PandasDatabaseGeneratorUnderscoreNotation.generate_from_folder(folder=minimnist_folder, columns_lambdas=columns_lambdas)
+        PandasDatabaseIO.save_csv(database, dataset_file)
+
+        old_index = 'id'
+        new_index = 'new_index_name'
+
+        PandasDatabaseIO.rename_index_inplace(dataset_file, old_index=old_index, new_index=new_index)
+        #PandasDatabaseIO.rename_index_inplace(dataset_file, old_index='label', new_index='new_label')
+
+        database_r = PandasDatabaseIO.load_csv(dataset_file)
+
+        assert new_index in database_r.data.index.names, "New id is wrong!"
+        assert old_index not in database_r.data.index.names, "New id is wrong!"
+
+        PandasDatabaseIO.rename_index_inplace(dataset_file, old_index='impossible_column_NAM3', new_index='newname')
