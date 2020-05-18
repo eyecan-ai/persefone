@@ -7,6 +7,7 @@ import imageio
 import tqdm
 from types import SimpleNamespace
 import pandas as pd
+import uuid
 
 
 class H5DatasetCompressionMethods(object):
@@ -24,7 +25,7 @@ class H5Database(object):
         :type filename: str
         """
         self.__filename = filename
-        self.__readonly = get_arg(kwargs, "readonly", default=False)
+        self.__readonly = get_arg(kwargs, "readonly", default=True)
         self.__handle = None
 
     @classmethod
@@ -212,7 +213,7 @@ class H5DatabaseIO(object):
         :return: generated H5Database
         :rtype: H5Database
         """
-        database = H5Database(filename=h5file, **kwargs)
+        database = H5Database(filename=h5file, readonly=False, **kwargs)
 
         compression = get_arg(kwargs, "compression", default=H5DatasetCompressionMethods.NONE.name)
         compression_opts = get_arg(kwargs, "compression_opts", default=H5DatasetCompressionMethods.NONE.opts)
@@ -221,9 +222,13 @@ class H5DatabaseIO(object):
         root_item = get_arg(kwargs, "root_item", '/')
         root_item = H5Database.purge_root_item(root_item)
 
+        uuid_keys = get_arg(kwargs, "uuid_keys", False)
+
         with database:
             tree = tree_from_underscore_notation_files(folder)
             for key, slots in tqdm.tqdm(tree.items()):
+                if uuid_keys:
+                    key = str(uuid.uuid1())
                 key = f'{root_item}{key}'
                 database.get_group(key)
                 for item_name, filename in slots.items():
@@ -277,6 +282,11 @@ class H5SimpleDatabase(H5Database):
 
     @property
     def root(self):
+        """Gets root element of database. May be different from classical '/'
+
+        :return: root h5py.Group
+        :rtype: h5py.Group
+        """
         if self.is_open():
             if self.__root_item == '/':
                 return self.handle
@@ -286,6 +296,11 @@ class H5SimpleDatabase(H5Database):
 
     @property
     def keys(self):
+        """Retrieves plain list of keys
+
+        :return: list of keys, empty if database is closed
+        :rtype: list
+        """
         if self.is_open():
             return list(self.root.keys())
         else:
@@ -296,13 +311,24 @@ class H5SimpleDatabase(H5Database):
 
     def __getitem__(self, idx):
         if self.is_open():
-            key = self.keys[idx]
-            return self.root[key]
+            if isinstance(idx, int):
+                key = self.keys[idx]
+                return self.root[key]
+            elif isinstance(idx, str):
+                return self.root[idx]
+        return None
 
     def _remove_root_item_from_key(self, key):
         return key.replace(self.__root_item, '', 1)
 
     def generate_tabular_representation(self, include_filename=True):
+        """Generates Tabular (PANDAS) Representation of current H5SimpleDatabase
+
+        :param include_filename: TRUE to add special column pointing to original h5 filename, defaults to True
+        :type include_filename: bool, optional
+        :return: pandas.DataFrame containing tabular data   
+        :rtype: pandas.DataFrame
+        """
         if self.is_open():
             rows = []
             for item in self:

@@ -56,10 +56,34 @@ class PandasDatabase(object):
         if not isinstance(values, list):
             values = [values]
         if not negate:
-            dataset = PandasDatabase(data=self.data[self.data[column_name].isin(values)])
+            dataset = PandasDatabase(data=self.data[self.data[column_name].isin(values)], attrs=self.attrs)
         else:
-            dataset = PandasDatabase(data=self.data[~self.data[column_name].isin(values)])
+            dataset = PandasDatabase(data=self.data[~self.data[column_name].isin(values)], attrs=self.attrs)
         return dataset
+
+    def query(self, expression):
+        """Query on data
+
+        :param expression: query expression
+        :type expression: str
+        :return: resulting PandasDatabase
+        :rtype: PandasDatabase
+        """
+        new_data = self.data.query(expr=expression)
+        return PandasDatabase(data=new_data, attrs=self.attrs)
+
+    def query_list(self, expressions: list):
+        """Applies a chain of queries
+
+        :param expressions: queries list
+        :type expressions: list
+        :return: resulting PandasDatabase
+        :rtype: PandasDatabase
+        """
+        current = self.copy()
+        for expr in expressions:
+            current = current.query(expr)
+        return current
 
     def split_by_column_values(self, column_name, list_of_values, check_sizes=False):
         """ Splits dataset in multiple datasets based on a target column and a list of values
@@ -115,7 +139,7 @@ class PandasDatabase(object):
         return {column_name: counts_map}
 
     def split(self, percentage=0.8):
-        """Splits PandasDatabase in two PandasDatabase obejcts based on a percentage split value
+        """Splits PandasDatabase in two PandasDatabase objects based on a percentage split value
 
         :param percentage: percentage split value, defaults to 0.8
         :type percentage: float, optional
@@ -127,6 +151,53 @@ class PandasDatabase(object):
         assert len(d0) + len(d1) == len(self.data), f"{self.__class__.__name__}.split: splits size not sum up to total size!"
         return PandasDatabase(data=d0, attrs=self.attrs), PandasDatabase(data=d1, attrs=self.attrs)
 
+    def splits(self, percentages=[0.8, 0.1, 0.1], integrity=True):
+        """Splits PandasDatabase in N objects based on a percentage list
+
+        :param percentages: percentages list, defaults to [0.8, 0.1, 0.1]
+        :type percentages: list, optional
+        :param integrity: TRUE to force sum to 1.0 adding remains to last chunk
+        :type integrity: bool
+        :return: list of PandasDatabase
+        :rtype: list
+        """
+        assert np.array(percentages).sum() <= 1.0, "Percentages sum must be <= 1.0"
+        sizes = []
+        for p in percentages:
+            sizes.append(int(len(self.data) * p))
+
+        if integrity:
+            diff = self.size - np.array(sizes).sum()
+            if diff > 0:
+                sizes[-1] += diff
+
+        chunks = []
+        current_index = 0
+        for s in sizes:
+            chunk = self[current_index:current_index + s]
+            chunks.append(chunk)
+            current_index += s
+        return chunks
+
+    def splits_as_dict(self, percentages_dictionary={'train': 0.9, 'test': 0.1}, integrity=True):
+        """Splits PandasDatabase in N objects based on a percentage dictionary name/percentage
+
+        :param percentages_dictionary: percentages dictionary, defaults to {'train': 0.9, 'test': 0.1}
+        :type percentages_dictionary: dict, optional
+        :param integrity: TRUE to force sum to 1.0 adding remains to last chunk
+        :type integrity: bool
+        :return: dict of name/PandasDatabase pairs
+        :rtype: dict
+        """
+        names = list(percentages_dictionary.keys())
+        percentages = list(percentages_dictionary.values())
+        chunks = self.splits(percentages=percentages, integrity=integrity)
+        output = {}
+        assert len(names) == len(chunks), "Len of chunks is different from percentage names number"
+        for idx in range(len(names)):
+            output[names[idx]] = chunks[idx]
+        return output
+
     def shuffle(self, seed=-1):
         """Produces a shuffled copy of the original PandasDatabase
 
@@ -135,11 +206,7 @@ class PandasDatabase(object):
         :return: Shuffled copy of the original PandasDatabase
         :rtype: PandasDatabase
         """
-        if seed >= 0:
-            np.random.seed(seed)
-        new_data = self.data.copy().sample(frac=1)
-        if seed >= 0:
-            np.random.seed(int(time.time()))
+        new_data = self.data.copy().sample(frac=1, random_state=seed)
         return PandasDatabase(data=new_data, attrs=self.attrs)
 
     def is_valid_index(self, idx):
@@ -204,7 +271,7 @@ class PandasDatabase(object):
         if isinstance(idx, slice):
             if idx.start is not None and idx.stop is not None:
                 assert self.is_valid_index(idx.start), f"{self.__class__.__name__}.__getitem__: slice start {idx.start} must be in [0,size)"
-                assert self.is_valid_index(idx.stop), f"{self.__class__.__name__}.__getitem__: slice stop {idx.stop} must be in [0,size)"
+                assert self.is_valid_index(idx.stop - 1), f"{self.__class__.__name__}.__getitem__: slice stop {idx.stop} must be in [0,size)"
             sub = self.data[idx]  # .reset_index(drop=True)
             return PandasDatabase(data=sub, attrs=self.attrs)
         else:
@@ -331,15 +398,19 @@ class PandasDatabaseIO(object):
         return PandasDatabase(data=data, attrs=metadata)
 
     @classmethod
-    def save_csv(cls, database: PandasDatabase, filename):
+    def save_csv(cls, database: PandasDatabase, filename, index_column='id'):
         """Saves CSV text version of PandasDatabase
 
         :param database: input PandasDatabase
         :type database: PandasDatabase
         :param filename: output filename
         :type filename: str, pathlib.Path
+        :param index_column: default index column
+        :type index_column: str
         """
         database.data.to_csv(filename)
+        if 'index' not in database.attrs:
+            database.attrs['index'] = index_column
         PandasDatabaseIO.save_metadata(database, filename)
 
     @classmethod

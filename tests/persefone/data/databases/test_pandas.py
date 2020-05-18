@@ -52,7 +52,12 @@ class TestPandasDatabase(object):
 
     @classmethod
     def _check_if_attrs_are_equal(cls, db1, db2):
-        assert db1.attrs == db2.attrs, f"Two database's attrs are different! {db1.attrs} != {db2.attrs}"
+        for key, value in db1.attrs.items():
+            if key not in db2.attrs:
+                return False
+        return True
+        # TODO: comparison is also in key list!
+        # assert db1.attrs == db2.attrs, f"Two database's attrs are different! {db1.attrs} != {db2.attrs}"
 
     @classmethod
     def _check_if_data_is_dataframe(cls, db: PandasDatabase):
@@ -189,6 +194,74 @@ class TestPandasDatabase(object):
                 assert d0.size == s0, f"{d0.size} != {s0}, database size after split is wrong!"
                 assert d1.size == s1, f"{d1.size} != {s1}, database size after split is wrong!"
 
+    def test_pandas_database_multiple_split_size(self):
+        """Checks for split size consistency """
+        fake_data_size = 256
+        databases = [
+            TestPandasDatabase._generate_random_database(fake_data_size, index=None),
+            TestPandasDatabase._generate_random_database(fake_data_size, index='name')
+        ]
+
+        divisions = [
+            [0.9],
+            [0.8, 0.2],
+            [0.8, 0.1, 0.1],
+            [0.8, 0.1, 0.1, 0.01],
+        ]
+
+        for database in databases:
+            # Check splits sizes
+            for percentages in divisions:
+                percentages_sum = np.array(percentages).sum()
+                if percentages_sum <= 1.0:
+                    chunks = database.splits(percentages)
+                    assert len(chunks) == len(percentages), "Chunks number is different from divisions number"
+
+                    for a in range(len(chunks)):
+                        for b in range(len(chunks)):
+                            if a != b:
+                                assert not chunks[a].check_intersection(chunks[b]), "Chunks must be orthogonals!"
+                else:
+                    with pytest.raises(AssertionError):
+                        chunks = database.splits(percentages)
+
+    def test_pandas_database_multiple_split_as_dict(self):
+        """Checks for split size consistency """
+        fake_data_size = 256
+        databases = [
+            TestPandasDatabase._generate_random_database(fake_data_size, index=None),
+            TestPandasDatabase._generate_random_database(fake_data_size, index='name')
+        ]
+
+        divisions_map = [
+            {'train': 0.9},
+            {'train': 0.8, 'test': 0.1, 'val': 0.1},
+            {'one': 0.1, 'two': 0.1, 'three': 0.1, 'remains': 0.7},
+        ]
+
+        for check_integrity in [True, False]:
+            for database in databases:
+                # Check splits sizes
+                for percentages_map in divisions_map:
+                    percentages_sum = np.array(list(percentages_map.values())).sum()
+                    if percentages_sum <= 1.0:
+                        chunks = database.splits_as_dict(percentages_map, integrity=check_integrity)
+                        assert len(chunks) == len(percentages_map), "Chunks number is different from divisions number"
+
+                        for a, _ in chunks.items():
+                            for b, _ in chunks.items():
+                                if a != b:
+                                    assert not chunks[a].check_intersection(chunks[b]), "Chunks must be orthogonals!"
+
+                        if check_integrity:
+                            sumup = 0
+                            for _, chunk in chunks.items():
+                                sumup += chunk.size
+                            assert sumup == database.size, "Size consistency fails!"
+                    else:
+                        with pytest.raises(AssertionError):
+                            chunks = database.splits_as_dict(percentages_map)
+
     def test_pandas_database_split_indices(self):
         """Checks for split indices consistency """
         fake_data_size = 256
@@ -241,7 +314,7 @@ class TestPandasDatabase(object):
 
         for database in databases:
             database_re = database.rebuild_indices()
-            assert database_re.attrs == database.attrs, "After rebuild indices attrs was lost!"
+            assert self._check_if_attrs_are_equal(database_re, database), "After rebuild indices attrs was lost!"
 
     def test_summation(self):
         """ Checks if sums among PandasDatabase are consistent """
@@ -424,6 +497,46 @@ class TestPandasDatabase(object):
             with pytest.raises(AssertionError):
                 g0, g1, g2, g3 = database1.split_by_column_values('howmany_5', [0, 1, 2, 3], check_sizes=True)
 
+    def test_query(self):
+
+        fake_data_size = 10005  # must be 10005! don't change
+        odds_count = int(fake_data_size / 2) + 1
+        evens_count = int(fake_data_size / 2)
+        indices = ['name']
+
+        for index in indices:
+            database1 = TestPandasDatabase._generate_random_database(fake_data_size, index=index).rebuild_indices()
+
+            print(database1.size)
+
+            assert isinstance(database1.query("oddity == 1"), PandasDatabase), "What is it?"
+            assert isinstance(database1.query("oddity == 0"), PandasDatabase), "What is it?"
+            assert database1.query("oddity == 1").size == odds_count, "Odds count is wrong"
+            assert database1.query("oddity in [1]").size == odds_count, "Odds count is wrong"
+            assert database1.query(f"oddity in {[1]}").size == odds_count, "Odds count is wrong"
+            assert database1.query("oddity == 0").size == evens_count, "Evens count is wrong"
+            assert database1.query("oddity in [0]").size == evens_count, "Evens count is wrong"
+            assert database1.query(f"oddity in {[0]}").size == evens_count, "Evens count is wrong"
+
+            assert database1.query("oddity == 1").query("oddity == 0").size == 0, "Database must be empty!"
+            assert database1.query("oddity == 0").query("oddity == 1").size == 0, "Database must be empty!"
+            assert database1.query("oddity == 1").query("oddity == 1").size == odds_count, "Database must be not empty!"
+
+            assert TestPandasDatabase._check_if_attrs_are_equal(database1, database1.query("oddity == 1")), "Attributes were lost after query!"
+            assert TestPandasDatabase._check_if_attrs_are_equal(database1, database1.query("oddity == 0")), "Attributes were lost after query!"
+
+            assert database1.query("oddity > 1").size == 0, "Oddity cannot be > 1"
+
+            queries = [
+                'oddity == 1',
+                'oddity in [1]',
+                'a > -0.1',
+                'b > -0.1',
+                'c > -0.1'
+            ]
+            assert isinstance(database1.query_list(queries), PandasDatabase), "What is it?"
+            assert database1.query_list(queries).size == odds_count, "Size is wrong!"
+
 
 class TestPandasDatabaseIO(object):
 
@@ -457,7 +570,7 @@ class TestPandasDatabaseIO(object):
         database_reloaded = PandasDatabaseIO.load_pickle(dataset_file)
 
         assert database.data.equals(database_reloaded.data), "Datasets differ after reloading!"
-        assert database.attrs == database_reloaded.attrs, "Datasets metadatas differ after reloading!"
+        assert TestPandasDatabase._check_if_attrs_are_equal(database, database_reloaded), "Datasets metadatas differ after reloading!"
 
         with pytest.raises(OSError):
             PandasDatabaseIO.load_pickle(str(dataset_file) + "_impossiblesuffix_")
@@ -485,7 +598,7 @@ class TestPandasDatabaseIO(object):
         assert Path(metadata_file).exists(), "Metadatafile does not exist!"
 
         database_reloaded = PandasDatabaseIO.load_csv(dataset_file_csv)
-        assert database.attrs == database_reloaded.attrs, "Datasets metadatas differ after reloading!"
+        assert TestPandasDatabase._check_if_attrs_are_equal(database, database_reloaded), "Datasets metadatas differ after reloading!"
 
         void_metadata = PandasDatabaseIO.load_metadata(dataset_file_csv + "_NPASDASDASODMASPDASDAS")
         assert void_metadata == {}, "Strange metadata loaded with an invalid filename!"
@@ -504,7 +617,7 @@ class TestPandasDatabaseIO(object):
         new_index = 'new_index_name'
 
         PandasDatabaseIO.rename_index_inplace(dataset_file, old_index=old_index, new_index=new_index)
-        #PandasDatabaseIO.rename_index_inplace(dataset_file, old_index='label', new_index='new_label')
+        # PandasDatabaseIO.rename_index_inplace(dataset_file, old_index='label', new_index='new_label')
 
         database_r = PandasDatabaseIO.load_csv(dataset_file)
 

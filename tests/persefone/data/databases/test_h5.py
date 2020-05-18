@@ -61,7 +61,7 @@ class TestH5Database(object):
     def test_h5_database_keys(self, temp_dataset_file, sample_keys):
         print(temp_dataset_file)
 
-        database = H5Database(filename=temp_dataset_file)
+        database = H5Database(filename=temp_dataset_file, readonly=False)
         with database:
             for key in sample_keys:
                 key = H5Database.purge_key(key)
@@ -75,7 +75,7 @@ class TestH5Database(object):
     def test_h5_database_data(self, temp_dataset_file, sample_keys, sample_items):
         print(temp_dataset_file)
 
-        database = H5Database(filename=temp_dataset_file)
+        database = H5Database(filename=temp_dataset_file, readonly=False)
         with database:
             for key in sample_keys:
                 key = H5Database.purge_key(key)
@@ -204,7 +204,7 @@ class TestH5SimpleDatabase(object):
 
         print(temp_dataset_file)
 
-        for root_item in ['///', '', '/', '_items', '/_items', '_items/', '/_items/', 'very_long-key!with#strange?chars']:
+        for root_item in ['///', '', '/', '//', '_items', '/_items', '_items/', '/_items/', 'very_long-key!with#strange?chars']:
 
             print(f"Testing root item: '{root_item}'")
             H5DatabaseIO.generate_from_folder(
@@ -215,6 +215,8 @@ class TestH5SimpleDatabase(object):
 
             simple_database = H5SimpleDatabase(filename=temp_dataset_file, root_item=root_item)
 
+            assert simple_database.root is None, "Database should be closed!"
+            assert simple_database['closed_missing_key!'] is None, "Database key should be None if closed!"
             assert len(simple_database.keys) == 0, "Keys must be empty when database is closed"
 
             tabular = simple_database.generate_tabular_representation(include_filename=True)
