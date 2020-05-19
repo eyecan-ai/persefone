@@ -1,7 +1,6 @@
 import numpy as np
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
 _logger = logging.getLogger()
 
 

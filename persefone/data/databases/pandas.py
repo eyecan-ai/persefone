@@ -1,12 +1,10 @@
 import pandas as pd
 import numpy as np
 from pathlib import Path
-import time
 import uuid
 import yaml
 import logging
 
-logging.basicConfig(level=logging.DEBUG)  # TODO: Logger is always in DEBUG
 _logger = logging.getLogger()
 
 

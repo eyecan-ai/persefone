@@ -4,7 +4,6 @@ import pytest
 import numpy as np
 import uuid
 from pathlib import Path
-from types import SimpleNamespace
 
 
 class TestH5Database(object):

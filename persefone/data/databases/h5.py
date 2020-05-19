@@ -226,11 +226,14 @@ class H5DatabaseIO(object):
 
         with database:
             tree = tree_from_underscore_notation_files(folder)
+            counter = 0
             for key, slots in tqdm.tqdm(tree.items()):
                 if uuid_keys:
                     key = str(uuid.uuid1())
                 key = f'{root_item}{key}'
-                database.get_group(key)
+                group = database.get_group(key)
+                group.attrs['counter'] = counter
+                group.attrs['oddity'] = counter % 2
                 for item_name, filename in slots.items():
                     loaded_data = cls.load_data_from_file(filename)
                     if loaded_data is not None:
@@ -242,6 +245,7 @@ class H5DatabaseIO(object):
                             compression=compression_method
                         )
                         data[...] = loaded_data
+                counter += 1
 
         return database
 

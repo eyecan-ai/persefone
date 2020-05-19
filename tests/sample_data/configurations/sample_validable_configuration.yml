@@ -1,0 +1,22 @@
+name: "this is a name"
+number: 12
+listofstrings:
+  - one
+  - two
+  - three
+dictofstrings:
+  one: one
+  two: two
+  three: three
+dictofnumbers:
+  one: 1
+  two: 2.0
+  three: 3.3
+nestedobjects:
+  level1:
+    one: [1]
+    two: [2, 2]
+    three: 3.3
+    four: "4"
+  level2:
+    five: five

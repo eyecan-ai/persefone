@@ -19,3 +19,4 @@ nbstripout==0.3.7
 pre-commit==2.3.0
 h5py==2.10.0
 Click==7.0
+schema==0.7.2

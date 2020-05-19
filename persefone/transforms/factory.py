@@ -5,7 +5,6 @@ import cv2
 import logging
 
 
-logging.basicConfig(level=logging.DEBUG)  # TODO: Logger is always in DEBUG
 _logger = logging.getLogger()
 
 
