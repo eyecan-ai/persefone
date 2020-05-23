@@ -5,7 +5,8 @@ from persefone.utils.configurations import XConfiguration
 import pytest
 from pathlib import Path
 import schema
-
+import hashlib
+import numpy as np
 
 SNAPSHOT_TEST_CONFIGURATIONS = [
     #  TEST FULL ARGUMENTS
@@ -99,6 +100,114 @@ SNAPSHOT_TEST_CONFIGURATIONS = [
 ]
 
 
+SNAPSHOT_WITH_READERS_TEST_CONFIGURATIONS = [
+    #  TEST FULL ARGUMENTS
+    ({
+        'name': 'sample_snapshot',
+        'sources': [],
+        'splits': {'train': 0.5, 'test': 0.5},
+        'readers': {
+            'columns': [
+                'counter',
+                'oddity',
+                '@image',
+                '@image_mask',
+                '@image_maskinv',
+                '@label',
+                '@points'
+            ]
+        }
+    }, {
+        'valid': True
+    }),
+
+    ({
+        'name': 'sample_snapshot',
+        'sources': [],
+        'splits': {'train': 0.5, 'test': 0.5},
+        'readers': {
+            'columns': [
+                'counter',
+                'oddity',
+                'image',
+                'points'
+            ]
+        }
+    }, {
+        'valid': True
+    }),
+    #
+    ({
+        'name': 'sample_snapshot',
+        'sources': [],
+        'splits': {'train': 0.5, 'test': 0.5},
+        'readers': {
+            'columns': [
+                'image_mask',
+                'image_maskinv',
+            ]
+        }
+    }, {
+        'valid': True
+    }),
+
+    # SAMPLE WITH READERS COLUMNS AS DICT
+    ({
+        'name': 'sample_snapshot',
+        'sources': [],
+        'splits': {'train': 0.5, 'test': 0.5},
+        'readers': {
+            'columns': {
+                'image_mask': 'mask',
+                'image_maskinv': 'mask_inv',
+            }
+        }
+    }, {
+        'valid': True
+    }),
+
+    # INVALIDS
+    ({
+        'name': 'sample_snapshot',
+        'sources': [],
+        'splits': {'train': 0.5, 'test': 0.5},
+        'readersx': {
+        }
+    }, {
+        'valid': False,
+        'raises': schema.SchemaError
+    }),
+    #
+    ({
+        'name': 'sample_snapshot',
+        'sources': [],
+        'splits': {'train': 0.5, 'test': 0.5},
+        'readers': {'column': []}
+    }, {
+        'valid': False,
+        'raises': schema.SchemaError
+    }),
+
+]
+
+SNAPSHOT_WITH_READERS_TEST_CONFIGURATIONS = [
+    # SAMPLE WITH READERS COLUMNS AS DICT
+    ({
+        'name': 'sample_snapshot',
+        'sources': [],
+        'splits': {'train': 0.5, 'test': 0.5},
+        'readers': {
+            'columns': {
+                'image_mask': 'mask',
+                'image_maskinv': 'mask_inv',
+            }
+        }
+    }, {
+        'valid': True
+    }),
+]
+
+
 class TestDatabaseSnapshot(object):
 
     @pytest.fixture(scope="function")
@@ -184,3 +293,117 @@ class TestDatabaseSnapshot(object):
             (output_name, output_db), = output.items()
             assert output_name == cfg['name'], "Snapshot name is wrong!"
             assert output_name == snapshot.name, "Snapshot name is wrong!"
+
+    @pytest.mark.parametrize("cfg, expectations", SNAPSHOT_WITH_READERS_TEST_CONFIGURATIONS)
+    def test_readers(self, cfg, expectations, temp_dataset_files_bunch, minimnist_folder, temp_yaml_file):
+
+        for source in temp_dataset_files_bunch:
+            H5DatabaseIO.generate_from_folder(
+                h5file=source,
+                folder=minimnist_folder,
+                root_item='_items',
+                uuid_keys=True
+            )
+
+        # Set corresponding h5 files in the configuration
+        cfg['sources'] = [str(x) for x in temp_dataset_files_bunch]
+
+        # save config
+        XConfiguration.from_dict(cfg).save_to(temp_yaml_file)
+        print("YAML CFG", temp_yaml_file)
+
+        snapshot_cfg = SnapshotConfiguration(filename=temp_yaml_file)
+
+        if not expectations['valid']:
+            raise_error = get_arg(expectations, 'raises', KeyError)
+            with pytest.raises(raise_error):
+                snapshot_cfg.validate()
+            return
+
+        assert snapshot_cfg.is_valid(), "Configuration cannot be invalid!"
+
+        for source in snapshot_cfg.params.sources:
+            assert Path(source).exists(), f"source {source} should exists!"
+
+        # Snapshot
+        snapshot = DatabaseSnapshot(filename=temp_yaml_file)
+        assert snapshot.is_valid(), "Snapshot configuration should be valid"
+
+        # Readers
+        readers = snapshot.output_readers
+        assert len(readers) == len(snapshot.output), "Readers number is wrong!"
+
+        for name, reader in readers.items():
+            assert name in snapshot.output, f"Reader name '{name}' invalid!"
+            assert len(reader) == len(snapshot.output[name]), f"Output dataset '{name}' wrong size!"
+            assert reader.database == snapshot.output[name], "Databases mismatch!"
+
+            if len(reader) > 0:
+                item = reader[0]
+                assert len(item.keys()) == len(cfg['readers']['columns']), "Columns in reader are wrong!"
+
+    def test_readers_repeatability(self, temp_dataset_files_bunch, minimnist_folder, temp_yaml_file):
+
+        cfg = {
+            'name': 'sample_snapshot',
+            'sources': [],
+            'operations': [
+                {'limit': 1000},
+                {'shuffle': 1},
+            ],
+            'splits': {
+                'train': 0.7,
+                'test': 0.1,
+                'val': 0.2
+            },
+            'readers': {'columns': {'image': 'grayscale', '_idx': 'id'}}
+        }
+
+        seeds = [10000, 1000, 10, 666, 4, 8, 15, 16, 23, 42]
+
+        for source in temp_dataset_files_bunch:
+            H5DatabaseIO.generate_from_folder(
+                h5file=source,
+                folder=minimnist_folder,
+                root_item='_items',
+                uuid_keys=True
+            )
+            print("H5 File", source)
+
+        images_sums = []
+        hashes = []
+        for seed in seeds:
+            cfg['random_seed'] = seed
+
+            # Set corresponding h5 files in the configuration
+            cfg['sources'] = [str(x) for x in temp_dataset_files_bunch]
+
+            # save config
+            XConfiguration.from_dict(cfg).save_to(temp_yaml_file)
+            print("YAML CFG", temp_yaml_file)
+
+            snapshot_cfg = SnapshotConfiguration(filename=temp_yaml_file)
+            assert snapshot_cfg.is_valid(), "Must be a valid configuration!"
+            # Snapshot
+            snapshot = DatabaseSnapshot(filename=temp_yaml_file)
+            print(snapshot)
+
+            images_sum = 0.0
+            indices = []
+            for _, reader in snapshot.output_readers.items():
+                for item in reader:
+                    images_sum += item['grayscale'].sum()
+                    indices.append(item['id'])
+
+            images_sums.append(images_sum)
+
+            indices = hashlib.md5(''.join(indices).encode('utf-8')).hexdigest()
+            hashes.append(indices)
+
+        images_sums = np.array(images_sums).astype(int)
+        print("Sums:", images_sums)
+        assert images_sums.max() == images_sums.min(), "Images pixels sum must be equal despite shuffle"
+
+        hashes = np.array(hashes)
+
+        assert len(hashes) == len(np.unique(hashes)), "The probability to have two ID order after shuffle is very low!"

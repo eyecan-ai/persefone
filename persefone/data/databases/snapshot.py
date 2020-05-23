@@ -1,6 +1,7 @@
 from persefone.utils.configurations import XConfiguration
 from persefone.data.databases.utils import H5SimpleDatabaseUtils
 from persefone.data.databases.pandas import PandasDatabase
+from persefone.data.databases.readers import H5SimpleDataReader
 from persefone.utils.pyutils import get_arg
 from schema import Schema, And, Or, Optional
 from pathlib import Path
@@ -24,7 +25,12 @@ class SnapshotConfiguration(XConfiguration):
             # PIPELINE OBJECT
             Optional('operations'): [{str: Or(int, float, list, str)}],
             # SPLITS DICTIONARY
-            Optional('splits'): {str: Or(int, float)}
+            Optional('splits'): {str: Or(int, float)},
+            # READERS OPTIONS
+            Optional('readers'): {
+                'columns': Or(And(list, [str]), And(dict, {str: str})),
+                Optional('cache_enabled'): bool
+            }
         }))
 
 
@@ -117,6 +123,23 @@ class DatabaseSnapshot(object):
         :rtype: dict
         """
         return self.__output_database_dictionary
+
+    @property
+    def output_readers(self) -> dict:
+        """Builds a dictionary of H5SimpleDataReader mapping output PandasDatabase dictionary
+
+        :return: H5SimpleDataReader  dictionray
+        :rtype: H5SimpleDataReader
+        """
+        readers_output = {}
+        readers_enabled = 'readers' in self.params
+        if readers_enabled:
+            for output_name, database in self.output.items():
+                readers_output[output_name] = H5SimpleDataReader(
+                    database=database,
+                    columns=get_arg(self.params['readers'], 'columns', [])
+                )
+        return readers_output
 
     @property
     def database(self) -> PandasDatabase:

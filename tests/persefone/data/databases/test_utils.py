@@ -44,7 +44,7 @@ class TestH5SimpleDatabaseUtils(object):
 
         pandas_database = H5SimpleDatabaseUtils.h5files_to_pandas_database(temp_dataset_files_bunch, include_filenames=True)
         PandasDatabaseIO.save_csv(pandas_database, temp_tabular_file)
-
+        print("TABULAR FILE: ", temp_tabular_file)
         merged_database = PandasDatabaseIO.load_csv(temp_tabular_file)
 
         assert merged_database.size == cumulative_size, "Cumulative size is wrong!"

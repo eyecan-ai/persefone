@@ -330,13 +330,15 @@ class H5SimpleDatabase(H5Database):
 
         :param include_filename: TRUE to add special column pointing to original h5 filename, defaults to True
         :type include_filename: bool, optional
-        :return: pandas.DataFrame containing tabular data   
+        :return: pandas.DataFrame containing tabular data
         :rtype: pandas.DataFrame
         """
         if self.is_open():
             rows = []
-            for item in self:
-                row = dict(item.attrs)
+            for item_key in self.root:
+                item = self[item_key]
+                row = {}
+                row.update(item.attrs)
                 row['id'] = self._remove_root_item_from_key(item.name)
                 row[H5SimpleDatabase.DEFAULT_TABULAR_REFERENCE_TOKEN] = item.name
 

@@ -24,6 +24,9 @@ class PandasDatabase(object):
     def size(self):
         return len(self.data)
 
+    def __len__(self):
+        return len(self.data)
+
     @property
     def attrs(self):
         return self.data.attrs
@@ -320,6 +323,15 @@ class PandasDatabase(object):
         :rtype: PandasDatabase
         """
         return self + other
+
+    @property
+    def rows(self):
+        """Rows iterator
+
+        :return: Binds the pandas DataFrame rows iterator
+        :rtype: object
+        """
+        return self.data.iterrows()
 
     @classmethod
     def from_array(cls, array: list, attrs: dict = {}):

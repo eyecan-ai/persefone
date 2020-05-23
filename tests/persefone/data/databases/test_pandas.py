@@ -11,6 +11,13 @@ class TestPandasDatabase(object):
 
     @classmethod
     def _generate_item(cls, index):
+        """Generate a fake dict item used to emulate databases rows
+
+        :param index: unique identifier (e.g. progressive number)
+        :type index: int or str
+        :return: useless dictionary
+        :rtype: dict
+        """
         item = {
             'name': f'item_{index}',
             'a': index * 2 + 4.1454,
@@ -24,6 +31,13 @@ class TestPandasDatabase(object):
 
     @classmethod
     def _generate_items(cls, n):
+        """Generates a list of random dict items
+
+        :param n: number of elements
+        :type n: int
+        :return: list of random elements
+        :rtype: int
+        """
         items = []
         for i in range(n):
             items.append(cls._generate_item(i))
@@ -31,6 +45,15 @@ class TestPandasDatabase(object):
 
     @classmethod
     def _generate_random_database(cls, n=1000, index=None):
+        """Generates random PandasDatabase
+
+        :param n: number of elements to generate, defaults to 1000
+        :type n: int, optional
+        :param index: column index, defaults to None
+        :type index: object, optional
+        :return: generated PandasDatabase
+        :rtype: PandasDatabase
+        """
         fake_data_size = n
         items = TestPandasDatabase._generate_items(fake_data_size)
         if len(items) > 0:
@@ -43,7 +66,7 @@ class TestPandasDatabase(object):
             'attr3': [1, 2, 3.3]
         }
         if index is not None and len(items) > 0:
-            database.set_index('name')
+            database.set_index(index)
         return database
 
     @classmethod
@@ -141,6 +164,32 @@ class TestPandasDatabase(object):
                         pick_item = picked.data.iloc[0][column]
                         source_item = TestPandasDatabase._generate_item(picks)[column]
                         assert np.isclose(pick_item, source_item), f"Mismatch between DataFrame values and original "
+
+    def test_pandas_rows_iterator(self):
+        """Checks for slices single value consistency """
+        fake_data_size = 256
+        databases_runs = [
+            {'index_type': None, 'db': TestPandasDatabase._generate_random_database(fake_data_size, index=None)},
+            {'index_type': 'name', 'db': TestPandasDatabase._generate_random_database(fake_data_size, index='name')}
+        ]
+
+        for run in databases_runs:
+            database = run['db']
+            index_type = run['index_type']
+            rows_list = []
+            for index, row in database.data.iterrows():
+                rows_list.append(row)
+                if index_type is None:
+                    assert isinstance(index, int), "If not specified, index must be an integer"
+                else:
+                    assert isinstance(index, str), "If specified, index must be an string"
+                assert isinstance(row, pd.Series), "Row is not a series!"
+            assert len(rows_list) == database.size, "Size is wrong!"
+            assert len(rows_list) == len(database), "Size is wrong!"
+            for row in database.data.iterrows():
+                assert isinstance(row, tuple), "Simple iteration must returns tuples"
+
+            assert not database.has_duplicated_index(), "Duplicate indices not allowed here!"
 
     def test_pandas_database_slice_multple_values(self):
         """Checks for slices multiple values consistency """
