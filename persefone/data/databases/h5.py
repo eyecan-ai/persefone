@@ -4,10 +4,41 @@ from persefone.utils.filesystem import tree_from_underscore_notation_files, is_f
 from pathlib import Path
 import numpy as np
 import imageio
+from io import BytesIO
 import tqdm
 from types import SimpleNamespace
 import pandas as pd
 import uuid
+
+
+class DataCodec(object):
+
+    IMAGE_CODECS = ['jpg', 'jpeg', 'png', 'tiff', 'bmp']
+
+    @classmethod
+    def encode_image_to_bytes(cls, image_array, encoding='jpg'):
+        buff = BytesIO()
+        imageio.imwrite(buff, image_array, format=encoding)
+        return buff.getbuffer()
+
+    @classmethod
+    def decode_image_from_bytes(cls, buffer, encoding='jpg'):
+        buff = BytesIO(buffer)
+        return imageio.imread(buff.getbuffer(), format=encoding)
+
+    @classmethod
+    def encode_data_to_bytes(cls, array, encoding):
+        if encoding in DataCodec.IMAGE_CODECS:
+            return cls.encode_image_to_bytes(array, encoding=encoding)
+        else:
+            raise NotImplementedError(f"Unknown data encoder for: '{encoding}'")
+
+    @classmethod
+    def decode_data_from_bytes(cls, buffer, encoding):
+        if encoding in DataCodec.IMAGE_CODECS:
+            return cls.decode_image_from_bytes(buffer, encoding=encoding)
+        else:
+            raise NotImplementedError(f"Unknown data decoder for: '{encoding}'")
 
 
 class H5DatasetCompressionMethods(object):
@@ -165,6 +196,8 @@ class H5Database(object):
             if group is not None:
                 if name in group:
                     data = group[name]
+        else:
+            pass  # TODO: logging when file is closed!
         return data
 
     def create_data(self, group_key, name, shape, dtype=None, maxshape=None, compression=H5DatasetCompressionMethods.NONE) -> h5py.Dataset:
@@ -197,7 +230,85 @@ class H5Database(object):
                 compression=compression.name,
                 compression_opts=compression.opts
             )
+        else:
+            pass  # TODO: logging when file is closed!
         return data
+
+    def store_object(self, group_key, name, obj) -> h5py.Dataset:
+        """Stores generic object as dataset
+
+        :param group_key: group key
+        :type group_key: str
+        :param name: data name
+        :type name: str
+        :param obj: object to store. numpy array or byte array
+        :type obj: list / np.ndarray
+        :return: created h5py.Dataset
+        :rtype: h5py.Dataset
+        """
+        data = None
+        if self.is_open():
+            group = self.get_group(group_key, force_create=True)
+            group[name] = obj
+            data = group[name]
+        return data
+
+    def store_encoded_data(self, group_key, name, array, encoding):
+        """Stores encoded data array
+
+        :param group_key: group key
+        :type group_key: str
+        :param name: dataset name
+        :type name: str
+        :param array: plain array data
+        :type array: list or np.ndarray
+        :param encoding: encoder name [e.g. 'jpg']
+        :type encoding: str
+        """
+        data = self.store_object(
+            group_key,
+            name,
+            DataCodec.encode_data_to_bytes(array, encoding=encoding)
+        )
+        if data is not None:
+            data.attrs['_encoding'] = encoding
+
+    def is_encoded_data(self, group_key, name) -> bool:
+        """Checks if key/name is an encoded data database
+
+        :param group_key: group key
+        :type group_key: str
+        :param name: database name
+        :type name: str
+        :return: TRUE if database contains encoded data (it uses attrs schema to understand it)
+        :rtype: bool
+        """
+        data = self.get_data(group_key, name)
+        if data is not None:
+            if '_encoding' in data.attrs:
+                return True
+        return False
+
+    def load_encoded_data(self, group_key, name):
+        """Loads decoded data to array
+
+        :param group_key: group key
+        :type group_key: str
+        :param name: dataset name
+        :type name: str
+        :raises AttributeError: Raises AttributeError if dataset doesn't have 'encodings' attributes
+        :return: decoded data
+        :rtype: object
+        """
+        data = self.get_data(group_key, name)
+        if data is not None:
+            if self.is_encoded_data(group_key, name):
+                encoding = data.attrs['_encoding']
+                decoded_data = DataCodec.decode_data_from_bytes(data[...], encoding=encoding)
+                return decoded_data
+            else:
+                raise AttributeError(f'Encoding attribute is missing for {group_key}/{name}')
+        return None
 
 
 class H5DatabaseIO(object):

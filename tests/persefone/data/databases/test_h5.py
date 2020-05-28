@@ -53,6 +53,64 @@ class TestH5Database(object):
             }
         ]
 
+    @pytest.fixture(scope="session")
+    def sample_images(self):
+        return [
+            {
+                "name": 'rgb_u',
+                "shape": (512, 512, 3),
+                "dtype": np.uint8,
+                "range": [0, 255],
+                "expected_shape": (512, 512, 3),
+            },
+            {
+                "name": 'gray_u',
+                "shape": (512, 512),
+                "dtype": np.uint8,
+                "range": [0, 255],
+                "expected_shape": (512, 512),
+            },
+            {
+                "name": 'gray3_u',
+                "shape": (512, 512, 1),
+                "dtype": np.uint8,
+                "range": [0, 255],
+                "expected_shape": (512, 512),
+            },
+            {
+                "name": 'rgb_f',
+                "shape": (256, 512, 3),
+                "dtype": np.float32,
+                "range": [0, 1.0],
+                "expected_shape": (256, 512, 3),
+            },
+            {
+                "name": 'gray_f',
+                "shape": (256, 512),
+                "dtype": np.float32,
+                "range": [0, 1.0],
+                "expected_shape": (256, 512),
+            },
+            {
+                "name": 'gray3_f',
+                "shape": (256, 512, 1),
+                "dtype": np.float32,
+                "range": [0, 1.0],
+                "expected_shape": (256, 512),
+            },
+        ]
+
+    @pytest.fixture(scope="session")
+    def encodings(self):
+        return [
+            {"name": 'jpg', "valid": True},
+            {"name": 'jpeg', "valid": True},
+            {"name": 'png', "valid": True},
+            {"name": 'tiff', "valid": True},
+            {"name": 'bmp', "valid": True},
+            {"name": 'txt', "valid": False},
+        ]
+
     @classmethod
     def _generate_item(cls, index):
         return None
@@ -113,6 +171,70 @@ class TestH5Database(object):
                         data_retrieve = database.get_data(key, data_name)
                         assert data[...].shape == shape_random, f"Item Data '{data_name}' shape must be {shape}"
                         assert np.array_equal(random_data, data_retrieve[...]), "Retrieved data is different from original"
+
+    def test_h5_database_store_object(self, temp_dataset_file, sample_keys, sample_items):
+        print(temp_dataset_file)
+
+        database = H5Database(filename=temp_dataset_file, readonly=False)
+        with database:
+            for key in sample_keys:
+                key = H5Database.purge_key(key)
+                print(f"Testing Key:{key}, {H5Database.purge_key(key)}")
+                group = database.get_group(key, force_create=True)
+                assert group is not None, f"Group '{key}' must be not None"
+
+                for item in sample_items:
+
+                    data_name = item['name']
+                    shape = item['shape']
+                    dtype = item['dtype']
+
+                    print(f"Testing Data:{data_name}")
+                    data = database.get_data(key, data_name)
+                    assert data is None, f"Item Data '{data_name}' must be None"
+
+                    # Fill / Fetch
+                    random_data = np.random.randint(0, 255, shape).astype(dtype)
+                    data = database.store_object(key, data_name, random_data)
+                    assert not database.is_encoded_data(key, data_name), "Database must be recognized as plain data!"
+                    assert data is not None, f"Item Data '{data_name}' must be not None"
+                    assert data.shape == shape, f"Item Data '{data_name}' shape must be {shape}"
+
+                    data_retrieve = database.get_data(key, data_name)
+                    assert np.array_equal(random_data, data_retrieve[...]), "Retrieved data is different from original"
+
+    def test_h5_database_images(self, temp_dataset_file, sample_keys, sample_images, encodings):
+        print(temp_dataset_file)
+
+        database = H5Database(filename=temp_dataset_file, readonly=False)
+        with database:
+            for key in sample_keys:
+                key = H5Database.purge_key(key)
+                print(f"Testing Key:{key}, {H5Database.purge_key(key)}")
+                group = database.get_group(key, force_create=True)
+                assert group is not None, f"Group '{key}' must be not None"
+
+                for sample in sample_images:
+
+                    name = sample['name']
+                    image = np.random.uniform(low=sample['range'][0], high=sample['range'][1], size=sample['shape']).astype(sample['dtype'])
+
+                    for encoding_item in encodings:
+                        encoding = encoding_item['name']
+                        encoding_valid = encoding_item['valid']
+
+                        full_name = f'{name}_{encoding}'
+
+                        if encoding_valid:
+                            database.store_encoded_data(key, full_name, image, encoding=encoding)
+                            assert database.is_encoded_data(key, full_name), "Database must be recognized as encoded data!"
+                            reloaded_image = database.load_encoded_data(key, full_name)
+
+                            assert reloaded_image.shape == sample['expected_shape'], "Decoded image shape is wrong!"
+                            print(f"Encoding: {encoding}", full_name, "\t", image.shape, image.dtype, " -> ", reloaded_image.shape, "/", sample['expected_shape'], reloaded_image.dtype)
+                        else:
+                            with pytest.raises(NotImplementedError):
+                                database.store_encoded_data(key, full_name, image, encoding=encoding)
 
 
 class TestH5DatabaseIO(object):

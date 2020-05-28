@@ -85,7 +85,7 @@ class AlbumentationTransformsFactory(object):
     @classmethod
     def _build_rotate_transform(cls, **params):
         return A.Rotate(
-            limit=get_arg(params, 'limit', [-180, 180]),
+            limit=get_arg(params, 'limit', [-45, 45]),
             interpolation=cls._get_interpolation_value(get_arg(params, 'interpolation', 'none')),
             border_mode=cls._get_borders_value(get_arg(params, 'border_mode', 'constant')),
             value=get_arg(params, 'value', 0),
@@ -108,7 +108,7 @@ class AlbumentationTransformsFactory(object):
 
     @classmethod
     def _build_random_crop_transform(cls, **params):
-        size = get_arg(params, 'size', [50, 50])
+        size = get_arg(params, 'size', [64, 64])
         return A.RandomCrop(
             height=size[1],
             width=size[0],
@@ -119,19 +119,19 @@ class AlbumentationTransformsFactory(object):
     @classmethod
     def _build_random_brightness_contrast(cls, **params):
         return A.RandomBrightnessContrast(
-            brightness_limit=get_arg(params, 'brightness', 0.2),
-            contrast_limit=get_arg(params, 'contrast', 0.1),
+            brightness_limit=get_arg(params, 'brightness', 0.0),
+            contrast_limit=get_arg(params, 'contrast', 0.0),
             brightness_by_max=get_arg(params, 'brighntess_by_max', True),
             always_apply=get_arg(params, 'always_apply', True),
             p=get_arg(params, 'p', 1.0)
         )
 
     @classmethod
-    def _build_random_hsv(cls, **params):
+    def _build_random_hsv(cls, **params):  # TODO: hue/sat/val values in albumentations are in [0,255] range, bad!
         return A.HueSaturationValue(
-            hue_shift_limit=get_arg(params, 'hue_shift_limit', 0.1),
-            sat_shift_limit=get_arg(params, 'sat_shift_limit', 0.1),
-            val_shift_limit=get_arg(params, 'val_shift_limit', 0.1),
+            hue_shift_limit=get_arg(params, 'hue_shift_limit', 0.0),
+            sat_shift_limit=get_arg(params, 'sat_shift_limit', 0.0),
+            val_shift_limit=get_arg(params, 'val_shift_limit', 0.0),
             always_apply=get_arg(params, 'always_apply', True),
             p=get_arg(params, 'p', 1.0)
         )
@@ -139,9 +139,9 @@ class AlbumentationTransformsFactory(object):
     @classmethod
     def _build_random_shift_scale_rotate(cls, **params):
         return A.ShiftScaleRotate(
-            shift_limit=get_arg(params, 'shift_limit', 0.1),
-            scale_limit=get_arg(params, 'scale_limit', 0.1),
-            rotate_limit=get_arg(params, 'rotate_limit', 5),
+            shift_limit=get_arg(params, 'shift_limit', 0.0),
+            scale_limit=get_arg(params, 'scale_limit', 0.0),
+            rotate_limit=get_arg(params, 'rotate_limit', 0),
             interpolation=cls._get_interpolation_value(get_arg(params, 'interpolation', 'linear')),
             border_mode=cls._get_borders_value(get_arg(params, 'border_mode', 'replicate')),
             value=get_arg(params, 'value', 0),
