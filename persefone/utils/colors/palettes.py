@@ -5,7 +5,7 @@ from persefone.utils.colors.color import Color
 
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 _logger = logging.getLogger()
 
 

@@ -21,3 +21,4 @@ h5py==2.10.0
 Click==7.0
 schema==0.7.2
 python-box==4.2.3
+Pillow==7.1.2

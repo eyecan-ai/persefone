@@ -29,7 +29,8 @@ class TestH5SimpleDatabaseUtils(object):
                 h5file=temp_dataset_file,
                 folder=minimnist_folder,
                 root_item='_items',
-                uuid_keys=True
+                uuid_keys=True,
+                root_metadata={'root_item': '_items'},
             )
             print(temp_dataset_file)
 

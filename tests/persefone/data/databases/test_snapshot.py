@@ -1,5 +1,5 @@
 from persefone.utils.pyutils import get_arg
-from persefone.data.databases.h5 import H5DatabaseIO
+from persefone.data.databases.h5 import H5DatabaseIO, H5SimpleDatabase
 from persefone.data.databases.snapshot import SnapshotConfiguration, DatabaseSnapshot
 from persefone.utils.configurations import XConfiguration
 import pytest
@@ -8,6 +8,7 @@ import schema
 import hashlib
 import numpy as np
 
+SNAPSHOT_TEST_ROOT_KEYS = ['_items', 'miao', '/']
 SNAPSHOT_TEST_CONFIGURATIONS = [
     #  TEST FULL ARGUMENTS
     ({
@@ -224,15 +225,17 @@ class TestDatabaseSnapshot(object):
         fn = tmpdir_factory.mktemp("data").join("configuration.yml")
         return fn
 
+    @pytest.mark.parametrize("root_item", SNAPSHOT_TEST_ROOT_KEYS)
     @pytest.mark.parametrize("cfg, expectations", SNAPSHOT_TEST_CONFIGURATIONS)
-    def test_simple(self, cfg, expectations, temp_dataset_files_bunch, minimnist_folder, temp_yaml_file):
+    def test_snapshots_creation(self, root_item, cfg, expectations, temp_dataset_files_bunch, minimnist_folder, temp_yaml_file):
 
         for source in temp_dataset_files_bunch:
             H5DatabaseIO.generate_from_folder(
                 h5file=source,
                 folder=minimnist_folder,
-                root_item='_items',
-                uuid_keys=True
+                root_item=root_item,
+                uuid_keys=True,
+                root_metadata={'root_item': root_item}
             )
 
         # Set corresponding h5 files in the configuration
@@ -294,15 +297,17 @@ class TestDatabaseSnapshot(object):
             assert output_name == cfg['name'], "Snapshot name is wrong!"
             assert output_name == snapshot.name, "Snapshot name is wrong!"
 
+    @pytest.mark.parametrize("root_item", SNAPSHOT_TEST_ROOT_KEYS)
     @pytest.mark.parametrize("cfg, expectations", SNAPSHOT_WITH_READERS_TEST_CONFIGURATIONS)
-    def test_readers(self, cfg, expectations, temp_dataset_files_bunch, minimnist_folder, temp_yaml_file):
+    def test_readers(self, root_item, cfg, expectations, temp_dataset_files_bunch, minimnist_folder, temp_yaml_file):
 
         for source in temp_dataset_files_bunch:
             H5DatabaseIO.generate_from_folder(
                 h5file=source,
                 folder=minimnist_folder,
-                root_item='_items',
-                uuid_keys=True
+                root_item=root_item,
+                uuid_keys=True,
+                root_metadata={'root_item': root_item}
             )
 
         # Set corresponding h5 files in the configuration
@@ -366,7 +371,8 @@ class TestDatabaseSnapshot(object):
                 h5file=source,
                 folder=minimnist_folder,
                 root_item='_items',
-                uuid_keys=True
+                uuid_keys=True,
+                root_metadata={'root_item': '_items'}
             )
             print("H5 File", source)
 

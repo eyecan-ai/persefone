@@ -1,4 +1,5 @@
 from persefone.data.databases.h5 import H5SimpleDatabase
+from pathlib import Path
 
 
 class DataReader(object):
@@ -86,6 +87,28 @@ class H5SimpleDataReader(DataReader):
     def cache_enabled(self):
         return self.__cache_enabled
 
+    def _parse_reference(self, reference):
+        """Splits 'reference' to (group_key, database_name) for data retrieval
+
+        :param reference: unique POSIX-like reference string
+        :type reference: str
+        :return: tuple with (group_key, database_name)
+        :rtype: tuple
+        """
+        reference_as_path = Path(reference)
+        group_key = str(reference_as_path.parent)
+        database_name = str(reference_as_path.name)
+        return group_key, database_name
+
+    def _get_h5_database(self, filename):
+        if self.cache_enabled:
+            if filename not in self.__filenames_cache:
+                self.__filenames_cache[filename] = H5SimpleDatabase(filename=filename, readonly=True)
+                self.__filenames_cache[filename].open()
+            return self.__filenames_cache[filename]
+        else:
+            return H5SimpleDatabase(filename=filename, readonly=True)
+
     def _get_h5_resource(self, filename, reference):
         """Loads a h5py file resource by reference string
 
@@ -96,17 +119,50 @@ class H5SimpleDataReader(DataReader):
         :return: generic loaded data
         :rtype: np.ndarray
         """
-        database = H5SimpleDatabase(filename=filename, readonly=True)
+        database = self._get_h5_database(filename)
         data = None
-        if self.cache_enabled:
-            if filename not in self.__filenames_cache:
-                self.__filenames_cache[filename] = database
-                self.__filenames_cache[filename].open()
-            data = self.__filenames_cache[filename][reference][...]
+        group_key, database_name = self._parse_reference(reference)
+
+        # Open Database if not caching
+        if not self.cache_enabled:
+            database.open()
+
+        if database.is_encoded_data(group_key, database_name):
+            data = database.load_encoded_data(group_key, database_name)
         else:
-            with database:
-                data = database[reference][...]
+            data = database.get_data(group_key, database_name)[...]
+
+        # Close Database if not caching
+        if not self.cache_enabled:
+            database.close()
+
         return data
+
+    # def _get_h5_resource_encoding(self, filename, reference):
+    #     """Loads a h5py file resource econding string by reference string
+
+    #     : param filename: h5 filename
+    #     : type filename: str
+    #     : param reference: reference path
+    #     : type reference: str
+    #     : return: generic loaded data
+    #     : rtype: np.ndarray
+    #     """
+    #     database = self._get_h5_database(filename)
+    #     encoding = None
+    #     group_key, database_name = self._parse_reference(reference)
+
+    #     # Open Database if not caching
+    #     if not self.cache_enabled:
+    #         database.open()
+
+    #     encoding = database.get_data_encoding()
+
+    #     # Close Database if not caching
+    #     if not self.cache_enabled:
+    #         database.close()
+
+    #     return encoding
 
     def close(self):
         for filename, database in self.__filenames_cache.items():

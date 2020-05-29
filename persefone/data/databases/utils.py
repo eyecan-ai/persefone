@@ -12,7 +12,7 @@ class H5SimpleDatabaseUtils(object):
         :type h5files: list
         :param include_filenames: TRUE to add column with reference hdf5 filename, defaults to True
         :type include_filenames: bool, optional
-        :return: tabular representation of multiple H5SimpleDatabase with single PandasDatabase 
+        :return: tabular representation of multiple H5SimpleDatabase with single PandasDatabase
         :rtype: PandasDatabase
         """
         merged_database = PandasDatabase()

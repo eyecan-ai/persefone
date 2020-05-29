@@ -1,7 +1,6 @@
 import pytest
 import numpy as np
 from persefone.utils.datasets.fake import FakeDatasetGenerator
-from PIL import Image
 
 
 @pytest.mark.utils_datasets_fake
@@ -52,6 +51,6 @@ class TestFakeDatasetGenerator(object):
             assert len(data['keypoints']) == OBJ_N * 3, "Keypoints shape is wrong"
             assert len(data['keypoints'][0]) == 6, " Keypoint shape is wrong"
 
-            Image.fromarray(data['rgb']).save('/tmp/rgb.png')
-            Image.fromarray((255. * data['mask'] / data['mask'].max()).astype(np.uint8)).save('/tmp/mask.png')
-            Image.fromarray((255. * data['instances'] / data['instances'].max()).astype(np.uint8)).save('/tmp/instances.png')
+            # Image.fromarray(data['rgb']).save('/tmp/rgb.png')
+            #Image.fromarray((255. * data['mask'] / data['mask'].max()).astype(np.uint8)).save('/tmp/mask.png')
+            #Image.fromarray((255. * data['instances'] / data['instances'].max()).astype(np.uint8)).save('/tmp/instances.png')

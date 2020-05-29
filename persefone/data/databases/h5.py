@@ -283,11 +283,23 @@ class H5Database(object):
         :return: TRUE if database contains encoded data (it uses attrs schema to understand it)
         :rtype: bool
         """
+        return self.get_data_encoding(group_key, name) is not None
+
+    def get_data_encoding(self, group_key, name) -> str:
+        """Gets data encoding if any, otherwise returns None
+
+        :param group_key: group key
+        :type group_key: str
+        :param name: database name
+        :type name: str
+        :return: encoding string if any, otherwise None
+        :rtype: str
+        """
         data = self.get_data(group_key, name)
         if data is not None:
             if '_encoding' in data.attrs:
-                return True
-        return False
+                return data.attrs['_encoding']
+        return None
 
     def load_encoded_data(self, group_key, name):
         """Loads decoded data to array
@@ -302,8 +314,8 @@ class H5Database(object):
         """
         data = self.get_data(group_key, name)
         if data is not None:
-            if self.is_encoded_data(group_key, name):
-                encoding = data.attrs['_encoding']
+            encoding = self.get_data_encoding(group_key, name)
+            if encoding is not None:
                 decoded_data = DataCodec.decode_data_from_bytes(data[...], encoding=encoding)
                 return decoded_data
             else:
@@ -326,16 +338,28 @@ class H5DatabaseIO(object):
         """
         database = H5Database(filename=h5file, readonly=False, **kwargs)
 
+        # Compression schema
         compression = get_arg(kwargs, "compression", default=H5DatasetCompressionMethods.NONE.name)
         compression_opts = get_arg(kwargs, "compression_opts", default=H5DatasetCompressionMethods.NONE.opts)
         compression_method = SimpleNamespace(name=compression, opts=compression_opts)
 
+        # Root item to use as prefix for each key
         root_item = get_arg(kwargs, "root_item", '/')
         root_item = H5Database.purge_root_item(root_item)
 
+        # Root metadata to add on root Attrs
+        root_metadata = get_arg(kwargs, "root_metadata", {})
+
+        # Use unique UUID keys for items
         uuid_keys = get_arg(kwargs, "uuid_keys", False)
 
+        # Image compression tags. E.g. with "{'image':'jpg'}" every item with 'image' in name
+        # will be stored as jpeg encoded byte array
+        image_compression_tags = get_arg(kwargs, "image_compression_tags", {})
+
         with database:
+            database.handle.attrs.update(root_metadata)
+
             tree = tree_from_underscore_notation_files(folder)
             counter = 0
             for key, slots in tqdm.tqdm(tree.items()):
@@ -348,14 +372,24 @@ class H5DatabaseIO(object):
                 for item_name, filename in slots.items():
                     loaded_data = cls.load_data_from_file(filename)
                     if loaded_data is not None:
-                        data = database.create_data(
-                            key,
-                            item_name,
-                            loaded_data.shape,
-                            loaded_data.dtype,
-                            compression=compression_method
-                        )
-                        data[...] = loaded_data
+                        # Compress Image data if item name has a compression tag
+                        if item_name in image_compression_tags.keys():
+                            encoding = image_compression_tags[item_name]
+                            database.store_encoded_data(
+                                key,
+                                item_name,
+                                loaded_data,
+                                encoding
+                            )
+                        else:
+                            data = database.create_data(
+                                key,
+                                item_name,
+                                loaded_data.shape,
+                                loaded_data.dtype,
+                                compression=compression_method
+                            )
+                            data[...] = loaded_data
                 counter += 1
 
         return database
@@ -392,7 +426,15 @@ class H5SimpleDatabase(H5Database):
 
     def __init__(self, filename, **kwargs):
         H5Database.__init__(self, filename=filename, **kwargs)
-        self.__root_item = get_arg(kwargs, 'root_item', H5SimpleDatabase.DEFAULT_ROOT_ITEM)
+
+        # If ReadOnly reads ROOT_ITEM from / attributes
+        if self.readonly:
+            self.open()
+            if 'root_item' in self.handle.attrs:
+                self.__root_item = self.handle.attrs['root_item']
+            self.close()
+        else:
+            self.__root_item = get_arg(kwargs, 'root_item', H5SimpleDatabase.DEFAULT_ROOT_ITEM)
         self.__root_item = H5SimpleDatabase.purge_root_item(self.__root_item)
 
     @property

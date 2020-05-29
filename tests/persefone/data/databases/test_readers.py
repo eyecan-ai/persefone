@@ -1,5 +1,5 @@
 from persefone.utils.pyutils import get_arg
-from persefone.data.databases.h5 import H5DatabaseIO
+from persefone.data.databases.h5 import H5DatabaseIO, H5SimpleDatabase
 from persefone.data.databases.readers import H5SimpleDataReader
 from persefone.data.databases.snapshot import SnapshotConfiguration, DatabaseSnapshot
 from persefone.utils.configurations import XConfiguration
@@ -7,7 +7,12 @@ import pytest
 from pathlib import Path
 import numpy as np
 
-
+READERS_TEST_ROOT_KEYS = ['_items']
+READERS_TEST_ENCODINGS_TAGS = [
+    {},
+    {'image': 'jpg', 'image_mask': 'png', 'image_maskinv': 'tiff'},
+    {'image': 'bmp', 'image_mask': 'jpg', 'image_maskinv': 'jpg'},
+]
 READERS_TEST_CONFIGURATIONS = [
     #  TEST FULL ARGUMENTS
     ({
@@ -30,6 +35,7 @@ READERS_TEST_CONFIGURATIONS = [
     }, {
         'valid': True,
         'expected_size': 16,
+        'images_shapes': {'image': (28, 28, 3)},
         'keys_equality': False
     }),
 
@@ -51,6 +57,7 @@ READERS_TEST_CONFIGURATIONS = [
     }, {
         'valid': True,
         'expected_size': 80,
+        'images_shapes': {'image': (28, 28, 3)},
         'keys_equality': True
     }),
 ]
@@ -72,17 +79,21 @@ class TestH5SimpleDataReader(object):
         fn = tmpdir_factory.mktemp("data").join("configuration.yml")
         return fn
 
+    @pytest.mark.parametrize("root_item", READERS_TEST_ROOT_KEYS)
+    @pytest.mark.parametrize("encodings_tags", READERS_TEST_ENCODINGS_TAGS)
     @pytest.mark.parametrize("cfg, expectations", READERS_TEST_CONFIGURATIONS)
-    def test_simple(self, cfg, expectations, temp_dataset_files_bunch, minimnist_folder, temp_yaml_file):
+    def test_h5_simple_data_reader(self, root_item, encodings_tags, cfg, expectations, temp_dataset_files_bunch, minimnist_folder, temp_yaml_file):
 
         for source in temp_dataset_files_bunch:
             H5DatabaseIO.generate_from_folder(
                 h5file=source,
                 folder=minimnist_folder,
-                root_item='_items',
-                uuid_keys=True
+                root_item=root_item,
+                uuid_keys=True,
+                root_metadata={'root_item': root_item},
+                image_compression_tags=encodings_tags
             )
-            print("H5 File", source)
+            print(encodings_tags, "H5 File", source)
 
         # Set corresponding h5 files in the configuration
         cfg['sources'] = [str(x) for x in temp_dataset_files_bunch]
@@ -142,7 +153,13 @@ class TestH5SimpleDataReader(object):
                             if col.startswith(H5SimpleDataReader.REFERENCE_PREFIX):
                                 simple_col = col.replace(H5SimpleDataReader.REFERENCE_PREFIX, '', 1)
                                 assert simple_col in item, f"key[REF] {simple_col} is missing!"
-                                assert isinstance(item[simple_col], np.ndarray), "Data is not a Numpy array!"
+                                assert isinstance(item[simple_col], np.ndarray), f"Data is not a Numpy array, but {type(item[simple_col])}!"
+
+                                images_shapes = expectations['images_shapes']
+
+                                if simple_col in images_shapes:
+                                    assert item[simple_col].shape == images_shapes[simple_col], f"Shape of '{simple_col}' is wrong!"
+                                #print("SHAPE " * 10, simple_col, item[simple_col].shape)
                             else:
                                 assert col in item, f"key {col} is missing!"
 

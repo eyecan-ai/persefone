@@ -331,7 +331,8 @@ class TestH5SimpleDatabase(object):
             H5DatabaseIO.generate_from_folder(
                 h5file=temp_dataset_file,
                 folder=minimnist_folder,
-                root_item=root_item
+                root_item=root_item,
+                root_metadata={'root_item': root_item}
             )
 
             simple_database = H5SimpleDatabase(filename=temp_dataset_file, root_item=root_item)
