@@ -30,7 +30,7 @@ setup(
         ],
     },
     install_requires=requirements,
-    long_description=readme + '\n\n' + history,
+    long_description=readme,
     include_package_data=True,
     keywords='persefone',
     name='persefone',
