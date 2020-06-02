@@ -1,0 +1,28 @@
+# inputs
+inputs:
+        image: {}
+        mask: {}
+        masks: {}
+# transforms
+transforms:
+        - pytorch.to_tensor:
+                  in_type: np.uint8
+                  in_range: [0, 255]
+                  out_type: torch.float32
+                  out_range: [0., 1.]
+                  always_apply: True
+                  p: 0.4
+        - pytorch.to_tensor:
+                  in_type: np.float32
+                  in_range: [0., 1.]
+                  out_type: torch.float64
+                  out_range: [-1., 1.]
+                  always_apply: True
+                  p: 0.5
+        - pytorch.to_tensor:
+                  in_type: np.uint8
+                  in_range: [0, 255]
+                  out_type: torch.int16
+                  out_range: [0., 1000]
+                  always_apply: True
+                  p: 0.3

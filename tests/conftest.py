@@ -11,3 +11,9 @@ def minimnist_folder():
 def configurations_folder():
     import pathlib
     return pathlib.Path(__file__).parent / 'sample_data/configurations/'
+
+
+@pytest.fixture()
+def augmentations_folder():
+    import pathlib
+    return pathlib.Path(__file__).parent / 'sample_data/augmentations'

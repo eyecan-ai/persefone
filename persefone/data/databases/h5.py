@@ -428,12 +428,14 @@ class H5SimpleDatabase(H5Database):
         H5Database.__init__(self, filename=filename, **kwargs)
 
         # If ReadOnly reads ROOT_ITEM from / attributes
+        self.__root_item = None
         if self.readonly:
             self.open()
             if 'root_item' in self.handle.attrs:
                 self.__root_item = self.handle.attrs['root_item']
             self.close()
-        else:
+
+        if self.__root_item is None:
             self.__root_item = get_arg(kwargs, 'root_item', H5SimpleDatabase.DEFAULT_ROOT_ITEM)
         self.__root_item = H5SimpleDatabase.purge_root_item(self.__root_item)
 

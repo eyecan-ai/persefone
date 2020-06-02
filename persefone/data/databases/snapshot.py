@@ -69,7 +69,7 @@ class DatabaseSnapshot(object):
             self.__applies_operations(operations)
 
             splits = get_arg(self.params, "splits", None)
-            self.__has_splits = splits != None
+            self.__has_splits = splits is not None
             self.__output_database_dictionary = self.__compute_splits(splits)
 
     @property

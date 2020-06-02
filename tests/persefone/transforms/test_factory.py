@@ -1,15 +1,11 @@
 import pytest
 from persefone.transforms.factory import TransformsFactory, AlbumentationTransformsFactory
 import numpy as np
+import torch
 
 
 @pytest.mark.transforms
 class TestTransformsFactory(object):
-
-    @pytest.fixture
-    def augmentations_folder(self):
-        import pathlib
-        return pathlib.Path(__file__).parent / '../../sample_data/augmentations'
 
     @pytest.fixture(scope='session')
     def expected_transforms(self):
@@ -186,3 +182,103 @@ class TestTransformsFactory(object):
             for param, value in exp['params'].items():
                 assert param in t, f"T{idx}: Param {param} not found in transform {t}"
                 assert t[param] == value, f"T{idx}: {exp['name']}: Param {param}={t[param]} is wrong! Expected: {value}"
+
+
+@pytest.mark.transforms
+class TestPytorchTransformsFactory(object):
+
+    @pytest.fixture(scope='session')
+    def expected_transforms(self):
+
+        return [
+            {
+                'name': 'persefone.transforms.pytorch.ToTensorExtended',
+                'params': {
+                    'in_type': np.uint8,
+                    'in_range': [0, 255],
+                    'out_type': torch.float32,
+                    'out_range': [0, 1.],
+                    'always_apply': True,
+                    'p': 0.4
+                }
+            },
+            {
+                'name': 'persefone.transforms.pytorch.ToTensorExtended',
+                'params': {
+                    'in_type': np.float32,
+                    'in_range': [0., 1.],
+                    'out_type': torch.float64,
+                    'out_range': [-1, 1.],
+                    'always_apply': True,
+                    'p': 0.5
+                }
+            },
+            {
+                'name': 'persefone.transforms.pytorch.ToTensorExtended',
+                'params': {
+                    'in_type': np.uint8,
+                    'in_range': [0, 255],
+                    'out_type': torch.int16,
+                    'out_range': [0, 1000],
+                    'always_apply': True,
+                    'p': 0.3
+                }
+            },
+        ]
+
+    def _compare_param(self, p1, p2):
+        if isinstance(p1, list) or isinstance(p1, tuple):
+            return np.all(np.isclose(np.array(p1), np.array(p2)))
+        else:
+            return p1 == p2
+
+    def test_load_full_configuration_sample(self, augmentations_folder, expected_transforms):
+
+        cfg_file = augmentations_folder / 'pytorch_augmentations.yml'
+        composition = TransformsFactory.parse_file(cfg_file)
+        composition_dict = composition.get_dict_with_id()
+
+        # Check for composition consistency
+        assert 'transforms' in composition_dict, "composition dict is wrong!"
+        transforms = composition_dict['transforms']
+
+        # Creates Expected Transforms List. Has to match with YAML Configuration file list
+        name_field = '__class_fullname__'
+
+        # Check size of loaded transforms
+        assert len(expected_transforms) == len(transforms), \
+            f"Size mismatch! Expected transforms = {len(expected_transforms) }, Loaded transform = {len(transforms)}"
+
+        # Check each transform name/arguments
+        for idx, exp in enumerate(expected_transforms):
+            t = transforms[idx]
+            # print(t)
+            assert t[name_field] == exp['name'], f"Transform name {t[name_field]} is wrong! Expected: {exp['name']}"
+            for param, value in exp['params'].items():
+                assert param in t, f"Param {param} not found in transform {t}"
+                assert self._compare_param(t[param], value), f"{exp['name']}: Param {param}={t[param]} is wrong! Expected: {value}"
+
+    def test_data_consistency(self, augmentations_folder, expected_transforms):
+
+        cfg_file = augmentations_folder / 'pytorch_augmentations.yml'
+        composition = TransformsFactory.parse_file(cfg_file)
+
+        size = [256, 256, 3]
+        for idx, exp in enumerate(expected_transforms):
+            print(exp)
+            in_range = exp['params']['in_range']
+            in_type = exp['params']['in_type']
+            out_range = exp['params']['out_range']
+            out_type = exp['params']['out_type']
+            print("RANGE", in_range, in_type)
+
+            fake_image = np.random.uniform(low=in_range[0], high=in_range[1], size=size).astype(in_type)
+            transform = composition[idx]
+            t_image = transform(image=fake_image)['image']
+            assert isinstance(t_image, torch.Tensor), "Output is not a pytorch.Tensor!"
+            assert t_image.dtype == out_type, "Output type is wrong!"
+            assert t_image.max() <= out_range[1], "Output max is greater thant max range"
+            assert t_image.min() >= out_range[0], "Output max is greater thant max range"
+            print("MIN MAX", t_image.min(), t_image.max())
+
+        # TODO: a numeric consistency test is missing here. No check if out MAX/MIN is correct
