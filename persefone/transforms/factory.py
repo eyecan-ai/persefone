@@ -79,8 +79,7 @@ class TransformsFactory(object):
         return inputs
 
     @classmethod
-    def parse_file(cls, filename, raise_not_found_error=False):
-        cfg = yaml.safe_load(open(filename))
+    def parse_dict(cls, cfg, raise_not_found_error=False):
 
         inputs = cls._parse_inputs(cfg)
         inputs_set = set(inputs.keys())
@@ -113,3 +112,8 @@ class TransformsFactory(object):
         )
 
         return composition
+
+    @classmethod
+    def parse_file(cls, filename, raise_not_found_error=False):
+        cfg = yaml.safe_load(open(filename))
+        return cls.parse_dict(cfg, raise_not_found_error=raise_not_found_error)

@@ -134,10 +134,12 @@ class DatabaseSnapshot(object):
         readers_output = {}
         readers_enabled = 'readers' in self.params
         if readers_enabled:
+            cache_enabled = get_arg(self.params['readers'], 'cache_enabled', False)
             for output_name, database in self.output.items():
                 readers_output[output_name] = H5SimpleDataReader(
                     database=database,
-                    columns=get_arg(self.params['readers'], 'columns', [])
+                    columns=get_arg(self.params['readers'], 'columns', []),
+                    enable_cache=cache_enabled
                 )
         return readers_output
 
