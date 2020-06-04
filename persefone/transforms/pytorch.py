@@ -1,4 +1,3 @@
-#import albumentations.pytorch as APytorch
 from .base import AbstractFactory
 from persefone.utils.pyutils import get_arg
 import logging

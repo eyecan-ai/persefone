@@ -231,7 +231,12 @@ class TestH5Database(object):
                             reloaded_image = database.load_encoded_data(key, full_name)
 
                             assert reloaded_image.shape == sample['expected_shape'], "Decoded image shape is wrong!"
-                            print(f"Encoding: {encoding}", full_name, "\t", image.shape, image.dtype, " -> ", reloaded_image.shape, "/", sample['expected_shape'], reloaded_image.dtype)
+                            print(
+                                f"Encoding: {encoding}",
+                                full_name, "\t", image.shape, image.dtype,
+                                " -> ", reloaded_image.shape,
+                                "/", sample['expected_shape'], reloaded_image.dtype
+                            )
                         else:
                             with pytest.raises(NotImplementedError):
                                 database.store_encoded_data(key, full_name, image, encoding=encoding)

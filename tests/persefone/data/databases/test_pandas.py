@@ -571,8 +571,8 @@ class TestPandasDatabase(object):
             assert database1.query("oddity == 0").query("oddity == 1").size == 0, "Database must be empty!"
             assert database1.query("oddity == 1").query("oddity == 1").size == odds_count, "Database must be not empty!"
 
-            assert TestPandasDatabase._check_if_attrs_are_equal(database1, database1.query("oddity == 1")), "Attributes were lost after query!"
-            assert TestPandasDatabase._check_if_attrs_are_equal(database1, database1.query("oddity == 0")), "Attributes were lost after query!"
+            assert TestPandasDatabase._check_if_attrs_are_equal(database1, database1.query("oddity == 1")), "Attributes lost after query!"
+            assert TestPandasDatabase._check_if_attrs_are_equal(database1, database1.query("oddity == 0")), "Attributes lost after query!"
 
             assert database1.query("oddity > 1").size == 0, "Oddity cannot be > 1"
 
@@ -625,7 +625,10 @@ class TestPandasDatabaseIO(object):
             PandasDatabaseIO.load_pickle(str(dataset_file) + "_impossiblesuffix_")
 
         with pytest.raises(OSError):
-            database = PandasDatabaseGeneratorUnderscoreNotation.generate_from_folder(folder=str(minimnist_folder)+"IMPOSSIBLE_TAG#", columns_lambdas=columns_lambdas)
+            database = PandasDatabaseGeneratorUnderscoreNotation.generate_from_folder(
+                folder=str(minimnist_folder) + "IMPOSSIBLE_TAG#",
+                columns_lambdas=columns_lambdas
+            )
 
     def test_csv_io(self, dataset_file_csv, minimnist_folder):
 

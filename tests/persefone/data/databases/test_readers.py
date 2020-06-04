@@ -1,5 +1,5 @@
 from persefone.utils.pyutils import get_arg
-from persefone.data.databases.h5 import H5DatabaseIO, H5SimpleDatabase
+from persefone.data.databases.h5 import H5DatabaseIO
 from persefone.data.databases.readers import H5SimpleDataReader
 from persefone.data.databases.snapshot import SnapshotConfiguration, DatabaseSnapshot
 from persefone.utils.configurations import XConfiguration
@@ -82,7 +82,14 @@ class TestH5SimpleDataReader(object):
     @pytest.mark.parametrize("root_item", READERS_TEST_ROOT_KEYS)
     @pytest.mark.parametrize("encodings_tags", READERS_TEST_ENCODINGS_TAGS)
     @pytest.mark.parametrize("cfg, expectations", READERS_TEST_CONFIGURATIONS)
-    def test_h5_simple_data_reader(self, root_item, encodings_tags, cfg, expectations, temp_dataset_files_bunch, minimnist_folder, temp_yaml_file):
+    def test_h5_simple_data_reader(self,
+                                   root_item,
+                                   encodings_tags,
+                                   cfg,
+                                   expectations,
+                                   temp_dataset_files_bunch,
+                                   minimnist_folder,
+                                   temp_yaml_file):
 
         for source in temp_dataset_files_bunch:
             H5DatabaseIO.generate_from_folder(
@@ -159,7 +166,7 @@ class TestH5SimpleDataReader(object):
 
                                 if simple_col in images_shapes:
                                     assert item[simple_col].shape == images_shapes[simple_col], f"Shape of '{simple_col}' is wrong!"
-                                #print("SHAPE " * 10, simple_col, item[simple_col].shape)
+                                # print("SHAPE " * 10, simple_col, item[simple_col].shape)
                             else:
                                 assert col in item, f"key {col} is missing!"
 

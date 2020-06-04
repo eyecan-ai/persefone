@@ -271,8 +271,8 @@ class PandasDatabase(object):
         """
         if isinstance(idx, slice):
             if idx.start is not None and idx.stop is not None:
-                assert self.is_valid_index(idx.start), f"{self.__class__.__name__}.__getitem__: slice start {idx.start} must be in [0,size)"
-                assert self.is_valid_index(idx.stop - 1), f"{self.__class__.__name__}.__getitem__: slice stop {idx.stop} must be in [0,size)"
+                assert self.is_valid_index(idx.start), f"{self.__class__.__name__}.__getitem__: start {idx.start} must be in [0,size)"
+                assert self.is_valid_index(idx.stop - 1), f"{self.__class__.__name__}.__getitem__: stop {idx.stop} must be in [0,size)"
             sub = self.data[idx]  # .reset_index(drop=True)
             return PandasDatabase(data=sub, attrs=self.attrs)
         else:

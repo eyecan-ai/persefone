@@ -1,5 +1,5 @@
 from persefone.utils.pyutils import get_arg
-from persefone.data.databases.h5 import H5DatabaseIO, H5SimpleDatabase
+from persefone.data.databases.h5 import H5DatabaseIO
 from persefone.data.databases.snapshot import SnapshotConfiguration, DatabaseSnapshot
 from persefone.utils.configurations import XConfiguration
 import pytest
