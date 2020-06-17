@@ -1,0 +1,8 @@
+# inputs
+inputs:
+        image: {}
+        mask: {}
+        masks: {}
+# transforms
+transforms:
+        - pytorch.to_tensor: {}

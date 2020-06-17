@@ -282,3 +282,9 @@ class TestPytorchTransformsFactory(object):
             print("MIN MAX", t_image.min(), t_image.max())
 
         # TODO: a numeric consistency test is missing here. No check if out MAX/MIN is correct
+
+    def test_empty_transforms(self, augmentations_folder, expected_transforms):
+
+        cfg_file = augmentations_folder / 'pytorch_augmentations_empty.yml'
+        composition = TransformsFactory.parse_file(cfg_file)
+        print(composition)
