@@ -37,8 +37,9 @@ class TransformsFactory(object):
 
     @classmethod
     def _parse_item(cls, item: dict):
-        # assert len(item.keys()) == 1
+        assert len(item.keys()) == 1
         item_name = list(item.keys())[0]
+
         if '.' in item_name:
             namespace, name = item_name.split('.')
         else:
