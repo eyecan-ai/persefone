@@ -70,3 +70,8 @@ transforms:
                   mask_value: 155
                   always_apply: False
                   p: 0.10
+        - aug.normalize:
+                  mean: [0.5, 0.5, 0.3]
+                  std: [0.1, 0.1, 0.1]
+                  always_apply: False
+                  p: 0.4

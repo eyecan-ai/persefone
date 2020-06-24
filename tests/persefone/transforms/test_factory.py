@@ -84,6 +84,15 @@ class TestTransformsFactory(object):
                     'always_apply': False
                 }
             },
+            {
+                'name': 'albumentations.augmentations.transforms.Normalize',
+                'params': {
+                    'mean': (0.5, 0.5, 0.3),
+                    'std': (0.1, 0.1, 0.1),
+                    'always_apply': False,
+                    'p': 0.4
+                }
+            }
         ]
 
     def _compare_param(self, p1, p2):

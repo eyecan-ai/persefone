@@ -57,6 +57,7 @@ class AlbumentationTransformsFactory(AbstractFactory):
             'horizontal_flip': {'f': cls._build_horizontal_flip, 'targets': cls._targets_map()['spatial_full']},
             'vertical_flip': {'f': cls._build_vertical_flip, 'targets': cls._targets_map()['spatial_full']},
             'flip': {'f': cls._build_flip, 'targets': cls._targets_map()['spatial_full']},
+            'normalize': {'f': cls._build_normalize, 'targets':cls._targets_map()['spatial_full']}
         }
 
     @classmethod
@@ -167,6 +168,16 @@ class AlbumentationTransformsFactory(AbstractFactory):
     def _build_flip(cls, **params):
         return A.Flip(
             always_apply=get_arg(params, 'always_apply', True),
+            p=get_arg(params, 'p', 1.0)
+        )
+
+    @classmethod
+    def _build_normalize(cls, **params):
+        return A.Normalize(
+            mean=get_arg(params, 'mean', (0.485, 0.456, 0.406)),
+            std=get_arg(params, 'std', (0.229, 0.224, 0.225)),
+            max_pixel_value=get_arg(params, 'max_pixel_value', 255.0),
+            always_apply=get_arg(params, 'always_apply', False),
             p=get_arg(params, 'p', 1.0)
         )
 
