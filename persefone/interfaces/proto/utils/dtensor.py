@@ -2,6 +2,7 @@ from persefone.interfaces.proto.data_pb2 import DTensor, DShape, DType, DTensorB
 import persefone.interfaces.proto.data_pb2 as proto_data
 import numpy as np
 from typing import List, Tuple
+from numpy import ndarray
 
 
 class DTensorUtils(object):
@@ -73,11 +74,11 @@ class DTensorUtils(object):
         return DShape(dim=dims)
 
     @classmethod
-    def numpy_to_dtensor(cls, array: np.ndarray) -> DTensor:
+    def numpy_to_dtensor(cls, array: ndarray) -> DTensor:
         """ Converts generic numpy multidimensional array to protobuf DTensor
 
         :param array: source numpy array
-        :type array: np.ndarray
+        :type array: ndarray
         :return: corresponding DTensor object
         :rtype: DTensor
         """
@@ -90,13 +91,13 @@ class DTensorUtils(object):
         return dtensor
 
     @classmethod
-    def dtensor_to_numpy(cls, dtensor: DTensor) -> np.ndarray:
+    def dtensor_to_numpy(cls, dtensor: DTensor) -> ndarray:
         """ Converts protobuf DTensor object to numpy array
 
         :param dtensor: source DTensor
         :type dtensor: DTensor
         :return: corresponding numpy array
-        :rtype: np.ndarray
+        :rtype: ndarray
         """
 
         shape = dtensor.shape
@@ -110,11 +111,11 @@ class DTensorUtils(object):
         return array
 
     @classmethod
-    def numpy_to_dtensor_bundle(cls, arrays: List[np.ndarray], action: str) -> DTensorBundle:
+    def numpy_to_dtensor_bundle(cls, arrays: List[ndarray], action: str) -> DTensorBundle:
         """ Converst a list of numpy array, with an action string, to protobuf DTensorBundle
 
         :param arrays: source numpy arrays list
-        :type arrays: List[np.ndarray]
+        :type arrays: List[ndarray]
         :param action: generic action string
         :type action: str
         :return: corresponding protobuf DTensorBundle
@@ -131,13 +132,13 @@ class DTensorUtils(object):
         return bundle
 
     @classmethod
-    def dtensor_bundle_to_numpy(cls, bundle: DTensorBundle) -> Tuple[List[np.ndarray], str]:
+    def dtensor_bundle_to_numpy(cls, bundle: DTensorBundle) -> Tuple[List[ndarray], str]:
         """ Converts protobuf DTensorBundle to a list of numpy arrays with a generic action string
 
         :param bundle: source protobuf DTensorBundle
         :type bundle: DTensorBundle
         :return: tuple with (list of numpy arrays, action string)
-        :rtype: Tuple[List[np.ndarray], str]
+        :rtype: Tuple[List[ndarray], str]
         """
 
         arrays = []
