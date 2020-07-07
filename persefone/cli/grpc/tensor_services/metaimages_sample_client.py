@@ -15,12 +15,16 @@ def metaimages_client(**options):
     logging.basicConfig(level=logging.DEBUG if options.get('debug') else logging.WARNING)
 
     try:
+
+        # Creates client
         client = MetaImagesServiceClient(
             host=options.get('host'),
             port=options.get('port')
         )
 
+        # GRPC call
         reply_images, reply_action = client.send_meta_images([np.random.uniform(0, 1, (3, 255, 255))], {'a': 22.2})
+
         print(reply_action)
 
     except grpc.RpcError as e:
