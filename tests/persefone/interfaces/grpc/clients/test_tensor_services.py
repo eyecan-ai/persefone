@@ -113,7 +113,7 @@ class TestSimpleTensorServiceClient(object):
         mock_server.stop()
 
 
-class TestSimpleTensorServiceClient(object):
+class TestMetaImagesServiceClient(object):
 
     @pytest.fixture()
     def testing_images(self):
