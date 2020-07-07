@@ -4,6 +4,7 @@ import grpc
 import logging
 import click
 from persefone.utils.cli_options import cli_base_options, cli_host_options
+import cv2
 
 
 @click.command("Launch MetaImages Server")
@@ -17,9 +18,30 @@ def metaimages_server(**options):
     def tensor_callback(images, metadata):
         new_images = []
         for image in images:
-            new_images.append(image.T)
 
-        return new_images, {'status': 'ok', 'transposed_images': len(new_images)}
+            new_image = image.copy()
+
+            # apply rescale
+            scale_percent = metadata.get('scale_percent', 0.5)
+            if scale_percent > 0:
+                width = int(image.shape[1] * scale_percent)
+                height = int(image.shape[0] * scale_percent)
+                dim = (width, height)
+                new_image = cv2.resize(new_image, dim, interpolation=cv2.INTER_AREA)
+
+            # Apply transpose
+            transpose = metadata.get('transpose', True)
+            if transpose:
+                new_image = cv2.transpose(new_image)
+
+            new_images.append(new_image)
+
+        return new_images, {
+            'status': 'ok',
+            'transformed_images': len(new_images),
+            'scale_percent': scale_percent,
+            'transpose': transpose
+        }
 
     # Creates New MetaImages Server
     server = MetaImagesTensorServer(
