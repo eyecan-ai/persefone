@@ -48,7 +48,7 @@ class TestDatabaseTaskManager(object):
         assert len(tasks) == 2, "Wrong number of retrieved tasks!"  # READY TASK SHOULD BE ONLY 2
 
         target_task: MTask = tasks[0]
-        started_task = worker.start_task(target_task.name, input_payload={'start': True})
+        started_task = worker.start_task(target_task.name)
         assert started_task is not None, "Started task should be valid"
         with pytest.raises(PermissionError):
             creator.start_task(target_task.name)
