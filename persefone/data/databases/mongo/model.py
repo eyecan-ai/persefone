@@ -1,4 +1,9 @@
-from mongoengine.fields import EmbeddedDocument, Document, StringField, DictField, ListField, SortedListField, IntField, ReferenceField
+from mongoengine.fields import (
+    Document, StringField,
+    DictField, ListField,
+    IntField, ReferenceField, DateTimeField
+)
+from enum import IntEnum
 
 
 class MDatasetCategory(Document):
@@ -24,6 +29,7 @@ class MDataset(Document):
 class MResource(Document):
     """ Resource Model. Represents a resource endpoint for a MSample """
 
+    name = StringField()
     driver = StringField(required=True)
     uri = StringField(required=True)
 
@@ -48,4 +54,51 @@ class MItem(Document):
 
     sample = ReferenceField(MSample)
     name = StringField(required=True, unique_with='sample')
-    resources = ListField(ReferenceField(MResource), ordering='driver')
+    resources = ListField(ReferenceField(MResource), ordering='name')
+
+
+class MTaskStatus(IntEnum):
+    """ Available Task statuses """
+
+    READY = 0,
+    STARTED = 1,
+    WORKING = 2,
+    DONE = 3,
+    CANCELED = 4,
+    UNKNOWN = 1000
+
+
+class MTask(Document):
+    """ Task model representing a queue task with multiple producers/consumers access model """
+
+    source = StringField(required=True)
+    name = StringField(required=True, unique=True)
+    status = StringField(default=MTaskStatus.UNKNOWN.name)
+    created_on = DateTimeField()
+    start_time = DateTimeField()
+    end_time = DateTimeField()
+    priority = IntField(default=0)
+    input_payload = DictField(default={})
+    working_payload = DictField(default={})
+    output_payload = DictField(default={})
+
+
+class MModelCategory(Document):
+    """ Model Category model """
+
+    name = StringField(required=True, unique=True)
+    description = StringField()
+
+    def __str__(self) -> str:
+        return f"ModelCategory[{self.name}]"
+
+
+class MModel(Document):
+
+    name = StringField(required=True, unique=True)
+    category = ReferenceField(MModelCategory)
+    resources = ListField(ReferenceField(MResource), ordering='name')
+    datesets = ListField(ReferenceField(MDataset))
+
+    def __str__(self) -> str:
+        return f"MModel[{self.name=},{self.category=}]"

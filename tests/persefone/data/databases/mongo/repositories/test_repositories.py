@@ -1,23 +1,17 @@
 
 import numpy as np
 import pytest
-from mongoengine import connect
-from persefone.data.databases.mongo.model import MItem, MResource, MSample, MDataset, MDatasetCategory
+from persefone.data.databases.mongo.model import MItem, MResource, MSample, MDataset, MDatasetCategory, MModel, MModelCategory
 from persefone.data.databases.mongo.repositories import (RepositoryTestingData,
                                                          DatasetsRepository,
                                                          DatasetCategoryRepository,
                                                          SamplesRepository,
+                                                         ModelsRepository,
+                                                         ModelCategoryRepository,
                                                          ItemsRepository)
 
 
-class TestRepositories(object):
-
-    @pytest.fixture(scope='function')
-    def temp_database(self):
-        db_name = '##_temp_database_@@'
-        db = connect(db_name)
-        yield db
-        db.drop_database(db_name)
+class TestDatasetManagement(object):
 
     def _compare_dicts(self, d1: dict, d2: dict):
         for k, v in d1.items():
@@ -35,29 +29,48 @@ class TestRepositories(object):
         else:
             return p1 == p2
 
-    def test_repo(self, temp_database):
+    @pytest.mark.mongo_real_server  # EXECUTE ONLY IF --mongo_real_server option is passed
+    def test_real_database_data_creation(self, temp_mongo_database):
+        self._data_creation_on_active_dataset(temp_mongo_database)
 
-        n_categories = 3
-        n_datasets = 2
-        n_samples = 20
-        n_items = 5
+    def test_mock_database_data_creation(self, temp_mongo_mock_database):
+        self._data_creation_on_active_dataset(temp_mongo_mock_database)
+
+    # def test_real_database_data_and_keep_alive(self, temp_mongo_database_keep_alive):
+    #     self._data_creation_on_active_dataset(temp_mongo_database_keep_alive)
+
+    def _data_creation_on_active_dataset(self, database):
+
+        n_categories = 2
+        n_datasets = 4
+        n_samples = 10
+        n_items = 3
         n_resources = 2
+        n_models = 5
+        n_models_categories = 2
+        n_model_resources = 2
 
         RepositoryTestingData.generate_test_data(
             n_categories=n_categories,
             n_datasets=n_datasets,
             n_samples=n_samples,
             n_items=n_items,
-            n_resources=n_resources
+            n_resources=n_resources,
+            n_models_categories=n_models_categories,
+            n_models=n_models,
+            n_model_resources=n_model_resources
         )
 
+        created_datasets = []
         for dataset_idx in range(n_datasets):
 
             dataset: MDataset
 
             dataset_name = RepositoryTestingData.dataset_name(dataset_idx)
             dataset = DatasetsRepository.get_dataset(dataset_name)
+            created_datasets.append(dataset)
             assert dataset is not None, f"Dataset {dataset_name} not found!"
+            assert DatasetsRepository.new_dataset(dataset_name, dataset.category) is None, "No duplicate datasets allowed!"
 
             none_name = dataset_name + "_INP0SS1BLE!"
             dataset_none = DatasetsRepository.get_dataset(none_name)
@@ -92,12 +105,14 @@ class TestRepositories(object):
                     assert item.name == RepositoryTestingData.item_name(item_idx)
 
                     not_unique_item = ItemsRepository.new_item(sample, item.name)
-                    assert not_unique_item == None, "Not unique Item should be None after creation"
+                    assert not_unique_item is None, "Not unique Item should be None after creation"
 
                     resources = item.resources
                     assert len(resources) == n_resources, f"Number of resources is wrong! {len(resources)}/{n_resources}"
 
                     for resource in resources:
+
+                        assert ItemsRepository.create_item_resource(item, resource.name, '', '') is None, "Duplicate resource not allowed!"
 
                         resource: MResource
                         for resource_idx in range(n_resources):
@@ -105,6 +120,29 @@ class TestRepositories(object):
                             if resource.driver == driver_name:
                                 assert resource.uri == RepositoryTestingData.uri(item_idx, resource_idx)
 
-            print(len(dataset_samples))
+        assert len(created_datasets) == n_datasets, "Some dataset was lost!"
 
-        print("WOW"*20, RepositoryTestingData)
+        for model_idx in range(n_models):
+
+            model_name = RepositoryTestingData.model_name(model_idx)
+            model: MModel = ModelsRepository.get_model(model_name)
+            assert ModelsRepository.get_model(model_name + "!IMPOSSIBLE!!!") is None, "No model should be found!"
+            assert ModelsRepository.new_model(model.name, model.category) is None, "Duplicates models are not allowed!"
+            assert model is not None, "Model creation fails!"
+
+            model_category: MModelCategory = model.category
+            not_unique_category = ModelCategoryRepository.new_category(model_category.name)
+            assert not_unique_category == model_category, "New Not-unique category attempt should return conflicting category instead"
+
+            for r_dataset in model.datesets:
+                assert r_dataset in created_datasets, "Retrived Model>Dataset not found!"
+
+            for resource in model.resources:
+
+                assert ModelsRepository.create_model_resource(model, resource.name, '', '') is None, "Duplicate resource not allowed!"
+
+                resource: MResource
+                for resource_idx in range(n_model_resources):
+                    driver_name = RepositoryTestingData.driver_name(resource_idx)
+                    if resource.driver == driver_name:
+                        assert resource.uri == RepositoryTestingData.uri(model_idx, resource_idx)

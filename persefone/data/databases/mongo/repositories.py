@@ -1,10 +1,14 @@
 from mongoengine.errors import NotUniqueError, DoesNotExist
 from mongoengine.queryset.queryset import QuerySet
-from persefone.data.databases.mongo.model import MDataset, MDatasetCategory, MSample, MItem, MResource
-from typing import Union
+from persefone.data.databases.mongo.model import (
+    MDataset, MDatasetCategory, MSample,
+    MItem, MResource, MTask, MTaskStatus,
+    MModel, MModelCategory
+)
 import logging
-from typing import List, Union
+from typing import Union
 import math
+import datetime
 
 
 class DatasetCategoryRepository(object):
@@ -24,7 +28,7 @@ class DatasetCategoryRepository(object):
         try:
             category.save()
         except NotUniqueError as e:
-            logging.error(e)
+            logging.info(e)
             category = MDatasetCategory.objects.get(name=name)
         return category
 
@@ -75,8 +79,8 @@ class DatasetsRepository(object):
             dataset = MDataset(name=dataset_name, category=dataset_category)
             dataset.save()
         except NotUniqueError as e:
-            logging.error(e)
-            dataset = cls.get_dataset(dataset_name=dataset_name)
+            logging.info(e)
+            dataset = None  # cls.get_dataset(dataset_name=dataset_name)
 
         return dataset
 
@@ -126,7 +130,7 @@ class SamplesRepository(object):
             sample.save()
         except NotUniqueError as e:
             sample = None
-            logging.error(e)
+            logging.info(e)
         return sample
 
     @classmethod
@@ -161,7 +165,7 @@ class ItemsRepository(object):
             item.save()
         except NotUniqueError as e:
             item = None
-            logging.error(e)
+            logging.info(e)
         return item
 
     @classmethod
@@ -176,32 +180,41 @@ class ItemsRepository(object):
         return MItem.objects(sample=sample).order_by('+name')
 
     @classmethod
-    def create_item_resource(cls, item: MItem, driver: str, uri: str) -> MResource:
+    def create_item_resource(cls, item: MItem, name: str, driver: str, uri: str) -> Union[MResource, None]:
         """ Create a MResource associated with target MItem
 
         :param item: target MItem
         :type item: MItem
         :param driver: resource driver
         :type driver: str
+        :param name: resource name
+        :type name: str
         :param uri: resource uri
         :type uri: str
-        :return: created MResource
+        :return: created MResource, NONE if duplicate resource is present with the same name
         :rtype: MResource
         """
 
-        resource = ResourcesRepository._new_resource(driver=driver, uri=uri)
+        for r in item.resources:
+            if r.name == name:
+                return None
+
+        resource = ResourcesRepository._new_resource(name=name, driver=driver, uri=uri)
         item.resources.append(resource)
         item.save()
+        return resource
 
 
 class ResourcesRepository(object):
 
     @classmethod
-    def _new_resource(cls, driver: str, uri: str) -> MResource:
+    def _new_resource(cls, name: str, driver: str, uri: str) -> MResource:
         """ Creates a generic MResource. It is private outside Repositories realm.
         Only another Repository should create a MResource in order to avoid creation
         of orphans resoruces.
 
+        :param name: resource name
+        :type name: str
         :param driver: driver name
         :type driver: str
         :param uri: uri
@@ -210,20 +223,276 @@ class ResourcesRepository(object):
         :rtype: MResource
         """
 
-        resource = MResource(driver=driver, uri=uri)
+        resource = MResource(name=name, driver=driver, uri=uri)
         resource.save()
+        return resource
+
+
+class TasksRepository(object):
+
+    @classmethod
+    def new_task(cls, name: str, source: str, input_payload: dict = {}) -> MTask:
+        """ Creates new MTask object
+
+        :param name: target name
+        :type name: str
+        :param source: source name
+        :type source: str
+        :param input_payload: an input paylod to link with task, defaults to {}
+        :type input_payload: dict, optional
+        :return: stored MTask
+        :rtype: MTask
+        """
+
+        task = MTask(name=name, source=source)
+        task.created_on = datetime.datetime.now()
+        task.status = MTaskStatus.READY.name
+        task.input_payload = input_payload
+        task.save()
+        return task
+
+    @classmethod
+    def get_tasks(cls, status: Union[MTaskStatus, None] = None, last_first=True) -> QuerySet:
+        """ Retrieves tasks
+
+        :param status: retrievs only MTask s with target MTaskStatus, defaults to None
+        :type status: Union[MTaskStatus, None], optional
+        :param last_first: TRUE to order last task first, defaults to True
+        :type last_first: bool, optional
+        :return: associated QuerySet
+        :rtype: QuerySet
+        """
+
+        order_by = f'{"-" if last_first else "+"}created_on'
+
+        if status is None:
+            return MTask.objects().order_by(order_by)
+        else:
+            return MTask.objects(status=status.name).order_by(order_by)
+
+    @classmethod
+    def start_task(cls, task: MTask) -> Union[MTask, None]:
+        """ Start target MTask setting status to MTaskStatus.STARTED
+
+        :param task: target task
+        :type task: MTask
+        :return: the input task if starting is ok, NONE if start is not allowed
+        :rtype: Union[MTask, None]
+        """
+
+        if task.status == MTaskStatus.READY.name:
+            task.status = MTaskStatus.STARTED.name
+            task.start_time = datetime.datetime.now()
+            task.save()
+            return task
+        else:
+            return None
+
+    @classmethod
+    def work_on_task(cls, task: MTask, working_payload: dict = {}) -> Union[MTask, None]:
+        """ Work on target MTask setting status on MTaskStatus.WORKING
+
+        :param task: target MTask
+        :type task: MTask
+        :param working_payload: associated working metadata, defaults to {}
+        :type working_payload: dict, optional
+        :return: the input task if working is ok, NONE if working is not allowed
+        :rtype: Union[MTask, None]
+        """
+
+        good_statuses = [
+            MTaskStatus.STARTED.name,
+            MTaskStatus.WORKING.name
+        ]
+        if task.status in good_statuses:
+            task.status = MTaskStatus.WORKING.name
+            task.start_time = datetime.datetime.now()
+            task.working_payload = working_payload
+            task.save()
+            return task
+        else:
+            return None
+
+    @classmethod
+    def complete_task(cls, task: MTask, output_payload: dict = {}) -> Union[MTask, None]:
+        """ Completes target MTask setting status to MTaskStatus.DONE
+
+        :param task: target MTask
+        :type task: MTask
+        :param output_payload: complete task associated metadata, defaults to {}
+        :type output_payload: dict, optional
+        :return: the input task if complete is ok, NONE if complete is not allowed
+        :rtype: Union[MTask, None]
+        """
+
+        good_statuses = [
+            MTaskStatus.STARTED.name,
+            MTaskStatus.WORKING.name
+        ]
+        if task.status in good_statuses:
+            task.status = MTaskStatus.DONE.name
+            task.end_time = datetime.datetime.now()
+            task.output_payload = output_payload
+            task.save()
+            return task
+        else:
+            return None
+
+    @classmethod
+    def cancel_task(cls, task: MTask) -> Union[MTask, None]:
+        """ Cancel target MTask setting status to MTaskStatus.CANCELED
+
+        :param task: target MTask
+        :type task: MTask
+        :return:  the input task if complete is ok, NONE if cancel is not allowed
+        :rtype: Union[MTask, None]
+        """
+
+        good_statuses = [
+            MTaskStatus.READY.name,
+            MTaskStatus.STARTED.name,
+            MTaskStatus.WORKING.name
+        ]
+        if task.status in good_statuses:
+            task.status = MTaskStatus.CANCELED.name
+            task.end_time = datetime.datetime.now()
+            task.save()
+            return task
+        else:
+            return None
+
+
+class ModelCategoryRepository(object):
+
+    @classmethod
+    def new_category(cls, name, description='') -> MModelCategory:
+        """Creates MModelCategory
+
+        :param name: category name
+        :type name: str
+        :param description: category short description, defaults to ''
+        :type description: str, optional
+        :return: MModelCategory instance
+        :rtype: MModelCategory
+        """
+
+        category = MModelCategory(name=name, description=description)
+        try:
+            category.save()
+        except NotUniqueError as e:
+            logging.info(e)
+            category = MModelCategory.objects.get(name=name)
+        return category
+
+    @classmethod
+    def get_category(cls, name, create_if_none=True):
+        """Retrieves a MModelCategory object from database
+
+        :param name: category name
+        :type name: str
+        :param create_if_none: set TRUE to create category if not present, defaults to True
+        :type create_if_none: bool, optional
+        :return: MModelCategory instance
+        :rtype: MModelCategory
+        """
+
+        category = None
+        try:
+            category = MModelCategory.objects.get(name=name)
+        except DoesNotExist as e:
+            if create_if_none:
+                category = cls.new_category(name, description='')
+            else:
+                logging.error(e)
+        return category
+
+
+class ModelsRepository(object):
+
+    @classmethod
+    def new_model(cls, model_name: str, model_category: Union[str, MModelCategory]) -> MModel:
+        """ Creates new MModel
+
+        :param model_name: model name
+        :type model_name: str
+        :param model_category: model category (string value or reference to MModelCategory)
+        :type model_category: Union[str, MModelCategory]
+        :return: MModel instance
+        :rtype: MModel
+        """
+
+        assert model_category is not None, "Model Category cannot be None!"
+
+        if isinstance(model_category, str):
+            model_category = ModelCategoryRepository.get_category(name=model_category)
+
+        try:
+            model = MModel(name=model_name, category=model_category)
+            model.save()
+        except NotUniqueError as e:
+            logging.info(e)
+            model = None
+        return model
+
+    @classmethod
+    def get_model(cls, model_name: str) -> Union[MModel, None]:
+        """Retrieves MModel by name
+
+        :param dataset_name: model name
+        :type dataset_name: str
+        :return: MModel instance
+        :rtype: MModel
+        """
+
+        model = None
+        try:
+            model = MModel.objects.get(name=model_name)
+        except DoesNotExist as e:
+            model = None
+            logging.error(e)
+        return model
+
+    @classmethod
+    def create_model_resource(cls, model: MModel, name: str, driver: str, uri: str) -> Union[MResource, None]:
+        """ Creates a MResource associated with target MModel
+
+        :param model: target MModel
+        :type model: MModel
+        :param name: resource name (should be unique among model resources)
+        :type name: str
+        :param driver: driver name
+        :type driver: str
+        :param uri: uri
+        :type uri: str
+        :return: created MResource instance, NONE if duplicate resource was found
+        :rtype: Union[MResource, None]
+        """
+
+        for r in model.resources:
+            if r.name == name:
+                return None
+
+        resource = ResourcesRepository._new_resource(name=name, driver=driver, uri=uri)
+        model.resources.append(resource)
+        model.save()
         return resource
 
 
 class RepositoryTestingData(object):
     DATASET_PREFIX = '##_3213213125r2313_DATASET_'
+    MODEL_PREFIX = '##_3213213125r2313_MODEL_'
     CATEGORY_PREFIX = '##_3213213125r2313_CATEGORY_'
     ITEM_PREFIX = '##_3213213125r2313_item_'
+    RESOURCE_PREFIX = '##_resource_name_'
     DRIVER_PREFIX = '##_aaadsdsadbasdb123_filesystem_driver_'
 
     @classmethod
     def dataset_name(cls, dataset_idx):
         return f'{cls.DATASET_PREFIX}{dataset_idx}'
+
+    @classmethod
+    def model_name(cls, model_idx):
+        return f'{cls.MODEL_PREFIX}{model_idx}'
 
     @classmethod
     def category_name(cls, dataset_idx, n_categories):
@@ -236,6 +505,10 @@ class RepositoryTestingData(object):
     @classmethod
     def driver_name(cls, resource_idx):
         return f'{cls.DRIVER_PREFIX}{resource_idx}'
+
+    @classmethod
+    def resource_name(cls, resource_idx):
+        return f'{cls.RESOURCE_PREFIX}{resource_idx}'
 
     @classmethod
     def metadata(cls, sample_idx):
@@ -257,19 +530,32 @@ class RepositoryTestingData(object):
             return f'amazons3://bucket/bacbdabb3434babcab/{item_idx}/{resource_idx}'
 
     @classmethod
-    def generate_test_data(cls, n_categories: int, n_datasets: int, n_samples: int, n_items: int, n_resources: int):
+    def generate_test_data(cls,
+                           n_categories: int,
+                           n_datasets: int,
+                           n_samples: int,
+                           n_items: int,
+                           n_resources: int,
+                           n_models_categories: int = 4,
+                           n_models: int = 5,
+                           n_model_resources: int = 2):
+
+        created_datasets = []
 
         for dataset_idx in range(n_datasets):
 
             category_name = cls.category_name(dataset_idx, n_categories)
             dataset_name = cls.dataset_name(dataset_idx)
             dataset = DatasetsRepository.new_dataset(dataset_name=dataset_name, dataset_category=category_name)
+            assert dataset is not None, "Dataset creation fails!"
+            created_datasets.append(dataset)
 
             for sample_idx in range(n_samples):
 
                 metadata = cls.metadata(sample_idx)
 
                 sample = SamplesRepository.new_sample(dataset, sample_idx, metadata)
+                assert sample is not None, "Delete old testing data!!"
 
                 for item_idx in range(n_items):
 
@@ -279,6 +565,25 @@ class RepositoryTestingData(object):
 
                         ItemsRepository.create_item_resource(
                             item,
+                            cls.resource_name(resource_idx),
                             cls.driver_name(resource_idx),
                             cls.uri(item_idx, resource_idx)
                         )
+
+        for model_idx in range(n_models):
+
+            model_category_name = cls.category_name(model_idx, n_models_categories)
+            model_name = cls.model_name(model_idx)
+            model = ModelsRepository.new_model(model_name, model_category_name)
+
+            for dataset in created_datasets:
+                model.datesets.append(dataset)
+                model.save()
+
+            for resource_idx in range(n_model_resources):
+                ModelsRepository.create_model_resource(
+                    model,
+                    cls.resource_name(resource_idx),
+                    cls.driver_name(resource_idx),
+                    cls.uri(model_idx, resource_idx)
+                )
