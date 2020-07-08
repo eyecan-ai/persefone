@@ -248,7 +248,13 @@ class TasksRepository(object):
         task.created_on = datetime.datetime.now()
         task.status = MTaskStatus.READY.name
         task.input_payload = input_payload
-        task.save()
+
+        try:
+            task.save()
+        except NotUniqueError as e:
+            logging.info(e)
+            task = None
+
         return task
 
     @classmethod
@@ -269,6 +275,18 @@ class TasksRepository(object):
             return MTask.objects().order_by(order_by)
         else:
             return MTask.objects(status=status.name).order_by(order_by)
+
+    @classmethod
+    def get_task_by_name(cls, name: str) -> Union[MTask, None]:
+        """ Retrieves a MTask by name
+
+        :param name: target name
+        :type name: str
+        :return: retrieved MTask or None
+        :rtype: MTask
+        """
+
+        return MTask.objects(name=name).get()
 
     @classmethod
     def start_task(cls, task: MTask) -> Union[MTask, None]:

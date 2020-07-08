@@ -1,39 +1,35 @@
 import pytest
-from mongoengine import connect, disconnect
-import logging
+from persefone.data.databases.mongo.clients import MongoDatabaseClient
+from pathlib import Path
+
+
+@pytest.fixture()
+def mongo_configurations_folder(configurations_folder):
+    return configurations_folder / 'mongo'
 
 
 @pytest.fixture(scope='function')
 def temp_mongo_database_keep_alive():
-    db_name = '_perse_'
-    try:
-        db = connect(db_name, serverSelectionTimeoutMS=1000)
-        yield db
-        disconnect()
-    except Exception as e:
-        logging.error(e)
-        disconnect()
-        pass
+    cfg_file = Path(mongo_configurations_folder) / 'mongo_test_client_cfg.yml'
+    client = MongoDatabaseClient.create_from_configuration_file(filename=cfg_file)
+    yield client.connect()
+    # client.drop_database()
+    client.disconnect()
 
 
 @pytest.fixture(scope='function')
-def temp_mongo_database():
-    db_name = '##_temp_database_@@'
-    try:
-        db = connect(db_name, serverSelectionTimeoutMS=1000)
-        yield db
-        db.drop_database(db_name)
-        disconnect()
-    except Exception as e:
-        logging.error(e)
-        disconnect()
-        pass
+def temp_mongo_database(mongo_configurations_folder):
+    cfg_file = Path(mongo_configurations_folder) / 'mongo_test_client_cfg.yml'
+    client = MongoDatabaseClient.create_from_configuration_file(filename=cfg_file)
+    yield client.connect()
+    client.drop_database(key0=client.DROP_KEY_0, key1=client.DROP_KEY_1)
+    client.disconnect()
 
 
 @pytest.fixture(scope='function')
-def temp_mongo_mock_database():
-    db_name = '##_temp_mock_database_@@'
-    db = connect(db_name, host='mongomock://localhost')
-    yield db
-    db.drop_database(db_name)
-    disconnect()
+def temp_mongo_mock_database(mongo_configurations_folder):
+    cfg_file = Path(mongo_configurations_folder) / 'mongo_test_client_cfg_mock.yml'
+    client = MongoDatabaseClient.create_from_configuration_file(filename=cfg_file)
+    yield client.connect()
+    client.drop_database(key0=client.DROP_KEY_0, key1=client.DROP_KEY_1)
+    client.disconnect()
