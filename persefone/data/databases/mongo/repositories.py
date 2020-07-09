@@ -85,7 +85,7 @@ class DatasetsRepository(object):
         return dataset
 
     @classmethod
-    def get_dataset(cls, dataset_name: str) -> MDataset:
+    def get_dataset(cls, dataset_name: str) -> Union[MDataset, None]:
         """Retrieves MDataset by name
 
         :param dataset_name: dataset name
@@ -99,7 +99,37 @@ class DatasetsRepository(object):
             dataset = MDataset.objects.get(name=dataset_name)
         except DoesNotExist as e:
             logging.error(e)
+            dataset = None
         return dataset
+
+    @classmethod
+    def delete_dataset(cls, dataset_name: str) -> bool:
+        """ Deletes target MDataset and all nested documents
+
+        :param dataset_name: target dataset Name
+        :type dataset_name: str
+        :return: TRUE if deletion is complete
+        :rtype: bool
+        """
+
+        dataset = cls.get_dataset(dataset_name)
+        if dataset is not None:
+            dataset: MDataset
+            samples = SamplesRepository.get_samples(dataset)
+            for sample in samples:
+                sample: MSample
+                items = ItemsRepository.get_items(sample)
+                for item in items:
+                    item: MItem
+                    for resource in item.resources:
+                        resource: MResource
+                        resource.delete()
+                    item.delete()
+                sample.delete()
+            dataset.delete()
+            return True
+
+        return False
 
 
 class SamplesRepository(object):
@@ -145,6 +175,25 @@ class SamplesRepository(object):
 
         return MSample.objects(dataset=dataset)
 
+    @classmethod
+    def get_sample_by_idx(cls, dataset: MDataset, idx: int) -> Union[MSample, None]:
+        """ Gets single MSample associated to target data
+
+        :param dataset: target dataset
+        :type dataset: MDataset
+        :param idx: sample id
+        :type idx: int
+        :return: retrived MSample or None
+        :rtype: Union[MSample, None]
+        """
+        sample = None
+        try:
+            sample = MSample.objects(dataset=dataset, sample_id=idx).get()
+        except DoesNotExist as e:
+            logging.error(e)
+            sample = None
+        return sample
+
 
 class ItemsRepository(object):
 
@@ -178,6 +227,25 @@ class ItemsRepository(object):
         :rtype: QuerySet
         """
         return MItem.objects(sample=sample).order_by('+name')
+
+    @classmethod
+    def get_item_by_name(cls, sample: MSample, name: str) -> Union[MItem, None]:
+        """ Gets single item by name
+
+        :param sample: target sample
+        :type sample: MSample
+        :param name: item name
+        :type name: str
+        :return: MItem or None
+        :rtype: Union[MItem, None]
+        """
+        item = None
+        try:
+            item = MItem.objects(sample=sample, name=name).get()
+        except DoesNotExist as e:
+            logging.error(e)
+            item = None
+        return item
 
     @classmethod
     def create_item_resource(cls, item: MItem, name: str, driver: str, uri: str) -> Union[MResource, None]:

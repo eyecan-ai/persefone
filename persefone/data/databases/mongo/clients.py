@@ -3,9 +3,16 @@ from persefone.utils.configurations import XConfiguration
 from schema import Schema, Optional
 from mongoengine import connect, disconnect, DEFAULT_CONNECTION_NAME
 from enum import Enum
-from persefone.data.databases.mongo.model import MTask, MTaskStatus
-from persefone.data.databases.mongo.repositories import TasksRepository
-from typing import Union, List
+from persefone.data.io.drivers.common import AbstractFileDriver
+from persefone.data.databases.mongo.model import (
+    MTask, MTaskStatus, MItem, MSample
+)
+from persefone.data.databases.mongo.repositories import (
+    TasksRepository, DatasetsRepository, DatasetCategoryRepository,
+    SamplesRepository, ItemsRepository, ResourcesRepository
+)
+from typing import Union, List, Dict
+from pathlib import Path
 
 
 class MongoDatabaseClientCFG(XConfiguration):
@@ -302,4 +309,68 @@ class DatabaseTaskManager(object):
         if task is not None:
             return TasksRepository.delete_task(task)
 
+        return False
+
+
+class DatabaseDataset(object):
+
+    def __init__(self,
+                 mongo_client: MongoDatabaseClient,
+                 dataset_name: str,
+                 dataset_category: str,
+                 drivers: Dict[str, AbstractFileDriver] = {}):
+
+        self._client = mongo_client
+        self._drivers = drivers
+
+        self._client.connect()
+
+        self._dataset = DatasetsRepository.get_dataset(dataset_name)
+        if self._dataset is None:
+            self._dataset = DatasetsRepository.new_dataset(dataset_name, dataset_category)
+            assert self._dataset is not None, "Something goes wrong creating Dataset"
+
+    def delete(self, security_name: str):
+        if security_name == self._dataset.name:
+            DatasetsRepository.delete_dataset(security_name)
+
+    def get_sample(self, sample_idx: int) -> Union[MSample, None]:
+        return SamplesRepository.get_sample_by_idx(self._dataset, sample_idx)
+
+    def add_sample(self, sample_idx: int = -1, metadata: dict = {}):
+        return SamplesRepository.new_sample(self._dataset, sample_idx, metadata)
+
+    def get_item(self, sample_idx: int, item_name: str) -> Union[MItem, None]:
+        sample = SamplesRepository.get_sample_by_idx(self._dataset, sample_idx)
+        return ItemsRepository.get_item_by_name(sample, item_name)
+
+    def add_item(self, sample_idx: int, item_name: str) -> Union[MItem, None]:
+        sample = SamplesRepository.get_sample_by_idx(self._dataset, sample_idx)
+        if sample is not None:
+            return ItemsRepository.new_item(sample, item_name)
+        return None
+
+    def push_resource(self,
+                      sample_idx: int,
+                      item_name: str,
+                      resource_name: str,
+                      filename_to_copy: str,
+                      driver_name: str):
+
+        if driver_name not in self._drivers:
+            raise KeyError(f"Driver '{driver_name}' not found!")
+
+        driver: AbstractFileDriver = self._drivers[driver_name]
+
+        item = self.get_item(sample_idx, item_name)
+
+        if item is not None:
+            extension = Path(filename_to_copy).suffix
+            uri = driver.uri_from_chunks(self._dataset.name, str(sample_idx), item_name + f'{extension}')
+            resource = ItemsRepository.create_item_resource(item, resource_name, driver_name, uri)
+            if resource is not None:
+                with open(filename_to_copy, 'rb') as fin:
+                    with driver.get(uri, 'wb') as fout:
+                        fout.write(fin.read())
+            return True
         return False
