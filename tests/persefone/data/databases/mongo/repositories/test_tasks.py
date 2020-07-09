@@ -31,6 +31,9 @@ class TestTaskManagement(object):
         self._generate_tasks(N_cancel, 'to_cancel_', 'tester', payload={'this': 'is', 'a': 'meta', 'data': 2.2})
 
         whole_tasks = TasksRepository.get_tasks(status=MTaskStatus.READY)
+        assert len(TasksRepository.get_tasks(status=MTaskStatus.READY, negate=True)) == 0, "No tasks other than ready"
+        assert len(TasksRepository.get_tasks(status=[MTaskStatus.DONE, MTaskStatus.WORKING])) == 0, "No tasks other than ready"
+        assert len(TasksRepository.get_tasks(status=[MTaskStatus.DONE, MTaskStatus.WORKING], negate=True)) != 0, "Should be not empty!"
 
         assert len(whole_tasks) == N_cancel + N_ready, "Task size is wrong!"
 
@@ -75,3 +78,9 @@ class TestTaskManagement(object):
                 assert TasksRepository.start_task(canceled_task) is None, "Start not allowd on canceled task!"
                 assert TasksRepository.work_on_task(canceled_task) is None, "Work not allowd on canceled task!"
                 assert TasksRepository.complete_task(canceled_task) is None, "Complete not allowd on canceled task!"
+
+        whole_tasks = TasksRepository.get_tasks()
+        for task in whole_tasks:
+            assert TasksRepository.delete_task(task), "Remove task failed!"
+
+        assert len(TasksRepository.get_tasks()) == 0, "All tasks should be removed"

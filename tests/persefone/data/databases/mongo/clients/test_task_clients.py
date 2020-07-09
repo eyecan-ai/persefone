@@ -45,6 +45,8 @@ class TestDatabaseTaskManager(object):
         assert god.new_task('my_task') is None, "Neither God can do duplicates!"
 
         tasks = worker.get_tasks(status=MTaskStatus.READY)
+        assert len(worker.get_tasks(status=MTaskStatus.READY, negate=True)) == 1, "Only one canceled task was there!"
+        assert len(worker.get_tasks(status=[MTaskStatus.READY, MTaskStatus.CANCELED], negate=True)) == 0, "No tasks other than ready"
         assert len(tasks) == 2, "Wrong number of retrieved tasks!"  # READY TASK SHOULD BE ONLY 2
 
         target_task: MTask = tasks[0]
@@ -74,6 +76,14 @@ class TestDatabaseTaskManager(object):
         tasks = god.get_tasks()
         print(tasks)
         assert len(tasks) == 3, "Wrong number of retrieved tasks!"  # TOTAL TASK SHOULD BE 3
+
+        tasks = god.get_tasks()
+        for task in tasks:
+            with pytest.raises(PermissionError):
+                creator.remove_task(task.name)
+            with pytest.raises(PermissionError):
+                worker.remove_task(task.name)
+            assert god.remove_task(task.name), "Remove task failed"
 
     @pytest.mark.mongo_real_server  # EXECUTE ONLY IF --mongo_real_server option is passed
     def test_manager(self, mongo_client):

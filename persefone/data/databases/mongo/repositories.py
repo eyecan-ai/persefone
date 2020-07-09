@@ -258,13 +258,15 @@ class TasksRepository(object):
         return task
 
     @classmethod
-    def get_tasks(cls, status: Union[MTaskStatus, None] = None, last_first=True) -> QuerySet:
+    def get_tasks(cls, status: Union[MTaskStatus, None] = None, last_first=True, negate: bool = False) -> QuerySet:
         """ Retrieves tasks
 
         :param status: retrievs only MTask s with target MTaskStatus, defaults to None
         :type status: Union[MTaskStatus, None], optional
         :param last_first: TRUE to order last task first, defaults to True
         :type last_first: bool, optional
+        :param negate: TRUE to negate results, defaults to False
+        :type negate: bool, optional
         :return: associated QuerySet
         :rtype: QuerySet
         """
@@ -274,6 +276,18 @@ class TasksRepository(object):
         if status is None:
             return MTask.objects().order_by(order_by)
         else:
+            if isinstance(status, MTaskStatus):
+                if not negate:
+                    return MTask.objects(status=status.name).order_by(order_by)
+                else:
+                    return MTask.objects(status__ne=status.name).order_by(order_by)
+
+            if isinstance(status, list):
+                if not negate:
+                    return MTask.objects(status__in=[s.name for s in status]).order_by(order_by)
+                else:
+                    return MTask.objects(status__nin=[s.name for s in status]).order_by(order_by)
+
             return MTask.objects(status=status.name).order_by(order_by)
 
     @classmethod
@@ -286,7 +300,11 @@ class TasksRepository(object):
         :rtype: MTask
         """
 
-        return MTask.objects(name=name).get()
+        try:
+            return MTask.objects(name=name).get()
+        except DoesNotExist as e:
+            logging.error(e)
+            return None
 
     @classmethod
     def start_task(cls, task: MTask) -> Union[MTask, None]:
@@ -378,6 +396,23 @@ class TasksRepository(object):
             return task
         else:
             return None
+
+    @classmethod
+    def delete_task(cls, task: MTask) -> bool:
+        """ Deletes target task
+
+        :param task: target task
+        :type task: MTask
+        :return: TRUE for deletion complete, FALSE otherwise
+        :rtype: bool
+        """
+
+        try:
+            task.delete()
+        except Exception as e:
+            logging.error(e)
+            return False
+        return True
 
 
 class ModelCategoryRepository(object):

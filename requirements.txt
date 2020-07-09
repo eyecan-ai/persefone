@@ -27,3 +27,7 @@ grpcio>=1.30.0
 grpcio-tools>=1.30.0
 mongoengine>=0.20.0
 mongomock>=3.19.0
+opencv-contrib-python==4.2.0.34
+opencv-python-headless==4.2.0.34
+sty==1.0.0b12
+tabulate==0.8.7

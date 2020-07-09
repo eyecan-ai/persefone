@@ -143,13 +143,15 @@ class DatabaseTaskManager(object):
 
         return TasksRepository.get_task_by_name(name)
 
-    def get_tasks(self, status: Union[MTaskStatus, None] = None, last_first: bool = True) -> List[MTask]:
+    def get_tasks(self, status: Union[List[MTaskStatus], MTaskStatus, None] = None, last_first: bool = True, negate: bool = False) -> List[MTask]:
         """ Retrieves MTask list based on status, or whole list
 
-        :param status: filtering MTaskStatus, defaults to None
-        :type status: Union[MTaskStatus, None], optional
+        :param status: filtering MTaskStatus as single value or list, defaults to None
+        :type status: Union[List[MTaskStatus], MTaskStatus, None], optional
         :param last_first: TRUE to obtain last tasks first, defaults to True
         :type last_first: bool, optional
+        :param negate: TRUE to negate query results, defaults to False
+        :type negate: bool, optional
         :return: list of retrieved MTask
         :rtype: List[MTask]
         """
@@ -157,7 +159,7 @@ class DatabaseTaskManager(object):
         if not self._mongo_client.connected:
             self._mongo_client.connect()
 
-        return list(TasksRepository.get_tasks(status=status, last_first=last_first))
+        return list(TasksRepository.get_tasks(status=status, last_first=last_first, negate=negate))
 
     def new_task(self, name: str, input_payload={}) -> Union[MTask, None]:
         """ Creates new task with target name. Can caouse collisions
@@ -276,3 +278,26 @@ class DatabaseTaskManager(object):
             return TasksRepository.cancel_task(task)
 
         return None
+
+    def remove_task(self, name: str) -> bool:
+        """ Permanently remove a target task
+
+        :param name: target task name
+        :type name: str
+        :raises PermissionError:  control permission level
+        :return: TRUE if task was removed
+        :rtype: bool
+        """
+
+        if not self._mongo_client.connected:
+            self._mongo_client.connect()
+
+        allowed = [DatabaseTaskManagerType.TASK_GOD]
+        if self._manager_type not in allowed:
+            raise PermissionError(f"Permanent task deletion not allowd for {self._manager_type}")
+
+        task = TasksRepository.get_task_by_name(name)
+        if task is not None:
+            return TasksRepository.delete_task(task)
+
+        return False
