@@ -143,7 +143,9 @@ class DatabaseTaskManager(object):
 
         return TasksRepository.get_task_by_name(name)
 
-    def get_tasks(self, status: Union[List[MTaskStatus], MTaskStatus, None] = None, last_first: bool = True, negate: bool = False) -> List[MTask]:
+    def get_tasks(self,
+                  status: Union[List[MTaskStatus], MTaskStatus, None] = None,
+                  last_first: bool = True, negate: bool = False) -> List[MTask]:
         """ Retrieves MTask list based on status, or whole list
 
         :param status: filtering MTaskStatus as single value or list, defaults to None

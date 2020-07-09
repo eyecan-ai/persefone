@@ -1,5 +1,5 @@
-from persefone.data.databases.mongo.clients import MongoDatabaseClient, DatabaseTaskManager, DatabaseTaskManagerType
-from persefone.data.databases.mongo.model import MTask, MTaskStatus
+from persefone.data.databases.mongo.clients import MongoDatabaseClient, DatabaseTaskManager
+from persefone.data.databases.mongo.model import MTask
 from persefone.utils.images.drawing import ConsoleImage
 import click
 from tabulate import tabulate

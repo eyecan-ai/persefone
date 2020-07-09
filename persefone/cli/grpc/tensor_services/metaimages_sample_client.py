@@ -1,8 +1,6 @@
 from persefone.interfaces.grpc.clients.tensor_services import MetaImagesServiceClient
-from persefone.interfaces.proto.data_pb2 import DTensorBundle
 import grpc
 import logging
-import numpy as np
 import click
 from persefone.utils.cli_options import cli_base_options, cli_host_options
 import cv2
