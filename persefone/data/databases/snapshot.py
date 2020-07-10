@@ -36,9 +36,8 @@ class SnapshotConfiguration(XConfiguration):
 
 class DatabaseSnapshot(object):
 
-    def __init__(self, filename):
-        self.__cfgfile = Path(filename)
-        self.__cfg = SnapshotConfiguration(filename=filename)
+    def __init__(self, cfg: SnapshotConfiguration):
+        self.__cfg = cfg
         self.__database = PandasDatabase()
         self.__reduced_database = PandasDatabase()
         self.__output_database_dictionary = {}
