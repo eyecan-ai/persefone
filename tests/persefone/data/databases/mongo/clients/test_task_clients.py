@@ -1,6 +1,6 @@
 
 from persefone.data.databases.mongo.model import MTask, MTaskStatus
-from persefone.data.databases.mongo.clients import MongoDatabaseClient, DatabaseTaskManager, DatabaseTaskManagerType
+from persefone.data.databases.mongo.clients import MongoDatabaseClient, MongoDatabaseTaskManager, MongoDatabaseTaskManagerType
 from pathlib import Path
 import pytest
 import numpy as np
@@ -26,9 +26,9 @@ class TestDatabaseTaskManager(object):
 
     def _test_manager(self, mongo_client):
 
-        creator = DatabaseTaskManager(mongo_client=mongo_client, manager_type=DatabaseTaskManagerType.TASK_CREATOR)
-        worker = DatabaseTaskManager(mongo_client=mongo_client, manager_type=DatabaseTaskManagerType.TASK_WORKER)
-        god = DatabaseTaskManager(mongo_client=mongo_client, manager_type=DatabaseTaskManagerType.TASK_GOD)
+        creator = MongoDatabaseTaskManager(mongo_client=mongo_client, manager_type=MongoDatabaseTaskManagerType.TASK_CREATOR)
+        worker = MongoDatabaseTaskManager(mongo_client=mongo_client, manager_type=MongoDatabaseTaskManagerType.TASK_WORKER)
+        god = MongoDatabaseTaskManager(mongo_client=mongo_client, manager_type=MongoDatabaseTaskManagerType.TASK_GOD)
 
         with pytest.raises(PermissionError):
             worker.new_task('impossible_task', {'a': 2.2})
