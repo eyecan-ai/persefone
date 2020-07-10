@@ -83,3 +83,8 @@ class SafeFilesystemDriver(AbstractFileDriver):
         puri = self._purge_uri(uri)
         puri_path: Path = self._base_folder / Path(puri)
         puri_path.unlink()
+
+    @classmethod
+    def create_from_configuration_file(cls, filename):
+        cfg = SafeFilesystemDriverCFG(filename=filename)
+        return SafeFilesystemDriver(cfg=cfg)

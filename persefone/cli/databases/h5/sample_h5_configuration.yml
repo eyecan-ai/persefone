@@ -1,0 +1,21 @@
+name: "train"
+random_seed: 666
+sources:
+    - /media/daniele/Data/datasets/cmp/cmp_batch2_h5/green.h5
+operations:
+    []
+    #- limit: 1000
+    #- shuffle: 1
+splits:
+    full: 1.0
+readers:
+    columns:
+        pc: pc
+        sample_number: sample_number
+        frame_number: frame_number
+        jpeg_quality: jpeg_quality
+        image: image
+    #{}
+    # columns:
+    #     image: image
+    #     classification_label: label
