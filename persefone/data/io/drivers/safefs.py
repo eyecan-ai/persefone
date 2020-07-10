@@ -18,6 +18,12 @@ class SafeFilesystemDriverCFG(XConfiguration):
 class SafeFilesystemDriver(AbstractFileDriver):
 
     def __init__(self, cfg: SafeFilesystemDriverCFG):
+        """ Safe filesystem wrapper. It uses a target folder as root
+
+        :param cfg: SafeFilesystemDriverCFG configuration
+        :type cfg: SafeFilesystemDriverCFG
+        """
+
         self.prefix = 'local'
         self._cfg = cfg
 
@@ -29,22 +35,51 @@ class SafeFilesystemDriver(AbstractFileDriver):
     def driver_name(cls):
         return "safe_filesystem_driver"
 
-    def _purge_uri(self, uri: str):
+    def _purge_uri(self, uri: str) -> str:
+        """ Purges source uri removing driver qualifier and checking permissions on path
+
+        :param uri: source uri
+        :type uri: str
+        :raises PermissionError: No absolute paths allowed
+        :raises PermissionError: No Relative Path allowd
+        :raises LookupError: unrecognized path
+        :return: purged uri
+        :rtype: str
+        """
+
         if uri.startswith(self.full_prefix_qualifier):
             uri = uri.replace(self.full_prefix_qualifier, '')
             if uri.startswith('/'):
-                raise LookupError(f"{self.__class__.__name__} cannot manage absolute URIs like: '{uri}'")
+                raise PermissionError(f"{self.__class__.__name__} cannot manage absolute URIs like: '{uri}'")
+            if '..' in uri:
+                raise PermissionError(f"{self.__class__.__name__} cannot manage relative URIs like: '{uri}'")
             return uri
         else:
             raise LookupError(f"{self.__class__.__name__} cannot manage URIs like: '{uri}'")
 
     def get(self, uri: str, mode: str = 'r'):
+        """ Gets target uri resource
+
+        :param uri: resource uri
+        :type uri: str
+        :param mode: mode in ['r','w','rb','wb' ...], defaults to 'r'
+        :type mode: str, optional
+        :return: opened resource
+        :rtype: file
+        """
+
         puri = self._purge_uri(uri)
         puri_path = self._base_folder / Path(puri)
         puri_path.parent.mkdir(parents=True, exist_ok=True)
         return open(puri_path, mode)
 
     def delete(self, uri: str):
+        """ Deletes target resource
+
+        :param uri: resource uri
+        :type uri: str
+        """
+
         puri = self._purge_uri(uri)
         puri_path: Path = self._base_folder / Path(puri)
         puri_path.unlink()

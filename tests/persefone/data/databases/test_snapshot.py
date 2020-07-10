@@ -259,7 +259,7 @@ class TestDatabaseSnapshot(object):
             assert Path(source).exists(), f"source {source} should exists!"
 
         # Snapshot
-        snapshot = DatabaseSnapshot(filename=temp_yaml_file)
+        snapshot = DatabaseSnapshot(cfg=snapshot_cfg)
         assert snapshot.is_valid(), "Snapshot configuration should be valid"
 
         # Len sources
@@ -331,7 +331,7 @@ class TestDatabaseSnapshot(object):
             assert Path(source).exists(), f"source {source} should exists!"
 
         # Snapshot
-        snapshot = DatabaseSnapshot(filename=temp_yaml_file)
+        snapshot = DatabaseSnapshot(cfg=snapshot_cfg)
         assert snapshot.is_valid(), "Snapshot configuration should be valid"
 
         # Readers
@@ -391,7 +391,7 @@ class TestDatabaseSnapshot(object):
             snapshot_cfg = SnapshotConfiguration(filename=temp_yaml_file)
             assert snapshot_cfg.is_valid(), "Must be a valid configuration!"
             # Snapshot
-            snapshot = DatabaseSnapshot(filename=temp_yaml_file)
+            snapshot = DatabaseSnapshot(cfg=snapshot_cfg)
             print(snapshot)
 
             images_sum = 0.0

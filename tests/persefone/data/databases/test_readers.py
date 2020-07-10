@@ -123,7 +123,7 @@ class TestH5SimpleDataReader(object):
             assert Path(source).exists(), f"source {source} should exists!"
 
         # Snapshot
-        snapshot = DatabaseSnapshot(filename=temp_yaml_file)
+        snapshot = DatabaseSnapshot(cfg=snapshot_cfg)
 
         for enable_cache in [False, True]:
 

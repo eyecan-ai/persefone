@@ -54,6 +54,22 @@ class DatasetCategoryRepository(object):
                 logging.error(e)
         return category
 
+    @classmethod
+    def delete_category(cls, name) -> bool:
+        """ Deletes target MCategory
+
+        :param name: category name
+        :type name: str
+        :return: TRUE if deletion is ok
+        :rtype: bool
+        """
+
+        category = cls.get_category(name, create_if_none=False)
+        if category is not None:
+            category.delete()
+            return True
+        return False
+
 
 class DatasetsRepository(object):
 
@@ -164,16 +180,19 @@ class SamplesRepository(object):
         return sample
 
     @classmethod
-    def get_samples(cls, dataset: MDataset) -> QuerySet:
+    def get_samples(cls, dataset: Union[MDataset, None] = None) -> QuerySet:
         """ Retrieves list of MSample s of given MDataset
 
-        :param dataset: target MDataset
-        :type dataset: MDataset
+        :param dataset: target MDataset or None for all
+        :type dataset: Union[MDataset, None] 
         :return: QuerySet of associated MSample
         :rtype: QuerySet
         """
 
-        return MSample.objects(dataset=dataset)
+        if dataset is None:
+            return MSample.objects()
+        else:
+            return MSample.objects(dataset=dataset)
 
     @classmethod
     def get_sample_by_idx(cls, dataset: MDataset, idx: int) -> Union[MSample, None]:
@@ -193,6 +212,32 @@ class SamplesRepository(object):
             logging.error(e)
             sample = None
         return sample
+
+    @classmethod
+    def delete_sample(cls, dataset_name: str, sample_idx: int) -> bool:
+        """ Delete target MSample and its children
+
+        :param dataset_name: target dataset
+        :type dataset_name: str
+        :param sample_idx: target sample idx
+        :type sample_idx: int
+        :return: TRUE if deletion is ok
+        :rtype: bool
+        """
+
+        dataset = DatasetsRepository.get_dataset(dataset_name)
+        if dataset is not None:
+            sample: MSample = cls.get_sample_by_idx(dataset, sample_idx)
+            if sample is not None:
+                items = ItemsRepository.get_items(sample)
+                for item in items:
+                    item: MItem
+                    for resource in item.resources:
+                        resource.delete()
+                    item.delete()
+                sample.delete()
+                return True
+        return False
 
 
 class ItemsRepository(object):
@@ -218,15 +263,19 @@ class ItemsRepository(object):
         return item
 
     @classmethod
-    def get_items(cls, sample: MSample) -> QuerySet:
+    def get_items(cls, sample: Union[MSample, None] = None) -> QuerySet:
         """ Retrieves list of MItem s given a target MSample
 
-        :param sample: target MSample
-        :type sample: MSample
+        :param sample: target MSample or None for all Items
+        :type sample: Union[MSample, None]
         :return: QuerySet of associated MItem s
         :rtype: QuerySet
         """
-        return MItem.objects(sample=sample).order_by('+name')
+
+        if sample is None:
+            return MItem.objects().order_by('+name')
+        else:
+            return MItem.objects(sample=sample).order_by('+name')
 
     @classmethod
     def get_item_by_name(cls, sample: MSample, name: str) -> Union[MItem, None]:
