@@ -1,0 +1,12 @@
+syntax = "proto3";
+package persefone;
+import "persefone/interfaces/proto/requests.proto";
+
+
+message DatasetsListRequest{
+    string query_name = 1;
+}
+
+message DatasetsListResponse{
+    ResponseStatus status = 1;
+}

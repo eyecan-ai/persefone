@@ -1,0 +1,19 @@
+syntax = "proto3";
+package persefone;
+import "persefone/interfaces/proto/data.proto";
+
+
+message DDataset {
+    string name = 1;
+    string category = 2;
+}
+
+message DSample {
+    int32 sample_id = 1;
+    string metadata = 2;
+}
+
+message DItem {
+    string name = 1;
+    DTensor tensor = 2;
+}
