@@ -16,17 +16,17 @@ from persefone.utils.bytes import DataCoding
 
 client = DatasetsSimpleServiceClient()
 
-# print(client.dataset_list())
+print(client.dataset_list())
 
-# print(client.get_dataset('green'))
+print(client.get_dataset('green'))
 
-# res = client.get_sample('green', 10, fetch_data=False)
-# pprint.pprint(res)
+res = client.get_sample('green', 10, fetch_data=False)
+pprint.pprint(res)
 
-# res = client.get_item('green', 10, 'image', fetch_data=True)
-# pprint.pprint(res)
+res = client.get_item('green', 10, 'image', fetch_data=True)
+pprint.pprint(res)
 
-# data, encoding = client.get_data('green', 10, 'image', fetch_data=True)
+data, encoding = client.get_item_data('green', 10, 'image')
 
 # image = DataCoding.bytes_to_data(data, encoding)
 # cv2.imshow("image", cv2.cvtColor(image, cv2.COLOR_RGB2BGR))

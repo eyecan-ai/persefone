@@ -57,7 +57,7 @@ class DatasetsSimpleServiceClient(DatasetsServiceClient):
     def __init__(self, host='localhost', port=50051, cfg=DatasetsServiceClientCFG()):
         super(DatasetsSimpleServiceClient, self).__init__(host=host, port=port, cfg=cfg)
 
-    def dataset_list(self, dataset_name: str = '') -> List[str]:
+    def datasets_list(self, dataset_name: str = '') -> List[str]:
         """ Retrieves dataset names list
 
         :param dataset_name: query 'like' string for dataset name, defaults to ''
@@ -93,6 +93,27 @@ class DatasetsSimpleServiceClient(DatasetsServiceClient):
         else:
             return False
 
+    def new_dataset(self, dataset_name: str, dataset_category: str) -> Union[dict, None]:
+        """ Creates new dataset
+
+        :param dataset_name: target dataset name
+        :type dataset_name: str
+        :param dataset_category: target dataset category
+        :type dataset_category: str
+        :return: JSON-like dataset representation or None if errors occur
+        :rtype: Union[dict, None]
+        """
+
+        request = DDatasetRequest()
+        request.dataset_name = dataset_name
+        request.dataset_category = dataset_category
+
+        response = self.NewDataset(request)
+        if len(response.datasets) > 0:
+            return json_format.MessageToDict(response.datasets[0], including_default_value_fields=True, preserving_proto_field_name=True)
+        else:
+            return None
+
     def get_dataset(self, dataset_name: str, fetch_data: bool = False) -> Union[dict, None]:
         """ Retrieves single dataset as JSON-like dictionary
 
@@ -110,7 +131,7 @@ class DatasetsSimpleServiceClient(DatasetsServiceClient):
 
         response = self.GetDataset(request)
         if len(response.datasets) > 0:
-            return json_format.MessageToDict(response.datasets[0], preserving_proto_field_name=True)
+            return json_format.MessageToDict(response.datasets[0], including_default_value_fields=True, preserving_proto_field_name=True)
         else:
             return None
 
@@ -131,7 +152,7 @@ class DatasetsSimpleServiceClient(DatasetsServiceClient):
 
         response = self.NewSample(request)
         if len(response.samples) > 0:
-            return json_format.MessageToDict(response.samples[0], preserving_proto_field_name=True)
+            return json_format.MessageToDict(response.samples[0], including_default_value_fields=True, preserving_proto_field_name=True)
         else:
             return None
 
@@ -155,7 +176,7 @@ class DatasetsSimpleServiceClient(DatasetsServiceClient):
 
         response = self.GetSample(request)
         if len(response.samples) > 0:
-            return json_format.MessageToDict(response.samples[0], preserving_proto_field_name=True)
+            return json_format.MessageToDict(response.samples[0], including_default_value_fields=True, preserving_proto_field_name=True)
         else:
             return None
 
@@ -182,7 +203,7 @@ class DatasetsSimpleServiceClient(DatasetsServiceClient):
 
         response = self.GetItem(request)
         if len(response.items) > 0:
-            return json_format.MessageToDict(response.items[0], preserving_proto_field_name=True)
+            return json_format.MessageToDict(response.items[0], including_default_value_fields=True, preserving_proto_field_name=True)
         else:
             return None
 
@@ -212,7 +233,7 @@ class DatasetsSimpleServiceClient(DatasetsServiceClient):
 
         response = self.NewItem(request)
         if len(response.items) > 0:
-            return json_format.MessageToDict(response.items[0], preserving_proto_field_name=True)
+            return json_format.MessageToDict(response.items[0], including_default_value_fields=True, preserving_proto_field_name=True)
         else:
             return None
 

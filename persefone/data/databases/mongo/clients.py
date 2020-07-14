@@ -116,85 +116,6 @@ class MongoDatabaseClient(object):
         cfg.validate()
         return MongoDatabaseClient(cfg=cfg)
 
-    def get_datasets(self, dataset_name: str, drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]):
-        """ Retrievers available datasets
-
-        :param dataset_name: dataset name query string (can be empty for all)
-        :type dataset_name: str
-        :param drivers: list or dict of AbstractFileDriver
-        :type drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]
-        :return: list of MongoDataset
-        :rtype: List[MDataset]
-        """
-
-        if self._connection is not None:
-            raw_datasets = list(DatasetsRepository.get_datasets(dataset_name=dataset_name))
-            mongo_datasets = []
-            for raw_dataset in raw_datasets:
-                mongo_dataset = MongoDataset(
-                    mongo_client=self,
-                    dataset_name=raw_dataset.name,
-                    dataset_category=raw_dataset.category.name,
-                    drivers=drivers
-                )
-                mongo_datasets.append(mongo_dataset)
-            return mongo_datasets
-
-        return []
-
-    def get_dataset(self, dataset_name: str, drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]):
-        """ Retrives single dataset by name
-
-        :param dataset_name: dataset name
-        :type dataset_name: str
-        :param drivers: list or dict of AbstractFileDriver
-        :type drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]
-        :return: single MongoDataset
-        :rtype: MongoDataset
-        """
-
-        if self._connection is not None:
-
-            raw_dataset = DatasetsRepository.get_dataset(dataset_name=dataset_name)
-            if raw_dataset is not None:
-                mongo_dataset = MongoDataset(
-                    mongo_client=self,
-                    dataset_name=raw_dataset.name,
-                    dataset_category=raw_dataset.category.name,
-                    drivers=drivers
-                )
-                return mongo_dataset
-        return None
-
-    def create_dataset(self, dataset_name: str, dataset_category: str, drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]):
-        """ Creates MongoDataset
-
-        :param dataset_name: dataset name
-        :type dataset_name: str
-        :param dataset_category: dataset category
-        :type dataset_category: str
-        :param drivers: list or dict of AbstractFileDriver
-        :type drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]
-        :return: created MongoDataset
-        :rtype: MongoDataset
-        """
-
-        if self._connection is not None:
-            try:
-                mongo_dataset = MongoDataset(
-                    mongo_client=self,
-                    dataset_name=dataset_name,
-                    dataset_category=dataset_category,
-                    drivers=drivers,
-                    error_if_exists=True
-                )
-                return mongo_dataset
-            except Exception as e:
-                logging.error(e)
-                return None
-
-        return None
-
 
 class MongoDatabaseTaskManagerType(Enum):
     """ DatabaseTaskManager permission levels """
@@ -394,6 +315,97 @@ class MongoDatabaseTaskManager(object):
         return False
 
 
+class MongoDatasetsManager(object):
+
+    def __init__(self, mongo_client: MongoDatabaseClient):
+        """ MongoDatasetsManager interface to datasets management
+
+        :param mongo_client: MongoDatabaseClient used for database connection
+        :type mongo_client: MongoDatabaseClient
+        :type manager_type: DatabaseTaskManagerType, optional
+        """
+
+        self._mongo_client = mongo_client
+
+    def get_datasets(self, dataset_name: str, drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]):
+        """ Retrievers available datasets
+
+        :param dataset_name: dataset name query string (can be empty for all)
+        :type dataset_name: str
+        :param drivers: list or dict of AbstractFileDriver
+        :type drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]
+        :return: list of MongoDataset
+        :rtype: List[MDataset]
+        """
+        if not self._mongo_client.connected:
+            self._mongo_client.connect()
+
+        raw_datasets = list(DatasetsRepository.get_datasets(dataset_name=dataset_name))
+        mongo_datasets = []
+        for raw_dataset in raw_datasets:
+            mongo_dataset = MongoDataset(
+                mongo_client=self._mongo_client,
+                dataset_name=raw_dataset.name,
+                dataset_category=raw_dataset.category.name,
+                drivers=drivers
+            )
+            mongo_datasets.append(mongo_dataset)
+        return mongo_datasets
+
+    def get_dataset(self, dataset_name: str, drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]):
+        """ Retrives single dataset by name
+
+        :param dataset_name: dataset name
+        :type dataset_name: str
+        :param drivers: list or dict of AbstractFileDriver
+        :type drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]
+        :return: single MongoDataset
+        :rtype: MongoDataset
+        """
+
+        if not self._mongo_client.connected:
+            self._mongo_client.connect()
+
+        raw_dataset = DatasetsRepository.get_dataset(dataset_name=dataset_name)
+        if raw_dataset is not None:
+            mongo_dataset = MongoDataset(
+                mongo_client=self._mongo_client,
+                dataset_name=raw_dataset.name,
+                dataset_category=raw_dataset.category.name,
+                drivers=drivers
+            )
+            return mongo_dataset
+
+    def create_dataset(self, dataset_name: str, dataset_category: str, drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]):
+        """ Creates MongoDataset
+
+        :param dataset_name: dataset name
+        :type dataset_name: str
+        :param dataset_category: dataset category
+        :type dataset_category: str
+        :param drivers: list or dict of AbstractFileDriver
+        :type drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]
+        :return: created MongoDataset
+        :rtype: MongoDataset
+        """
+
+        if not self._mongo_client.connected:
+            self._mongo_client.connect()
+
+        try:
+            mongo_dataset = MongoDataset(
+                mongo_client=self._mongo_client,
+                dataset_name=dataset_name,
+                dataset_category=dataset_category,
+                drivers=drivers,
+                error_if_exists=True
+            )
+            return mongo_dataset
+        except Exception as e:
+            logging.error(e)
+            return None
+
+
 class MongoDataset(object):
 
     def __init__(self,
@@ -401,6 +413,7 @@ class MongoDataset(object):
                  dataset_name: str,
                  dataset_category: str,
                  drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]] = {},
+                 create_if_none: bool = True,
                  error_if_exists: bool = False):
         """ Database Dataset client for read/write operation
 
@@ -410,6 +423,10 @@ class MongoDataset(object):
         :type dataset_name: str
         :param dataset_category: target dataset category
         :type dataset_category: str
+        :param create_if_none: TRUE to create if not found
+        :type create_if_none: bool
+        :param error_if_exists: TRUE to raise error on dataset with same name
+        :type error_if_exists: bool
         :param drivers: dictionary with file drivers or list of AbstractFileDriver, defaults to {}
         :type drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]], optional
         """
@@ -430,7 +447,8 @@ class MongoDataset(object):
         self._dataset = DatasetsRepository.get_dataset(dataset_name)
         if error_if_exists and self._dataset is not None:
             raise Exception("Dataset with the same name found!")
-        if self._dataset is None:
+
+        if self._dataset is None and create_if_none:
             self._dataset = DatasetsRepository.new_dataset(dataset_name, dataset_category)
             assert self._dataset is not None, "Something goes wrong creating Dataset"
 
