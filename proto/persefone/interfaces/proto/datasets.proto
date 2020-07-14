@@ -1,19 +1,24 @@
 syntax = "proto3";
 package persefone;
-import "persefone/interfaces/proto/data.proto";
+import "google/protobuf/struct.proto";
 
-
-message DDataset {
+message DItem {
     string name = 1;
-    string category = 2;
+    bytes data = 2;
+    string data_encoding = 3;
+    bool has_data = 4;
 }
 
 message DSample {
     int32 sample_id = 1;
-    string metadata = 2;
+    google.protobuf.Struct metadata = 2;
+    repeated DItem items = 3;
 }
 
-message DItem {
+message DDataset {
     string name = 1;
-    DTensor tensor = 2;
+    string category = 2;
+    repeated DSample samples = 3;
 }
+
+

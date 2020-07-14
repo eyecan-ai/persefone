@@ -27,9 +27,9 @@ import numpy as np
 #     print("Wrtie")
 #     time.sleep(0)
 
-driver = SafeFilesystemDriver.create_from_configuration_file('/home/daniele/work/workspace_python/persefone/tests/sample_data/configurations/drivers/securefs.yml')
+driver = SafeFilesystemDriver.create_from_configuration_file('/home/daniele/work/workspace_python/persefone/persefone/cli/databases/h5/securefs_driver.yml')
 mongo_client = MongoDatabaseClient.create_from_configuration_file(filename='/home/daniele/work/workspace_python/persefone/persefone/cli/databases/h5/database.yml')
-mongo_dataset = MongoDataset(mongo_client, 'temp_datast', 'cmp', {driver.driver_name(): driver})
+mongo_dataset = MongoDataset(mongo_client, 'green', 'cmp', {driver.driver_name(): driver})
 
 
 db = H5SimpleDatabase(filename='/media/daniele/Data/datasets/cmp/cmp_batch2_h5/green.h5')

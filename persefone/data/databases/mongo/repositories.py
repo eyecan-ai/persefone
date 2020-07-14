@@ -6,7 +6,7 @@ from persefone.data.databases.mongo.model import (
     MModel, MModelCategory
 )
 import logging
-from typing import Union
+from typing import Union, List
 import math
 import datetime
 
@@ -117,6 +117,18 @@ class DatasetsRepository(object):
             logging.error(e)
             dataset = None
         return dataset
+
+    @classmethod
+    def get_datasets(cls, dataset_name: str = '') -> List[MDataset]:
+        """ Retrieves a list of MDataset with name similar to input dataset_name ()
+
+        :param dataset_name: query string for dataset name [empty for all], defaults to ''
+        :type dataset_name: str, optional
+        :return: list of MDataset
+        :rtype: List[MDataset]
+        """
+
+        return MDataset.objects(name__contains=dataset_name)
 
     @classmethod
     def delete_dataset(cls, dataset_name: str) -> bool:

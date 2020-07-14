@@ -5,7 +5,7 @@ from mongoengine import connect, disconnect, DEFAULT_CONNECTION_NAME
 from enum import Enum
 from persefone.data.io.drivers.common import AbstractFileDriver
 from persefone.data.databases.mongo.model import (
-    MTask, MTaskStatus, MItem, MSample, MResource
+    MTask, MTaskStatus, MItem, MSample, MResource, MDataset
 )
 from persefone.data.databases.mongo.repositories import (
     TasksRepository, DatasetsRepository, DatasetCategoryRepository,
@@ -115,6 +115,85 @@ class MongoDatabaseClient(object):
         cfg = MongoDatabaseClientCFG(filename=filename)
         cfg.validate()
         return MongoDatabaseClient(cfg=cfg)
+
+    def get_datasets(self, dataset_name: str, drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]):
+        """ Retrievers available datasets
+
+        :param dataset_name: dataset name query string (can be empty for all)
+        :type dataset_name: str
+        :param drivers: list or dict of AbstractFileDriver
+        :type drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]
+        :return: list of MongoDataset
+        :rtype: List[MDataset]
+        """
+
+        if self._connection is not None:
+            raw_datasets = list(DatasetsRepository.get_datasets(dataset_name=dataset_name))
+            mongo_datasets = []
+            for raw_dataset in raw_datasets:
+                mongo_dataset = MongoDataset(
+                    mongo_client=self,
+                    dataset_name=raw_dataset.name,
+                    dataset_category=raw_dataset.category.name,
+                    drivers=drivers
+                )
+                mongo_datasets.append(mongo_dataset)
+            return mongo_datasets
+
+        return []
+
+    def get_dataset(self, dataset_name: str, drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]):
+        """ Retrives single dataset by name
+
+        :param dataset_name: dataset name
+        :type dataset_name: str
+        :param drivers: list or dict of AbstractFileDriver
+        :type drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]
+        :return: single MongoDataset
+        :rtype: MongoDataset
+        """
+
+        if self._connection is not None:
+
+            raw_dataset = DatasetsRepository.get_dataset(dataset_name=dataset_name)
+            if raw_dataset is not None:
+                mongo_dataset = MongoDataset(
+                    mongo_client=self,
+                    dataset_name=raw_dataset.name,
+                    dataset_category=raw_dataset.category.name,
+                    drivers=drivers
+                )
+                return mongo_dataset
+        return None
+
+    def create_dataset(self, dataset_name: str, dataset_category: str, drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]):
+        """ Creates MongoDataset
+
+        :param dataset_name: dataset name
+        :type dataset_name: str
+        :param dataset_category: dataset category
+        :type dataset_category: str
+        :param drivers: list or dict of AbstractFileDriver
+        :type drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]
+        :return: created MongoDataset
+        :rtype: MongoDataset
+        """
+
+        if self._connection is not None:
+            try:
+                mongo_dataset = MongoDataset(
+                    mongo_client=self,
+                    dataset_name=dataset_name,
+                    dataset_category=dataset_category,
+                    drivers=drivers,
+                    error_if_exists=True
+                )
+                return mongo_dataset
+            except Exception as e:
+                logging.error(e)
+                return None
+
+        return None
 
 
 class MongoDatabaseTaskManagerType(Enum):
@@ -321,7 +400,8 @@ class MongoDataset(object):
                  mongo_client: MongoDatabaseClient,
                  dataset_name: str,
                  dataset_category: str,
-                 drivers: Dict[str, AbstractFileDriver] = {}):
+                 drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]] = {},
+                 error_if_exists: bool = False):
         """ Database Dataset client for read/write operation
 
         :param mongo_client: mongo db client object
@@ -330,29 +410,63 @@ class MongoDataset(object):
         :type dataset_name: str
         :param dataset_category: target dataset category
         :type dataset_category: str
-        :param drivers: dictionary with file drivers, defaults to {}
-        :type drivers: Dict[str, AbstractFileDriver], optional
+        :param drivers: dictionary with file drivers or list of AbstractFileDriver, defaults to {}
+        :type drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]], optional
         """
 
         self._client = mongo_client
-        self._drivers = drivers
+        if isinstance(drivers, dict):
+            self._drivers = drivers
+        elif isinstance(drivers, list):
+            self._drivers = {}
+            for driver in drivers:
+                driver: AbstractFileDriver
+                self._drivers[driver.driver_name()] = driver
+        else:
+            raise NotImplementedError("drivers is neither a dict nor a list of AbstractFileDriver")
 
         self._client.connect()
 
         self._dataset = DatasetsRepository.get_dataset(dataset_name)
+        if error_if_exists and self._dataset is not None:
+            raise Exception("Dataset with the same name found!")
         if self._dataset is None:
             self._dataset = DatasetsRepository.new_dataset(dataset_name, dataset_category)
             assert self._dataset is not None, "Something goes wrong creating Dataset"
 
-    def delete(self, security_name: str):
+    @property
+    def dataset(self):
+        return self._dataset
+
+    def delete(self, security_name: str) -> bool:
         """ Deletes dataset with secury name check
 
         :param security_name: name of the dataset, used for security check
         :type security_name: str
+        :return: TRUE if deletion complete
+        :rtype: bool
         """
 
         if security_name == self._dataset.name:
-            DatasetsRepository.delete_dataset(security_name)
+            samples = self.get_samples()
+            for sample in samples:
+                items = self.get_items(sample.sample_id)
+                for item in items:
+                    for resource in item.resources:
+                        resource: MResource
+
+                        if resource.driver in self._drivers:
+                            driver = self._drivers[resource.driver]
+                            driver.delete(resource.uri)
+                        else:
+                            raise ModuleNotFoundError(f"No avaibale driver [{resource.driver}] to delete resource!")
+
+                        resource.delete()
+                    item.delete()
+                sample.delete()
+            self._dataset.delete()
+            return True
+        return False
 
     def get_sample(self, sample_idx: int) -> Union[MSample, None]:
         """ Retrieves single sample by idx
@@ -502,6 +616,8 @@ class MongoDataset(object):
         item = self.get_item(sample_idx, item_name)
 
         if item is not None:
+            if '.' not in extension:
+                extension = f'.{extension}'
             uri = driver.uri_from_chunks(self._dataset.name, str(sample_idx), item_name + f'{extension}')
             resource = ItemsRepository.create_item_resource(item, resource_name, driver_name, uri)
             if resource is not None:
