@@ -22,7 +22,9 @@ def process_keys(job_id, keys, chunk_size, database_cfg, driver_cfg, h5_file, ne
 
     sample_id_counter = chunk_size * job_id
     with db:
-        for h5_sample in db:
+        for key in keys:
+
+            h5_sample = db[key]
 
             metadata = {}  # TODO: Conversion with external mapper!!!
             for k, v in dict(h5_sample.attrs).items():
@@ -30,11 +32,13 @@ def process_keys(job_id, keys, chunk_size, database_cfg, driver_cfg, h5_file, ne
                     v = int(v)
                 metadata[k] = v
 
-            print(job_id, "Counter: ", sample_id_counter)
+            # print(job_id, "Counter: ", sample_id_counter)
             mongo_sample = mongo_dataset.add_sample(metadata=metadata, sample_id=sample_id_counter)
-            print(job_id, "Sample: ", sample_id_counter, mongo_sample.sample_id)
+            # print(job_id, "Sample: ", sample_id_counter, mongo_sample.sample_id)
             sample_id_counter += 1
 
+            if sample_id_counter % 100 == 0:
+                print(job_id, '->', sample_id_counter)
             # print(dict(item.attrs))
             for h5_item_name, h5_data in h5_sample.items():
                 mongo_dataset.add_item(mongo_sample.sample_id, h5_item_name)
@@ -54,14 +58,29 @@ def process_keys(job_id, keys, chunk_size, database_cfg, driver_cfg, h5_file, ne
 @click.option('--h5_file', required=True, help="H5 Dataset file to convert")
 @click.option('--new_dataset_name', required=True, help="New Dataset desired name")
 @click.option('--new_dataset_category', required=True, help="New Dataset desired category name")
-def h5_to_mongo(database_cfg, driver_cfg, h5_file, new_dataset_name, new_dataset_category):
+@click.option('--workers', default=10, help="How many workers to use")
+def h5_to_mongo(database_cfg, driver_cfg, h5_file, new_dataset_name, new_dataset_category, workers):
 
     keys = []
     db = H5SimpleDatabase(filename=h5_file)
     with db:
         keys = list(db.keys)
 
-    job_numbers = 10
+    driver = SafeFilesystemDriver.create_from_configuration_file(driver_cfg)
+    mongo_client = MongoDatabaseClient.create_from_configuration_file(filename=database_cfg)
+    MongoDataset(
+        mongo_client,
+        new_dataset_name,
+        new_dataset_category,
+        {driver.driver_name(): driver}
+    )
+    mongo_client.disconnect()
+
+    print("Dataset ready...")
+    import time
+    time.sleep(1)
+
+    job_numbers = workers
     total = len(keys)
     chunk_size = total // job_numbers
     chunks = [keys[i:i + chunk_size] for i in range(0, len(keys), chunk_size)]
