@@ -114,7 +114,7 @@ class DatasetsRepository(object):
         try:
             dataset = MDataset.objects.get(name=dataset_name)
         except DoesNotExist as e:
-            logging.error(e)
+            logging.error(f'{e} : {dataset_name}')
             dataset = None
         return dataset
 

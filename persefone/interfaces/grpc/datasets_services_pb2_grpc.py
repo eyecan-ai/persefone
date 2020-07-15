@@ -39,6 +39,11 @@ class DatasetsServiceStub(object):
                 request_serializer=persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DSampleRequest.SerializeToString,
                 response_deserializer=persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DSampleResponse.FromString,
                 )
+        self.UpdateSample = channel.unary_unary(
+                '/persefone.DatasetsService/UpdateSample',
+                request_serializer=persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DSampleRequest.SerializeToString,
+                response_deserializer=persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DSampleResponse.FromString,
+                )
         self.NewSample = channel.unary_unary(
                 '/persefone.DatasetsService/NewSample',
                 request_serializer=persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DSampleRequest.SerializeToString,
@@ -51,6 +56,11 @@ class DatasetsServiceStub(object):
                 )
         self.NewItem = channel.unary_unary(
                 '/persefone.DatasetsService/NewItem',
+                request_serializer=persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DItemRequest.SerializeToString,
+                response_deserializer=persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DItemResponse.FromString,
+                )
+        self.UpdateItem = channel.unary_unary(
+                '/persefone.DatasetsService/UpdateItem',
                 request_serializer=persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DItemRequest.SerializeToString,
                 response_deserializer=persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DItemResponse.FromString,
                 )
@@ -89,6 +99,12 @@ class DatasetsServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def UpdateSample(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def NewSample(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -102,6 +118,12 @@ class DatasetsServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def NewItem(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def UpdateItem(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -135,6 +157,11 @@ def add_DatasetsServiceServicer_to_server(servicer, server):
                     request_deserializer=persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DSampleRequest.FromString,
                     response_serializer=persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DSampleResponse.SerializeToString,
             ),
+            'UpdateSample': grpc.unary_unary_rpc_method_handler(
+                    servicer.UpdateSample,
+                    request_deserializer=persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DSampleRequest.FromString,
+                    response_serializer=persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DSampleResponse.SerializeToString,
+            ),
             'NewSample': grpc.unary_unary_rpc_method_handler(
                     servicer.NewSample,
                     request_deserializer=persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DSampleRequest.FromString,
@@ -147,6 +174,11 @@ def add_DatasetsServiceServicer_to_server(servicer, server):
             ),
             'NewItem': grpc.unary_unary_rpc_method_handler(
                     servicer.NewItem,
+                    request_deserializer=persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DItemRequest.FromString,
+                    response_serializer=persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DItemResponse.SerializeToString,
+            ),
+            'UpdateItem': grpc.unary_unary_rpc_method_handler(
+                    servicer.UpdateItem,
                     request_deserializer=persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DItemRequest.FromString,
                     response_serializer=persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DItemResponse.SerializeToString,
             ),
@@ -241,6 +273,22 @@ class DatasetsService(object):
             call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
+    def UpdateSample(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/persefone.DatasetsService/UpdateSample',
+            persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DSampleRequest.SerializeToString,
+            persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DSampleResponse.FromString,
+            options, channel_credentials,
+            call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
     def NewSample(request,
             target,
             options=(),
@@ -283,6 +331,22 @@ class DatasetsService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/persefone.DatasetsService/NewItem',
+            persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DItemRequest.SerializeToString,
+            persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DItemResponse.FromString,
+            options, channel_credentials,
+            call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def UpdateItem(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/persefone.DatasetsService/UpdateItem',
             persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DItemRequest.SerializeToString,
             persefone_dot_interfaces_dot_grpc_dot_datasets__services__pb2.DItemResponse.FromString,
             options, channel_credentials,

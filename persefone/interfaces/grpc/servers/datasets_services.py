@@ -3,7 +3,7 @@ from persefone.data.io.drivers.common import AbstractFileDriver
 from persefone.data.databases.mongo.clients import MongoDatabaseClient, MongoDataset, MongoDatasetsManager
 from google.protobuf import json_format
 from persefone.interfaces.proto.utils.comm import ResponseStatusUtils
-from persefone.data.databases.mongo.model import MSample, MItem
+from persefone.data.databases.mongo.model import MSample, MItem, MResource
 from persefone.interfaces.proto.datasets_pb2 import DDataset, DItem, DSample
 from persefone.interfaces.grpc.datasets_services_pb2_grpc import DatasetsServiceServicer, add_DatasetsServiceServicer_to_server
 from persefone.interfaces.grpc.datasets_services_pb2 import (
@@ -11,7 +11,7 @@ from persefone.interfaces.grpc.datasets_services_pb2 import (
     DSampleRequest, DSampleResponse,
     DItemRequest, DItemResponse
 )
-
+from typing import List
 import grpc
 from abc import ABC, abstractmethod
 
@@ -59,11 +59,19 @@ class DatasetsService(ABC, DatasetsServiceServicer):
         pass
 
     @abstractmethod
+    def UpdateSample(self, request: DSampleRequest, context: grpc.ServicerContext) -> DSampleResponse:
+        pass
+
+    @abstractmethod
     def GetItem(self, request: DItemRequest, context: grpc.ServicerContext) -> DItemResponse:
         pass
 
     @abstractmethod
     def NewItem(self, request: DItemRequest, context: grpc.ServicerContext) -> DItemResponse:
+        pass
+
+    @abstractmethod
+    def UpdateItem(self, request: DItemRequest, context: grpc.ServicerContext) -> DItemResponse:
         pass
 
 
@@ -114,6 +122,15 @@ class MongoDatasetService(DatasetsService):
         return MongoDatasetsManager(self._mongo_client).get_datasets(
             dataset_name=dataset_name, drivers=self._drivers
         )
+
+    def _fetch_resource(self, mongo_dataset: MongoDataset, ditem: DItem, resources: List[MResource]) -> bool:
+        for resource in resources:
+            if resource.driver == self._drivers[0].driver_name():
+                ditem.data = mongo_dataset.fetch_resource_to_blob(resource)
+                ditem.data_encoding = Path(resource.uri).suffix
+                ditem.has_data = True
+                return True
+        return False
 
     def DatasetsList(self, request: DDatasetRequest, context: grpc.ServicerContext) -> DDatasetResponse:
 
@@ -216,9 +233,7 @@ class MongoDatasetService(DatasetsService):
 
                     # if fetch_data == True in request, fetches also tensor data in each DItem
                     if request.fetch_data:
-                        for resource in item.resources:
-                            ditem.data = mongo_dataset.fetch_resource_to_blob(resource)
-                            ditem.data_encoding = Path(resource.uri).suffix
+                        self._fetch_resource(mongo_dataset, ditem, item.resources)
 
                     # Fills DSample with DItems
                     dsample.items.append(ditem)
@@ -269,9 +284,7 @@ class MongoDatasetService(DatasetsService):
 
                     # if fetch_data == True in request, fetches also tensor data in each DItem
                     if request.fetch_data:
-                        for resource in item.resources:
-                            ditem.data = mongo_dataset.fetch_resource_to_blob(resource)
-                            ditem.data_encoding = Path(resource.uri).suffix
+                        self._fetch_resource(mongo_dataset, ditem, item.resources)
 
                     # Fills DSample with DItems
                     dsample.items.append(ditem)
@@ -309,6 +322,57 @@ class MongoDatasetService(DatasetsService):
 
                 # Creates DSample from MSample
                 dsample = self._create_dsample(sample)
+                response.samples.append(dsample)
+
+        return response
+
+    def UpdateSample(self, request: DSampleRequest, context: grpc.ServicerContext) -> DSampleResponse:
+
+        # Fetches MongoDataset  if any
+        mongo_dataset: MongoDataset = self._get_dataset(request)
+
+        # Inits Response
+        response = DSampleResponse()
+
+        if mongo_dataset is None:  # No corresponding dataser found
+
+            # Build response status
+            response.status.CopyFrom(ResponseStatusUtils.create_error_status(f"No dataset found: [{request.dataset_name}]"))
+        else:
+
+            sample = mongo_dataset.get_sample(request.sample_id)
+
+            if sample is None:
+
+                # Build response status
+                response.status.CopyFrom(ResponseStatusUtils.create_error_status(f"No sample found with id: [{request.sample_id}]"))
+
+            else:
+                # Build response status
+                response.status.CopyFrom(ResponseStatusUtils.create_ok_status())
+
+                # Update metdata
+                sample.metadata = json_format.MessageToDict(request.metadata)
+                sample.save()
+
+                # Creates DSample from MSample
+                dsample = self._create_dsample(sample)
+
+                # Fetches sample items
+                items = mongo_dataset.get_items(sample_idx=sample.sample_id)
+
+                for item in items:
+
+                    # Creates DItem from MItem
+                    ditem = self._create_ditem(item)
+
+                    # if fetch_data == True in request, fetches also tensor data in each DItem
+                    if request.fetch_data:
+                        self._fetch_resource(mongo_dataset, ditem, item.resources)
+
+                    # Fills DSample with DItems
+                    dsample.items.append(ditem)
+
                 response.samples.append(dsample)
 
         return response
@@ -351,9 +415,7 @@ class MongoDatasetService(DatasetsService):
 
                     # if fetch_data == True in request, fetches also tensor data in each DItem
                     if request.fetch_data:
-                        for resource in item.resources:
-                            ditem.data = mongo_dataset.fetch_resource_to_blob(resource)
-                            ditem.data_encoding = Path(resource.uri).suffix
+                        self._fetch_resource(mongo_dataset, ditem, item.resources)
 
                     response.items.append(ditem)
 
@@ -408,6 +470,59 @@ class MongoDatasetService(DatasetsService):
                         response.status.CopyFrom(ResponseStatusUtils.create_error_status(f"Failed to create Resource"))
                     else:
 
+                        ditem = self._create_ditem(item)
+                        response.items.append(ditem)
+
+        return response
+
+    def UpdateItem(self, request: DItemRequest, context: grpc.ServicerContext) -> DItemResponse:
+
+        # Fetches MongoDataset  if any
+        mongo_dataset: MongoDataset = self._get_dataset(request)
+
+        # Inits Response
+        response = DItemResponse()
+
+        if mongo_dataset is None:  # No corresponding dataser found
+
+            # Build response status
+            response.status.CopyFrom(ResponseStatusUtils.create_error_status(f"No dataset found: [{ request.dataset_name}]"))
+        else:
+
+            sample = mongo_dataset.get_sample(request.sample_id)
+
+            if sample is None:
+
+                # Build response status
+                response.status.CopyFrom(ResponseStatusUtils.create_error_status(f"No sample found with id: [{request.sample_id}]"))
+
+            else:
+
+                item = mongo_dataset.get_item(sample.sample_id, request.item_name)
+
+                if item is None:
+
+                    # Build response status
+                    response.status.CopyFrom(ResponseStatusUtils.create_error_status(f"No item found with name: [{request.item_name}]"))
+
+                else:
+
+                    # Build response status
+                    response.status.CopyFrom(ResponseStatusUtils.create_ok_status())
+
+                    resource = mongo_dataset.push_resource_from_blob(
+                        sample.sample_id,
+                        item.name,
+                        item.name,
+                        request.data,
+                        request.data_encoding,
+                        self._drivers[0].driver_name()
+                    )
+
+                    if resource is None:
+                        # Build response status
+                        response.status.CopyFrom(ResponseStatusUtils.create_error_status(f"Failed to create Resource"))
+                    else:
                         ditem = self._create_ditem(item)
                         response.items.append(ditem)
 

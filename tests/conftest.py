@@ -22,6 +22,8 @@ def augmentations_folder():
     return pathlib.Path(__file__).parent / 'sample_data/augmentations'
 
 
+# MONGO
+
 def pytest_addoption(parser):
     parser.addoption("--mongo_real_server", action="store_true",
                      help="run the tests only in case of real localhost mongo server active")
@@ -30,11 +32,25 @@ def pytest_addoption(parser):
 def pytest_runtest_setup(item):
     if 'mongo_real_server' in item.keywords and not item.config.getoption("--mongo_real_server"):
         pytest.skip("need --mongo_real_server for full testing on real mongodb server")
+    if 'mongo_mock_server' in item.keywords and item.config.getoption("--mongo_real_server"):
+        pytest.skip("remove --mongo_real_server for testing on mock mongodb server")
+
+
+@pytest.fixture
+def safefs_sample_configuration(configurations_folder):
+    from pathlib import Path
+    return Path(configurations_folder) / 'drivers/securefs.yml'
 
 
 @pytest.fixture()
 def mongo_configurations_folder(configurations_folder):
     return configurations_folder / 'mongo'
+
+
+@pytest.fixture(scope="function")
+def driver_temp_base_folder(tmpdir_factory):
+    fn = tmpdir_factory.mktemp("driver_folder")
+    return fn
 
 
 @pytest.fixture(scope='function')

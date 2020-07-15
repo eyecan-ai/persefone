@@ -8,22 +8,6 @@ import numpy as np
 
 class TestDatabaseTaskManager(object):
 
-    @pytest.fixture(scope='function')
-    def mongo_client(self, mongo_configurations_folder):
-        cfg_file = Path(mongo_configurations_folder) / 'mongo_test_client_cfg.yml'
-        client = MongoDatabaseClient.create_from_configuration_file(filename=cfg_file)
-        yield client
-        client.drop_database(key0=client.DROP_KEY_0, key1=client.DROP_KEY_1)
-        client.disconnect()
-
-    @pytest.fixture(scope='function')
-    def mongo_client_mock(self, mongo_configurations_folder):
-        cfg_file = Path(mongo_configurations_folder) / 'mongo_test_client_cfg_mock.yml'
-        client = MongoDatabaseClient.create_from_configuration_file(filename=cfg_file)
-        yield client
-        client.drop_database(key0=client.DROP_KEY_0, key1=client.DROP_KEY_1)
-        client.disconnect()
-
     def _test_manager(self, mongo_client):
 
         creator = MongoDatabaseTaskManager(mongo_client=mongo_client, manager_type=MongoDatabaseTaskManagerType.TASK_CREATOR)
@@ -86,8 +70,9 @@ class TestDatabaseTaskManager(object):
             assert god.remove_task(task.name), "Remove task failed"
 
     @pytest.mark.mongo_real_server  # EXECUTE ONLY IF --mongo_real_server option is passed
-    def test_manager(self, mongo_client):
-        self._test_manager(mongo_client)
+    def test_manager(self, temp_mongo_database):
+        self._test_manager(temp_mongo_database)
 
-    def test_manager_mock(self, mongo_client_mock):
-        self._test_manager(mongo_client_mock)
+    @pytest.mark.mongo_mock_server  # NOT EXECUTE IF --mongo_real_server option is passed
+    def test_manager_mock(self, temp_mongo_mock_database):
+        self._test_manager(temp_mongo_mock_database)

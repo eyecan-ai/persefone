@@ -22,7 +22,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n1persefone/interfaces/grpc/datasets_services.proto\x12\tpersefone\x1a\x1cgoogle/protobuf/struct.proto\x1a%persefone/interfaces/proto/comm.proto\x1a)persefone/interfaces/proto/datasets.proto\"U\n\x0f\x44\x44\x61tasetRequest\x12\x14\n\x0c\x64\x61taset_name\x18\x01 \x01(\t\x12\x18\n\x10\x64\x61taset_category\x18\x02 \x01(\t\x12\x12\n\nfetch_data\x18\x03 \x01(\x08\"d\n\x10\x44\x44\x61tasetResponse\x12)\n\x06status\x18\x01 \x01(\x0b\x32\x19.persefone.ResponseStatus\x12%\n\x08\x64\x61tasets\x18\x02 \x03(\x0b\x32\x13.persefone.DDataset\"x\n\x0e\x44SampleRequest\x12\x14\n\x0c\x64\x61taset_name\x18\x01 \x01(\t\x12\x11\n\tsample_id\x18\x02 \x01(\x05\x12)\n\x08metadata\x18\x03 \x01(\x0b\x32\x17.google.protobuf.Struct\x12\x12\n\nfetch_data\x18\x04 \x01(\x08\"a\n\x0f\x44SampleResponse\x12)\n\x06status\x18\x01 \x01(\x0b\x32\x19.persefone.ResponseStatus\x12#\n\x07samples\x18\x02 \x03(\x0b\x32\x12.persefone.DSample\"\x83\x01\n\x0c\x44ItemRequest\x12\x14\n\x0c\x64\x61taset_name\x18\x01 \x01(\t\x12\x11\n\tsample_id\x18\x02 \x01(\x05\x12\x11\n\titem_name\x18\x03 \x01(\t\x12\x0c\n\x04\x64\x61ta\x18\x04 \x01(\x0c\x12\x15\n\rdata_encoding\x18\x05 \x01(\t\x12\x12\n\nfetch_data\x18\x06 \x01(\x08\"[\n\rDItemResponse\x12)\n\x06status\x18\x01 \x01(\x0b\x32\x19.persefone.ResponseStatus\x12\x1f\n\x05items\x18\x02 \x03(\x0b\x32\x10.persefone.DItem2\xc6\x04\n\x0f\x44\x61tasetsService\x12I\n\x0c\x44\x61tasetsList\x12\x1a.persefone.DDatasetRequest\x1a\x1b.persefone.DDatasetResponse\"\x00\x12G\n\nNewDataset\x12\x1a.persefone.DDatasetRequest\x1a\x1b.persefone.DDatasetResponse\"\x00\x12J\n\rDeleteDataset\x12\x1a.persefone.DDatasetRequest\x1a\x1b.persefone.DDatasetResponse\"\x00\x12G\n\nGetDataset\x12\x1a.persefone.DDatasetRequest\x1a\x1b.persefone.DDatasetResponse\"\x00\x12\x44\n\tGetSample\x12\x19.persefone.DSampleRequest\x1a\x1a.persefone.DSampleResponse\"\x00\x12\x44\n\tNewSample\x12\x19.persefone.DSampleRequest\x1a\x1a.persefone.DSampleResponse\"\x00\x12>\n\x07GetItem\x12\x17.persefone.DItemRequest\x1a\x18.persefone.DItemResponse\"\x00\x12>\n\x07NewItem\x12\x17.persefone.DItemRequest\x1a\x18.persefone.DItemResponse\"\x00\x62\x06proto3'
+  serialized_pb=b'\n1persefone/interfaces/grpc/datasets_services.proto\x12\tpersefone\x1a\x1cgoogle/protobuf/struct.proto\x1a%persefone/interfaces/proto/comm.proto\x1a)persefone/interfaces/proto/datasets.proto\"U\n\x0f\x44\x44\x61tasetRequest\x12\x14\n\x0c\x64\x61taset_name\x18\x01 \x01(\t\x12\x18\n\x10\x64\x61taset_category\x18\x02 \x01(\t\x12\x12\n\nfetch_data\x18\x03 \x01(\x08\"d\n\x10\x44\x44\x61tasetResponse\x12)\n\x06status\x18\x01 \x01(\x0b\x32\x19.persefone.ResponseStatus\x12%\n\x08\x64\x61tasets\x18\x02 \x03(\x0b\x32\x13.persefone.DDataset\"x\n\x0e\x44SampleRequest\x12\x14\n\x0c\x64\x61taset_name\x18\x01 \x01(\t\x12\x11\n\tsample_id\x18\x02 \x01(\x05\x12)\n\x08metadata\x18\x03 \x01(\x0b\x32\x17.google.protobuf.Struct\x12\x12\n\nfetch_data\x18\x04 \x01(\x08\"a\n\x0f\x44SampleResponse\x12)\n\x06status\x18\x01 \x01(\x0b\x32\x19.persefone.ResponseStatus\x12#\n\x07samples\x18\x02 \x03(\x0b\x32\x12.persefone.DSample\"\x83\x01\n\x0c\x44ItemRequest\x12\x14\n\x0c\x64\x61taset_name\x18\x01 \x01(\t\x12\x11\n\tsample_id\x18\x02 \x01(\x05\x12\x11\n\titem_name\x18\x03 \x01(\t\x12\x0c\n\x04\x64\x61ta\x18\x04 \x01(\x0c\x12\x15\n\rdata_encoding\x18\x05 \x01(\t\x12\x12\n\nfetch_data\x18\x06 \x01(\x08\"[\n\rDItemResponse\x12)\n\x06status\x18\x01 \x01(\x0b\x32\x19.persefone.ResponseStatus\x12\x1f\n\x05items\x18\x02 \x03(\x0b\x32\x10.persefone.DItem2\xd2\x05\n\x0f\x44\x61tasetsService\x12I\n\x0c\x44\x61tasetsList\x12\x1a.persefone.DDatasetRequest\x1a\x1b.persefone.DDatasetResponse\"\x00\x12G\n\nNewDataset\x12\x1a.persefone.DDatasetRequest\x1a\x1b.persefone.DDatasetResponse\"\x00\x12J\n\rDeleteDataset\x12\x1a.persefone.DDatasetRequest\x1a\x1b.persefone.DDatasetResponse\"\x00\x12G\n\nGetDataset\x12\x1a.persefone.DDatasetRequest\x1a\x1b.persefone.DDatasetResponse\"\x00\x12\x44\n\tGetSample\x12\x19.persefone.DSampleRequest\x1a\x1a.persefone.DSampleResponse\"\x00\x12G\n\x0cUpdateSample\x12\x19.persefone.DSampleRequest\x1a\x1a.persefone.DSampleResponse\"\x00\x12\x44\n\tNewSample\x12\x19.persefone.DSampleRequest\x1a\x1a.persefone.DSampleResponse\"\x00\x12>\n\x07GetItem\x12\x17.persefone.DItemRequest\x1a\x18.persefone.DItemResponse\"\x00\x12>\n\x07NewItem\x12\x17.persefone.DItemRequest\x1a\x18.persefone.DItemResponse\"\x00\x12\x41\n\nUpdateItem\x12\x17.persefone.DItemRequest\x1a\x18.persefone.DItemResponse\"\x00\x62\x06proto3'
   ,
   dependencies=[google_dot_protobuf_dot_struct__pb2.DESCRIPTOR,persefone_dot_interfaces_dot_proto_dot_comm__pb2.DESCRIPTOR,persefone_dot_interfaces_dot_proto_dot_datasets__pb2.DESCRIPTOR,])
 
@@ -378,7 +378,7 @@ _DATASETSSERVICE = _descriptor.ServiceDescriptor(
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
   serialized_start=814,
-  serialized_end=1396,
+  serialized_end=1536,
   methods=[
   _descriptor.MethodDescriptor(
     name='DatasetsList',
@@ -431,9 +431,19 @@ _DATASETSSERVICE = _descriptor.ServiceDescriptor(
     create_key=_descriptor._internal_create_key,
   ),
   _descriptor.MethodDescriptor(
+    name='UpdateSample',
+    full_name='persefone.DatasetsService.UpdateSample',
+    index=5,
+    containing_service=None,
+    input_type=_DSAMPLEREQUEST,
+    output_type=_DSAMPLERESPONSE,
+    serialized_options=None,
+    create_key=_descriptor._internal_create_key,
+  ),
+  _descriptor.MethodDescriptor(
     name='NewSample',
     full_name='persefone.DatasetsService.NewSample',
-    index=5,
+    index=6,
     containing_service=None,
     input_type=_DSAMPLEREQUEST,
     output_type=_DSAMPLERESPONSE,
@@ -443,7 +453,7 @@ _DATASETSSERVICE = _descriptor.ServiceDescriptor(
   _descriptor.MethodDescriptor(
     name='GetItem',
     full_name='persefone.DatasetsService.GetItem',
-    index=6,
+    index=7,
     containing_service=None,
     input_type=_DITEMREQUEST,
     output_type=_DITEMRESPONSE,
@@ -453,7 +463,17 @@ _DATASETSSERVICE = _descriptor.ServiceDescriptor(
   _descriptor.MethodDescriptor(
     name='NewItem',
     full_name='persefone.DatasetsService.NewItem',
-    index=7,
+    index=8,
+    containing_service=None,
+    input_type=_DITEMREQUEST,
+    output_type=_DITEMRESPONSE,
+    serialized_options=None,
+    create_key=_descriptor._internal_create_key,
+  ),
+  _descriptor.MethodDescriptor(
+    name='UpdateItem',
+    full_name='persefone.DatasetsService.UpdateItem',
+    index=9,
     containing_service=None,
     input_type=_DITEMREQUEST,
     output_type=_DITEMRESPONSE,

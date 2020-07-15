@@ -32,3 +32,15 @@ class DataCoding(object):
         filename = Path(filename)
         extension = filename.suffix.replace('.', '')
         return open(filename, 'rb').read(), extension
+
+    @classmethod
+    def numpy_image_to_bytes(cls, array: np.ndarray, data_encoding: str):
+        data_encoding = data_encoding.replace('.', '')
+
+        data = bytes()
+        if data_encoding in cls.IMAGE_CODECS:
+            buffer = BytesIO(data)
+            imageio.imwrite(buffer, array, format=data_encoding)
+            return buffer.getvalue(), data_encoding
+        else:
+            return None

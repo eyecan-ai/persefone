@@ -63,21 +63,22 @@ class MongoDatabaseClient(object):
         :return: database connection #TODO: what is this?
         :rtype: database connection
         """
-        if not self._mock:
-            self._connection = connect(
-                db=self._cfg.params.db,
-                alias=alias,
-                host=self._cfg.params.host,
-                port=self._cfg.params.port
-            )
-        else:
-            self._connection = connect(
-                db=self._cfg.params.db,
-                alias=alias,
-                host='mongomock://localhost',
-                port=self._cfg.params.port
-            )
-        return self._connection
+        if self._connection is None:
+            if not self._mock:
+                self._connection = connect(
+                    db=self._cfg.params.db,
+                    alias=alias,
+                    host=self._cfg.params.host,
+                    port=self._cfg.params.port
+                )
+            else:
+                self._connection = connect(
+                    db=self._cfg.params.db,
+                    alias=alias,
+                    host='mongomock://localhost',
+                    port=self._cfg.params.port
+                )
+        return self
 
     def drop_database(self, db: str = None, key0: str = None, key1: str = None):
         """ Drops related database. Needs double security key to delete database, it is used to avoid unwanted actions
@@ -634,14 +635,34 @@ class MongoDataset(object):
         item = self.get_item(sample_idx, item_name)
 
         if item is not None:
+
+            target_resource = None
+            for resource in item.resources:
+                if resource.name == resource_name:
+                    target_resource = resource
+                    break
+
             if '.' not in extension:
                 extension = f'.{extension}'
             uri = driver.uri_from_chunks(self._dataset.name, str(sample_idx), item_name + f'{extension}')
-            resource = ItemsRepository.create_item_resource(item, resource_name, driver_name, uri)
-            if resource is not None:
-                with driver.get(uri, 'wb') as fout:
+            if target_resource is None:
+                # Brand new resource
+                target_resource = ItemsRepository.create_item_resource(item, resource_name, driver_name, uri)
+            else:
+                # Delete previous stored resource
+                driver.delete(target_resource.uri)
+
+                # Update Resource
+                target_resource.name = resource_name
+                target_resource.uri = uri
+                target_resource.driver = driver_name
+                target_resource.save()
+
+            if target_resource is not None:
+                with driver.get(target_resource.uri, 'wb') as fout:
                     fout.write(blob)
-            return resource
+
+            return target_resource
         return None
 
     def fetch_resource_to_blob(self,

@@ -16,45 +16,19 @@ import numpy as np
 
 class TestMongoDatasetService(object):
 
-    @pytest.fixture(scope='function')
-    def mongo_client(self, mongo_configurations_folder):
-        cfg_file = Path(mongo_configurations_folder) / 'mongo_test_client_cfg.yml'
-        client = MongoDatabaseClient.create_from_configuration_file(filename=cfg_file)
-        yield client
-        client.drop_database(key0=client.DROP_KEY_0, key1=client.DROP_KEY_1)
-        client.disconnect()
-
-    @pytest.fixture(scope='function')
-    def mongo_client_mock(self, mongo_configurations_folder):
-        cfg_file = Path(mongo_configurations_folder) / 'mongo_test_client_cfg_mock.yml'
-        client = MongoDatabaseClient.create_from_configuration_file(filename=cfg_file)
-        yield client
-        client.drop_database(key0=client.DROP_KEY_0, key1=client.DROP_KEY_1)
-        client.disconnect()
-
-    @pytest.fixture
-    def safefs_sample_configuration(self, configurations_folder):
-        from pathlib import Path
-        return Path(configurations_folder) / 'drivers/securefs.yml'
-
-    @pytest.fixture(scope="function")
-    def driver_temp_base_folder(self, tmpdir_factory):
-        fn = tmpdir_factory.mktemp("driver_folder")
-        return fn
-
     @pytest.mark.mongo_real_server  # EXECUTE ONLY IF --mongo_real_server option is passed
-    def test_lifecycle(self, mongo_client, driver_temp_base_folder, minimnist_folder):
-        self._test_lifecycle(mongo_client, driver_temp_base_folder, minimnist_folder)
+    def test_lifecycle(self, temp_mongo_database, driver_temp_base_folder, minimnist_folder):
+        self._test_lifecycle(temp_mongo_database, driver_temp_base_folder, minimnist_folder)
 
-    def test_lifecycle_mock(self, mongo_client_mock, driver_temp_base_folder, minimnist_folder):
-        self._test_lifecycle(mongo_client_mock, driver_temp_base_folder, minimnist_folder)
+    @pytest.mark.mongo_mock_server
+    def test_lifecycle_mock(self, temp_mongo_mock_database, driver_temp_base_folder, minimnist_folder):
+        self._test_lifecycle(temp_mongo_mock_database, driver_temp_base_folder, minimnist_folder)
 
     def _test_lifecycle(self, mongo_client, driver_temp_base_folder, minimnist_folder):
 
         host = 'localhost'
         port = 10005
 
-        print("TEMP FOLDER", driver_temp_base_folder)
         cfg = SafeFilesystemDriverCFG.from_dict({'base_folder': driver_temp_base_folder})
         driver = SafeFilesystemDriver(cfg)
 
@@ -90,7 +64,15 @@ class TestMongoDatasetService(object):
                 sample = client.new_sample(dataset_name, metadata={'sample': sample_str, 'items': [1, 2, 3]})
                 assert sample is not None, "Sample creation should be ok!"
                 print("SAMPLE", sample)
+                assert 'metadata' in sample, "metadata key is missing"
                 assert 'sample_id' in sample, "Sample ID is missing"
+
+                sample = client.update_sample(dataset_name, sample['sample_id'], metadata={'sample': 'update', 'items': [11]})
+                print("U SAMPLE", sample)
+                assert sample is not None, "Sample update should be ok!"
+                assert 'metadata' in sample, "metadata key is missing"
+                assert sample['metadata']['sample'] == 'update', "After update 'sample' key should be 'update'"
+                assert len(sample['metadata']['items']) == 1, "After update 'items' key should be one-sized list"
 
                 for item_name, filename in tree_items.items():
 
@@ -115,6 +97,18 @@ class TestMongoDatasetService(object):
                     assert original_data.shape == retrieved_data.shape, "Retrieved data shape is not valid"
                     assert np.array_equal(original_data, retrieved_data), "Retrieved data content is not valid"
 
+                    fake_image = np.random.uniform(0, 255, (32, 32, 3)).astype(np.uint8)
+                    fake_data, fake_encoding = DataCoding.numpy_image_to_bytes(fake_image, 'png')
+                    item_updated = client.update_item(dataset_name, sample['sample_id'], item_name, fake_data, fake_encoding)
+                    assert item_updated is not None, "Item update should be ok!"
+
+                    item_data_2, item_data_encoding_2 = client.get_item_data(dataset_name, sample['sample_id'], item_name)
+                    assert len(item_data_2) > 0, "data bytes should be not empty!"
+                    retrieved_data_2 = DataCoding.bytes_to_data(item_data_2, item_data_encoding_2)
+                    assert retrieved_data_2 is not None, "Retrieved data After Update should be not None"
+                    assert fake_image.shape == retrieved_data_2.shape, "After UpdateRetrieved data shape is not valid"
+                    assert np.array_equal(fake_image, retrieved_data_2), " After Update Retrieved data content is not valid"
+
         for dataset_idx, dataset_name in enumerate(dataset_names):
             dataset = client.get_dataset(dataset_name, fetch_data=False)
             assert dataset is not None, "Retrieved dataset should be not None"
@@ -130,6 +124,8 @@ class TestMongoDatasetService(object):
                 for item in sample['items']:
                     assert 'name' in item, "name key is missing"
                     assert len(item['data']) == 0, "item data should be empty if not fetched explicity"
+                    assert 'has_data' in item, "has_data key is missing"
+                    assert item['has_data'] is False, "has_data should be false"
 
         for dataset_idx, dataset_name in enumerate(dataset_names):
             dataset = client.get_dataset(dataset_name, fetch_data=True)
@@ -137,5 +133,19 @@ class TestMongoDatasetService(object):
             for sample in samples:
                 for item in sample['items']:
                     assert len(item['data']) > 0, "item data should be not empty if  fetched"
+                    assert item['has_data'] is True, "has_data should be true"
 
         assert len(client.datasets_list()) == len(dataset_names), "Datasets list is wrong!"
+
+        for dataset_idx, dataset_name in enumerate(dataset_names):
+            assert client.delete_dataset(dataset_name) is True, "Deletion should be ok!"
+
+        assert len(client.datasets_list()) == 0, "Datasets list must be empty after armageddon!"
+
+        print("TEMP FOLDER", driver_temp_base_folder)
+
+        p = Path(driver_temp_base_folder)
+        subitems = [x for x in p.glob('**/*') if x.is_file()]
+        assert len(subitems) == 0, "No breadcrumbs please!"
+        # for i in p.glob('**/*'):
+        #     print(i.name)

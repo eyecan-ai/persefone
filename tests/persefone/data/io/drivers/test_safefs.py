@@ -9,11 +9,6 @@ import pickle
 
 class TestSafeFS(object):
 
-    @pytest.fixture
-    def safefs_sample_configuration(self, configurations_folder):
-        from pathlib import Path
-        return configurations_folder / 'drivers/securefs.yml'
-
     def test_file_management(self, safefs_sample_configuration):
 
         cfg = SafeFilesystemDriverCFG(filename=safefs_sample_configuration)

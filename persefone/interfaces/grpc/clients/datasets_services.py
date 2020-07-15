@@ -45,11 +45,17 @@ class DatasetsServiceClient(object):
     def NewSample(self, request: DSampleRequest) -> DSampleResponse:
         return self._stub.NewSample(request)
 
+    def UpdateSample(self, request: DSampleRequest) -> DSampleResponse:
+        return self._stub.UpdateSample(request)
+
     def GetItem(self, request: DItemRequest) -> DItemResponse:
         return self._stub.GetItem(request)
 
     def NewItem(self, request: DItemRequest) -> DItemResponse:
         return self._stub.NewItem(request)
+
+    def UpdateItem(self, request: DItemRequest) -> DItemResponse:
+        return self._stub.UpdateItem(request)
 
 
 class DatasetsSimpleServiceClient(DatasetsServiceClient):
@@ -180,6 +186,33 @@ class DatasetsSimpleServiceClient(DatasetsServiceClient):
         else:
             return None
 
+    def update_sample(self, dataset_name: str, sample_id: int, metadata: dict, fetch_data: bool = False) -> Union[dict, None]:
+        """ Retrieves single sample associated with target dataset
+
+        :param dataset_name: target dataset name
+        :type dataset_name: str
+        :param sample_id: target sample id
+        :type sample_id: int
+        :param metadata: sample associated metadata, defaults to {}
+        :type metadata: dict, optional
+        :param fetch_data: TRUE to fetch also binary item data, defaults to False
+        :type fetch_data: bool, optional
+        :return: JSON-like sample representation or None if errors occur
+        :rtype: Union[dict, None]
+        """
+
+        request = DSampleRequest()
+        request.dataset_name = dataset_name
+        request.sample_id = sample_id
+        json_format.ParseDict(metadata, request.metadata)
+        request.fetch_data = fetch_data
+
+        response = self.UpdateSample(request)
+        if len(response.samples) > 0:
+            return json_format.MessageToDict(response.samples[0], including_default_value_fields=True, preserving_proto_field_name=True)
+        else:
+            return None
+
     def get_item(self, dataset_name: str, sample_id: int, item_name: str, fetch_data: bool = False) -> Union[dict, None]:
         """ Retrieves single item associated with target dataset/sample
 
@@ -232,6 +265,36 @@ class DatasetsSimpleServiceClient(DatasetsServiceClient):
         request.data_encoding = data_encoding
 
         response = self.NewItem(request)
+        if len(response.items) > 0:
+            return json_format.MessageToDict(response.items[0], including_default_value_fields=True, preserving_proto_field_name=True)
+        else:
+            return None
+
+    def update_item(self, dataset_name: str, sample_id: int, item_name: str, data: bytes, data_encoding: str) -> Union[dict, None]:
+        """ Creates new item associated with target dataset/sample
+
+        :param dataset_name: target dataset name
+        :type dataset_name: str
+        :param sample_id: target sample id
+        :type sample_id: int
+        :param item_name: target item name
+        :type item_name: str
+        :param data: bytes to store
+        :type data: bytes
+        :param data_encoding: encoding for bytes to store
+        :type data_encoding: str
+        :return: JSON-like representation of created item or None if errors occur
+        :rtype: Union[dict, None]
+        """
+
+        request = DItemRequest()
+        request.dataset_name = dataset_name
+        request.sample_id = sample_id
+        request.item_name = item_name
+        request.data = data
+        request.data_encoding = data_encoding
+
+        response = self.UpdateItem(request)
         if len(response.items) > 0:
             return json_format.MessageToDict(response.items[0], including_default_value_fields=True, preserving_proto_field_name=True)
         else:

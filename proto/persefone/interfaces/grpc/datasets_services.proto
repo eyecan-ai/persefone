@@ -11,9 +11,11 @@ service DatasetsService{
     rpc DeleteDataset(DDatasetRequest) returns (DDatasetResponse) {}
     rpc GetDataset(DDatasetRequest) returns (DDatasetResponse) {}
     rpc GetSample(DSampleRequest) returns (DSampleResponse) {}
+    rpc UpdateSample(DSampleRequest) returns (DSampleResponse) {}
     rpc NewSample(DSampleRequest) returns (DSampleResponse) {}
     rpc GetItem(DItemRequest) returns (DItemResponse) {}
     rpc NewItem(DItemRequest) returns (DItemResponse) {}
+    rpc UpdateItem(DItemRequest) returns (DItemResponse) {}
 }
 
 
