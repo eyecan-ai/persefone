@@ -57,6 +57,7 @@ class H5Database(object):
         """
         self.__filename = filename
         self.__readonly = get_arg(kwargs, "readonly", default=True)
+        self.__swmr = get_arg(kwargs, "swmr", default=False)
         self.__handle = None
 
     @classmethod
@@ -144,7 +145,7 @@ class H5Database(object):
     def open(self):
         """Opens related file"""
         if not self.is_open():
-            self.__handle = h5py.File(self.filename, 'r' if self.readonly else 'a')
+            self.__handle = h5py.File(self.filename, 'r' if self.readonly else 'a', swmr=self.__swmr)
             if self.is_empty():
                 self.initialize()
 

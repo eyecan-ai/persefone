@@ -514,16 +514,18 @@ class MongoDataset(object):
 
         return SamplesRepository.count_samples(dataset=self._dataset)
 
-    def add_sample(self, metadata: dict = {}) -> Union[MSample, None]:
+    def add_sample(self, metadata: dict = {}, sample_id: int = -1) -> Union[MSample, None]:
         """ Creates new sample. If a idx collision occurs, None is returned
 
         :param metadata: sample metadata, defaults to {}
         :type metadata: dict, optional
+        :param sample_id: custom sample id, (-1) for auto id assignment
+        :type sample_id: int
         :return: MSample object or None
         :rtype: Union[MSample, None]
         """
 
-        return SamplesRepository.new_sample(self._dataset, -1, metadata)
+        return SamplesRepository.new_sample(self._dataset, sample_id, metadata)
 
     def get_item(self, sample_idx: int, item_name: str) -> Union[MItem, None]:
         """ Retrieves single sample item

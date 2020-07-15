@@ -184,11 +184,12 @@ class SamplesRepository(object):
             metadata=metadata,
             dataset=dataset
         )
+
         try:
             sample.save()
         except NotUniqueError as e:
             sample = None
-            logging.info(e)
+            logging.error(e)
         return sample
 
     @classmethod
