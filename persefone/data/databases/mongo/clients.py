@@ -5,7 +5,7 @@ from mongoengine import connect, disconnect, DEFAULT_CONNECTION_NAME
 from enum import Enum
 from persefone.data.io.drivers.common import AbstractFileDriver
 from persefone.data.databases.mongo.model import (
-    MTask, MTaskStatus, MItem, MSample, MResource
+    MTask, MTaskStatus, MItem, MSample, MResource, MDataset
 )
 from persefone.data.databases.mongo.repositories import (
     TasksRepository, DatasetsRepository, DatasetCategoryRepository,
@@ -13,6 +13,10 @@ from persefone.data.databases.mongo.repositories import (
 )
 from typing import Union, List, Dict
 from pathlib import Path
+import numpy as np
+from PIL import Image
+import logging
+import io
 
 
 class MongoDatabaseClientCFG(XConfiguration):
@@ -59,21 +63,22 @@ class MongoDatabaseClient(object):
         :return: database connection #TODO: what is this?
         :rtype: database connection
         """
-        if not self._mock:
-            self._connection = connect(
-                db=self._cfg.params.db,
-                alias=alias,
-                host=self._cfg.params.host,
-                port=self._cfg.params.port
-            )
-        else:
-            self._connection = connect(
-                db=self._cfg.params.db,
-                alias=alias,
-                host='mongomock://localhost',
-                port=self._cfg.params.port
-            )
-        return self._connection
+        if self._connection is None:
+            if not self._mock:
+                self._connection = connect(
+                    db=self._cfg.params.db,
+                    alias=alias,
+                    host=self._cfg.params.host,
+                    port=self._cfg.params.port
+                )
+            else:
+                self._connection = connect(
+                    db=self._cfg.params.db,
+                    alias=alias,
+                    host='mongomock://localhost',
+                    port=self._cfg.params.port
+                )
+        return self
 
     def drop_database(self, db: str = None, key0: str = None, key1: str = None):
         """ Drops related database. Needs double security key to delete database, it is used to avoid unwanted actions
@@ -85,7 +90,6 @@ class MongoDatabaseClient(object):
         :param key1: security key 1, defaults to None
         :type key1: str, optional
         """
-
         if key0 == self.DROP_KEY_0 and key1 == self.DROP_KEY_1:
             if self._connection is not None:
                 self._connection.drop_database(db if db is not None else self._cfg.params.db)
@@ -114,7 +118,7 @@ class MongoDatabaseClient(object):
         return MongoDatabaseClient(cfg=cfg)
 
 
-class DatabaseTaskManagerType(Enum):
+class MongoDatabaseTaskManagerType(Enum):
     """ DatabaseTaskManager permission levels """
 
     TASK_CREATOR = 0
@@ -122,9 +126,9 @@ class DatabaseTaskManagerType(Enum):
     TASK_GOD = 2
 
 
-class DatabaseTaskManager(object):
+class MongoDatabaseTaskManager(object):
 
-    def __init__(self, mongo_client: MongoDatabaseClient, manager_type: DatabaseTaskManagerType = DatabaseTaskManagerType.TASK_GOD):
+    def __init__(self, mongo_client: MongoDatabaseClient, manager_type: MongoDatabaseTaskManagerType = MongoDatabaseTaskManagerType.TASK_GOD):
         """ Creates a DatabaseTaskManager as interface to tasks management
 
         :param mongo_client: MongoDatabaseClient used for database connection
@@ -185,11 +189,11 @@ class DatabaseTaskManager(object):
         if not self._mongo_client.connected:
             self._mongo_client.connect()
 
-        allowed = [DatabaseTaskManagerType.TASK_CREATOR, DatabaseTaskManagerType.TASK_GOD]
+        allowed = [MongoDatabaseTaskManagerType.TASK_CREATOR, MongoDatabaseTaskManagerType.TASK_GOD]
         if self._manager_type not in allowed:
             raise PermissionError(f"New task not allowd for {self._manager_type}")
 
-        source = self.__class__.__name__ + "@" + self._manager_type.name
+        source = MongoDatabaseTaskManager.__name__ + "@" + self._manager_type.name
         return TasksRepository.new_task(name=name, source=source, input_payload=input_payload)
 
     def start_task(self, name: str) -> Union[MTask, None]:
@@ -205,7 +209,7 @@ class DatabaseTaskManager(object):
         if not self._mongo_client.connected:
             self._mongo_client.connect()
 
-        allowed = [DatabaseTaskManagerType.TASK_WORKER, DatabaseTaskManagerType.TASK_GOD]
+        allowed = [MongoDatabaseTaskManagerType.TASK_WORKER, MongoDatabaseTaskManagerType.TASK_GOD]
         if self._manager_type not in allowed:
             raise PermissionError(f"Start task not allowd for {self._manager_type}")
 
@@ -230,7 +234,7 @@ class DatabaseTaskManager(object):
         if not self._mongo_client.connected:
             self._mongo_client.connect()
 
-        allowed = [DatabaseTaskManagerType.TASK_WORKER, DatabaseTaskManagerType.TASK_GOD]
+        allowed = [MongoDatabaseTaskManagerType.TASK_WORKER, MongoDatabaseTaskManagerType.TASK_GOD]
         if self._manager_type not in allowed:
             raise PermissionError(f"Work on task not allowd for {self._manager_type}")
 
@@ -255,7 +259,7 @@ class DatabaseTaskManager(object):
         if not self._mongo_client.connected:
             self._mongo_client.connect()
 
-        allowed = [DatabaseTaskManagerType.TASK_WORKER, DatabaseTaskManagerType.TASK_GOD]
+        allowed = [MongoDatabaseTaskManagerType.TASK_WORKER, MongoDatabaseTaskManagerType.TASK_GOD]
         if self._manager_type not in allowed:
             raise PermissionError(f"Complete task not allowd for {self._manager_type}")
 
@@ -278,7 +282,7 @@ class DatabaseTaskManager(object):
         if not self._mongo_client.connected:
             self._mongo_client.connect()
 
-        allowed = [DatabaseTaskManagerType.TASK_WORKER, DatabaseTaskManagerType.TASK_GOD]
+        allowed = [MongoDatabaseTaskManagerType.TASK_WORKER, MongoDatabaseTaskManagerType.TASK_GOD]
         if self._manager_type not in allowed:
             raise PermissionError(f"Cancel task not allowd for {self._manager_type}")
 
@@ -301,7 +305,7 @@ class DatabaseTaskManager(object):
         if not self._mongo_client.connected:
             self._mongo_client.connect()
 
-        allowed = [DatabaseTaskManagerType.TASK_GOD]
+        allowed = [MongoDatabaseTaskManagerType.TASK_GOD]
         if self._manager_type not in allowed:
             raise PermissionError(f"Permanent task deletion not allowd for {self._manager_type}")
 
@@ -312,13 +316,107 @@ class DatabaseTaskManager(object):
         return False
 
 
-class DatabaseDataset(object):
+class MongoDatasetsManager(object):
+
+    def __init__(self, mongo_client: MongoDatabaseClient):
+        """ MongoDatasetsManager interface to datasets management
+
+        :param mongo_client: MongoDatabaseClient used for database connection
+        :type mongo_client: MongoDatabaseClient
+        :type manager_type: DatabaseTaskManagerType, optional
+        """
+
+        self._mongo_client = mongo_client
+
+    def get_datasets(self, dataset_name: str, drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]):
+        """ Retrievers available datasets
+
+        :param dataset_name: dataset name query string (can be empty for all)
+        :type dataset_name: str
+        :param drivers: list or dict of AbstractFileDriver
+        :type drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]
+        :return: list of MongoDataset
+        :rtype: List[MDataset]
+        """
+        if not self._mongo_client.connected:
+            self._mongo_client.connect()
+
+        raw_datasets = list(DatasetsRepository.get_datasets(dataset_name=dataset_name))
+        mongo_datasets = []
+        for raw_dataset in raw_datasets:
+            mongo_dataset = MongoDataset(
+                mongo_client=self._mongo_client,
+                dataset_name=raw_dataset.name,
+                dataset_category=raw_dataset.category.name,
+                drivers=drivers
+            )
+            mongo_datasets.append(mongo_dataset)
+        return mongo_datasets
+
+    def get_dataset(self, dataset_name: str, drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]):
+        """ Retrives single dataset by name
+
+        :param dataset_name: dataset name
+        :type dataset_name: str
+        :param drivers: list or dict of AbstractFileDriver
+        :type drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]
+        :return: single MongoDataset
+        :rtype: MongoDataset
+        """
+
+        if not self._mongo_client.connected:
+            self._mongo_client.connect()
+
+        raw_dataset = DatasetsRepository.get_dataset(dataset_name=dataset_name)
+        if raw_dataset is not None:
+            mongo_dataset = MongoDataset(
+                mongo_client=self._mongo_client,
+                dataset_name=raw_dataset.name,
+                dataset_category=raw_dataset.category.name,
+                drivers=drivers
+            )
+            return mongo_dataset
+        return None
+
+    def create_dataset(self, dataset_name: str, dataset_category: str, drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]):
+        """ Creates MongoDataset
+
+        :param dataset_name: dataset name
+        :type dataset_name: str
+        :param dataset_category: dataset category
+        :type dataset_category: str
+        :param drivers: list or dict of AbstractFileDriver
+        :type drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]
+        :return: created MongoDataset
+        :rtype: MongoDataset
+        """
+
+        if not self._mongo_client.connected:
+            self._mongo_client.connect()
+
+        try:
+            mongo_dataset = MongoDataset(
+                mongo_client=self._mongo_client,
+                dataset_name=dataset_name,
+                dataset_category=dataset_category,
+                drivers=drivers,
+                error_if_exists=True
+            )
+            return mongo_dataset
+        except Exception as e:
+            logging.error(e)
+            return None
+
+
+class MongoDataset(object):
 
     def __init__(self,
                  mongo_client: MongoDatabaseClient,
                  dataset_name: str,
                  dataset_category: str,
-                 drivers: Dict[str, AbstractFileDriver] = {}):
+                 drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]] = {},
+                 create_if_none: bool = True,
+                 error_if_exists: bool = False):
         """ Database Dataset client for read/write operation
 
         :param mongo_client: mongo db client object
@@ -327,29 +425,68 @@ class DatabaseDataset(object):
         :type dataset_name: str
         :param dataset_category: target dataset category
         :type dataset_category: str
-        :param drivers: dictionary with file drivers, defaults to {}
-        :type drivers: Dict[str, AbstractFileDriver], optional
+        :param create_if_none: TRUE to create if not found
+        :type create_if_none: bool
+        :param error_if_exists: TRUE to raise error on dataset with same name
+        :type error_if_exists: bool
+        :param drivers: dictionary with file drivers or list of AbstractFileDriver, defaults to {}
+        :type drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]], optional
         """
 
         self._client = mongo_client
-        self._drivers = drivers
+        if isinstance(drivers, dict):
+            self._drivers = drivers
+        elif isinstance(drivers, list):
+            self._drivers = {}
+            for driver in drivers:
+                driver: AbstractFileDriver
+                self._drivers[driver.driver_name()] = driver
+        else:
+            raise NotImplementedError("drivers is neither a dict nor a list of AbstractFileDriver")
 
         self._client.connect()
 
         self._dataset = DatasetsRepository.get_dataset(dataset_name)
-        if self._dataset is None:
+        if error_if_exists and self._dataset is not None:
+            raise Exception("Dataset with the same name found!")
+
+        if self._dataset is None and create_if_none:
             self._dataset = DatasetsRepository.new_dataset(dataset_name, dataset_category)
             assert self._dataset is not None, "Something goes wrong creating Dataset"
 
-    def delete(self, security_name: str):
+    @property
+    def dataset(self):
+        return self._dataset
+
+    def delete(self, security_name: str) -> bool:
         """ Deletes dataset with secury name check
 
         :param security_name: name of the dataset, used for security check
         :type security_name: str
+        :return: TRUE if deletion complete
+        :rtype: bool
         """
 
         if security_name == self._dataset.name:
-            DatasetsRepository.delete_dataset(security_name)
+            samples = self.get_samples()
+            for sample in samples:
+                items = self.get_items(sample.sample_id)
+                for item in items:
+                    for resource in item.resources:
+                        resource: MResource
+
+                        if resource.driver in self._drivers:
+                            driver = self._drivers[resource.driver]
+                            driver.delete(resource.uri)
+                        else:
+                            raise ModuleNotFoundError(f"No avaibale driver [{resource.driver}] to delete resource!")
+
+                        resource.delete()
+                    item.delete()
+                sample.delete()
+            self._dataset.delete()
+            return True
+        return False
 
     def get_sample(self, sample_idx: int) -> Union[MSample, None]:
         """ Retrieves single sample by idx
@@ -367,20 +504,29 @@ class DatabaseDataset(object):
         :return: list of MSample
         :rtype: List[MSample]
         """
-        return SamplesRepository.get_samples(dataset=self._dataset)
+        return list(SamplesRepository.get_samples(dataset=self._dataset))
 
-    def add_sample(self, sample_idx: int = -1, metadata: dict = {}) -> Union[MSample, None]:
+    def count_samples(self) -> int:
+        """ Counts samples
+
+        :return: number of samples
+        :rtype: int
+        """
+
+        return SamplesRepository.count_samples(dataset=self._dataset)
+
+    def add_sample(self, metadata: dict = {}, sample_id: int = -1) -> Union[MSample, None]:
         """ Creates new sample. If a idx collision occurs, None is returned
 
-        :param sample_idx: sample idx, defaults to -1
-        :type sample_idx: int, optional
         :param metadata: sample metadata, defaults to {}
         :type metadata: dict, optional
+        :param sample_id: custom sample id, (-1) for auto id assignment
+        :type sample_id: int
         :return: MSample object or None
         :rtype: Union[MSample, None]
         """
 
-        return SamplesRepository.new_sample(self._dataset, sample_idx, metadata)
+        return SamplesRepository.new_sample(self._dataset, sample_id, metadata)
 
     def get_item(self, sample_idx: int, item_name: str) -> Union[MItem, None]:
         """ Retrieves single sample item
@@ -394,7 +540,25 @@ class DatabaseDataset(object):
         """
 
         sample = SamplesRepository.get_sample_by_idx(self._dataset, sample_idx)
-        return ItemsRepository.get_item_by_name(sample, item_name)
+        if sample is not None:
+            return ItemsRepository.get_item_by_name(sample, item_name)
+        else:
+            return None
+
+    def get_items(self, sample_idx: int) -> List[MItem]:
+        """ Retrieves all items of given sample
+
+        :param sample_idx: sample idx
+        :type sample_idx: int
+        :return: list of MItem
+        :rtype: List[MItem]
+        """
+
+        sample = SamplesRepository.get_sample_by_idx(self._dataset, sample_idx)
+        if sample is not None:
+            return ItemsRepository.get_items(sample=sample)
+        else:
+            return None
 
     def add_item(self, sample_idx: int, item_name: str) -> Union[MItem, None]:
         """ Creates new item associated with sample
@@ -440,24 +604,6 @@ class DatabaseDataset(object):
                 sample_idx, item_name, resource_name, fin.read(), Path(filename_to_copy).suffix, driver_name
             )
 
-        # if driver_name not in self._drivers:
-        #     raise KeyError(f"Driver '{driver_name}' not found!")
-
-        # driver: AbstractFileDriver=self._drivers[driver_name]
-
-        # item=self.get_item(sample_idx, item_name)
-
-        # if item is not None:
-        #     extension=Path(filename_to_copy).suffix
-        #     uri=driver.uri_from_chunks(self._dataset.name, str(sample_idx), item_name + f'{extension}')
-        #     resource=ItemsRepository.create_item_resource(item, resource_name, driver_name, uri)
-        #     if resource is not None:
-        #         with open(filename_to_copy, 'rb') as fin:
-        #             with driver.get(uri, 'wb') as fout:
-        #                 fout.write(fin.read())
-        #     return True
-        # return False
-
     def push_resource_from_blob(self,
                                 sample_idx: int,
                                 item_name: str,
@@ -465,6 +611,24 @@ class DatabaseDataset(object):
                                 blob: bytes,
                                 extension: str,
                                 driver_name: str) -> Union[MResource, None]:
+        """ Creates new resource pushing a byte array within
+
+        :param sample_idx: target sample idx
+        :type sample_idx: int
+        :param item_name: target item name
+        :type item_name: str
+        :param resource_name: resource name to store
+        :type resource_name: str
+        :param blob: source bytes array
+        :type blob: bytes
+        :param extension: extension for resource
+        :type extension: str
+        :param driver_name: name of driver used to store data
+        :type driver_name: str
+        :raises KeyError: If driver does not exist in dataset available drivers
+        :return: MResource istance or None if errors occur
+        :rtype: Union[MResource, None]
+        """
 
         if driver_name not in self._drivers:
             raise KeyError(f"Driver '{driver_name}' not found!")
@@ -474,18 +638,48 @@ class DatabaseDataset(object):
         item = self.get_item(sample_idx, item_name)
 
         if item is not None:
+
+            target_resource = None
+            for resource in item.resources:
+                if resource.name == resource_name:
+                    target_resource = resource
+                    break
+
+            if '.' not in extension:
+                extension = f'.{extension}'
             uri = driver.uri_from_chunks(self._dataset.name, str(sample_idx), item_name + f'{extension}')
-            resource = ItemsRepository.create_item_resource(item, resource_name, driver_name, uri)
-            if resource is not None:
-                with driver.get(uri, 'wb') as fout:
+            if target_resource is None:
+                # Brand new resource
+                target_resource = ItemsRepository.create_item_resource(item, resource_name, driver_name, uri)
+            else:
+                # Delete previous stored resource
+                driver.delete(target_resource.uri)
+
+                # Update Resource
+                target_resource.name = resource_name
+                target_resource.uri = uri
+                target_resource.driver = driver_name
+                target_resource.save()
+
+            if target_resource is not None:
+                with driver.get(target_resource.uri, 'wb') as fout:
                     fout.write(blob)
-            return resource
+
+            return target_resource
         return None
 
     def fetch_resource_to_blob(self,
-                               resource: MResource,
-                               driver_name: str) -> bytes:
+                               resource: MResource) -> bytes:
+        """ Fetches a resource into bytes array 
 
+        :param resource: target resource
+        :type resource: MResource
+        :raises KeyError: If driver does not exist in dataset available drivers
+        :return: bytes array
+        :rtype: bytes
+        """
+
+        driver_name = resource.driver
         if driver_name not in self._drivers:
             raise KeyError(f"Driver '{driver_name}' not found!")
 
@@ -496,3 +690,84 @@ class DatabaseDataset(object):
             blob = fin.read()
 
         return blob
+
+    def fetch_resource_to_numpyarray(self, resource: MResource) -> np.ndarray:
+        """ Fetches a resource into numpy array
+
+        :param resource: target resoruce
+        :type resource: MResource
+        :raises NotmplementedError: If driver does not exist in dataset available drivers
+        :return: numpy array
+        :rtype: np.ndarray
+        """
+
+        blob = self.fetch_resource_to_blob(resource)
+        # print(resource.uri, len(blob))
+        fin = io.BytesIO(blob)
+
+        try:
+            data = np.array(Image.open(fin))
+        except Exception as e:
+            logging.debug(e)
+            try:
+                data = np.loadtxt(fin)
+            except Exception as e:
+                logging.debug(e)
+                try:
+                    data = np.load(fin)
+                except Exception as e:
+                    logging.debug(e)
+                    raise NotImplementedError("Blob data is not interpretable!")
+
+        return data
+
+
+class MongoDatasetReader(object):
+
+    def __init__(self,
+                 mongo_dataset: MongoDataset,
+                 data_mapping: dict = {},
+                 preferred_driver: str = None):
+        """ Reader wrapper for a MongoDataset
+
+        :param mongo_dataset: target MongoDataset
+        :type mongo_dataset: MongoDataset
+        :param data_mapping: key mapping to retrieves metadata and items in final output, defaults to {}
+        :type data_mapping: dict, optional
+        :param preferred_driver: the preferred driver used during data fetches, defaults to None
+        :type preferred_driver: str, optional
+        """
+
+        self._mongo_dataset = mongo_dataset
+        self._data_mapping = data_mapping
+        self._preferred_driver = preferred_driver
+
+    def __len__(self):
+        return self._mongo_dataset.count_samples()
+
+    def __getitem__(self, idx):
+        if idx >= len(self):
+            raise IndexError
+
+        sample: MSample = self._mongo_dataset.get_sample(idx)
+
+        metadata = sample.metadata
+        items = self._mongo_dataset.get_items(sample.sample_id)
+
+        output_data = {}
+        for k, v in metadata.items():
+            if k in self._data_mapping:
+                output_data[self._data_mapping[k]] = v
+
+        for item in items:
+            item: MItem
+            if item.name in self._data_mapping:
+
+                data = None
+                for resource in item.resources:
+                    data = self._mongo_dataset.fetch_resource_to_numpyarray(resource)
+                    break
+
+                output_data[self._data_mapping[item.name]] = data
+
+        return output_data

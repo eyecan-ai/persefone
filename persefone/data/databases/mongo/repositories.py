@@ -6,7 +6,7 @@ from persefone.data.databases.mongo.model import (
     MModel, MModelCategory
 )
 import logging
-from typing import Union
+from typing import Union, List
 import math
 import datetime
 
@@ -114,9 +114,21 @@ class DatasetsRepository(object):
         try:
             dataset = MDataset.objects.get(name=dataset_name)
         except DoesNotExist as e:
-            logging.error(e)
+            logging.error(f'{e} : {dataset_name}')
             dataset = None
         return dataset
+
+    @classmethod
+    def get_datasets(cls, dataset_name: str = '') -> List[MDataset]:
+        """ Retrieves a list of MDataset with name similar to input dataset_name ()
+
+        :param dataset_name: query string for dataset name [empty for all], defaults to ''
+        :type dataset_name: str, optional
+        :return: list of MDataset
+        :rtype: List[MDataset]
+        """
+
+        return MDataset.objects(name__contains=dataset_name)
 
     @classmethod
     def delete_dataset(cls, dataset_name: str) -> bool:
@@ -165,18 +177,19 @@ class SamplesRepository(object):
         :rtype: Union[MSample, None]
         """
         if sample_id < 0:
-            sample_id = MSample.objects.count()
+            sample_id = SamplesRepository.count_samples(dataset=dataset)
 
         sample = MSample(
             sample_id=sample_id,
             metadata=metadata,
             dataset=dataset
         )
+
         try:
             sample.save()
         except NotUniqueError as e:
             sample = None
-            logging.info(e)
+            logging.error(e)
         return sample
 
     @classmethod
@@ -184,7 +197,7 @@ class SamplesRepository(object):
         """ Retrieves list of MSample s of given MDataset
 
         :param dataset: target MDataset or None for all
-        :type dataset: Union[MDataset, None] 
+        :type dataset: Union[MDataset, None]
         :return: QuerySet of associated MSample
         :rtype: QuerySet
         """
@@ -193,6 +206,20 @@ class SamplesRepository(object):
             return MSample.objects()
         else:
             return MSample.objects(dataset=dataset)
+
+    @classmethod
+    def count_samples(cls, dataset: Union[MDataset, None] = None) -> int:
+        """ Count samples
+
+        :param dataset: target MDataset or none, defaults to None
+        :type dataset: Union[MDataset, None], optional
+        :return: number of samples
+        :rtype: int
+        """
+        if dataset is None:
+            return len(list(MSample.objects()))
+        else:
+            return len(list(MSample.objects(dataset=dataset)))
 
     @classmethod
     def get_sample_by_idx(cls, dataset: MDataset, idx: int) -> Union[MSample, None]:

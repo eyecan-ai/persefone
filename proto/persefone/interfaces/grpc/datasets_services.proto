@@ -1,0 +1,65 @@
+syntax = "proto3";
+package persefone;
+import "google/protobuf/struct.proto";
+import "persefone/interfaces/proto/comm.proto";
+import "persefone/interfaces/proto/datasets.proto";
+
+
+service DatasetsService{
+    rpc DatasetsList(DDatasetRequest) returns (DDatasetResponse) {}
+    rpc NewDataset(DDatasetRequest) returns (DDatasetResponse) {}
+    rpc DeleteDataset(DDatasetRequest) returns (DDatasetResponse) {}
+    rpc GetDataset(DDatasetRequest) returns (DDatasetResponse) {}
+    rpc GetSample(DSampleRequest) returns (DSampleResponse) {}
+    rpc UpdateSample(DSampleRequest) returns (DSampleResponse) {}
+    rpc NewSample(DSampleRequest) returns (DSampleResponse) {}
+    rpc GetItem(DItemRequest) returns (DItemResponse) {}
+    rpc NewItem(DItemRequest) returns (DItemResponse) {}
+    rpc UpdateItem(DItemRequest) returns (DItemResponse) {}
+}
+
+
+// NewDataset / GetDataset
+
+message DDatasetRequest{
+    string dataset_name = 1;
+    string dataset_category = 2;
+    bool fetch_data = 3;
+}
+
+message DDatasetResponse{
+    ResponseStatus status = 1;
+    repeated DDataset datasets = 2;
+}
+
+
+message DSampleRequest{
+    string dataset_name = 1;
+    int32 sample_id = 2;
+    google.protobuf.Struct metadata = 3;
+    bool fetch_data = 4;
+}
+
+message DSampleResponse{
+    ResponseStatus status = 1;
+    repeated DSample samples = 2;
+}
+
+message DItemRequest{
+    string dataset_name = 1;
+    int32 sample_id = 2;
+    string item_name = 3;
+    bytes data = 4;
+    string data_encoding= 5;
+    bool fetch_data = 6;
+}
+
+message DItemResponse{
+    ResponseStatus status = 1;
+    repeated DItem items = 2;
+}
+
+
+//################################################################################
+//################################################################################
+//################################################################################

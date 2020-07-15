@@ -1,4 +1,4 @@
-from persefone.data.databases.mongo.clients import MongoDatabaseClient, DatabaseTaskManager, DatabaseTaskManagerType
+from persefone.data.databases.mongo.clients import MongoDatabaseClient, MongoDatabaseTaskManager, MongoDatabaseTaskManagerType
 from persefone.data.databases.mongo.model import MTask, MTaskStatus
 import click
 import time
@@ -11,7 +11,7 @@ import time
 def manage_tasks(database_cfg, name, work_time):
 
     client = MongoDatabaseClient.create_from_configuration_file(filename=database_cfg)
-    manager = DatabaseTaskManager(mongo_client=client, manager_type=DatabaseTaskManagerType.TASK_WORKER)
+    manager = MongoDatabaseTaskManager(mongo_client=client, manager_type=MongoDatabaseTaskManagerType.TASK_WORKER)
 
     print(f'Daemon [{name}] started...')
 

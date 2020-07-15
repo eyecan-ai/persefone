@@ -2,4 +2,4 @@ host: localhost
 port: 27017
 user: root
 pass: ""
-db: "persefone_pytest_database"
+db: "cmp_demo"

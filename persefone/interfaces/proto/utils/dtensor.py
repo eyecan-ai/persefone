@@ -3,6 +3,7 @@ import persefone.interfaces.proto.data_pb2 as proto_data
 import numpy as np
 from typing import List, Tuple
 from numpy import ndarray
+import logging
 
 
 class DTensorUtils(object):
@@ -109,6 +110,23 @@ class DTensorUtils(object):
         dtype = cls.dtype_to_numpytype(dtensor.dtype)
         array = np.frombuffer(dtensor.content, dtype).reshape(dims)
         return array
+
+    @classmethod
+    def is_valid_dtensor(cls, dtensor: DTensor) -> bool:
+        """ Checks is valid DTensor
+
+        :param dtensor: source DTensor
+        :type dtensor: DTensor
+        :return: TRUE if valid
+        :rtype: bool
+        """
+
+        try:
+            cls.dtensor_to_numpy(dtensor)
+            return True
+        except Exception as e:
+            logging.error(e)
+            return False
 
     @classmethod
     def numpy_to_dtensor_bundle(cls, arrays: List[ndarray], action: str) -> DTensorBundle:

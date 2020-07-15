@@ -2,5 +2,5 @@ host: localhost
 port: 27017
 user: root
 pass: ""
-db: "testing_database_#!@"
+db: "persefone_pytest_database_mocked"
 mock: True

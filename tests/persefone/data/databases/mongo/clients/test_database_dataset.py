@@ -1,4 +1,4 @@
-from persefone.data.databases.mongo.clients import MongoDatabaseClient, DatabaseDataset
+from persefone.data.databases.mongo.clients import MongoDatabaseClient, MongoDataset, MongoDatasetReader
 from persefone.data.databases.mongo.repositories import ItemsRepository, DatasetsRepository, DatasetCategoryRepository, SamplesRepository
 from persefone.data.io.drivers.safefs import SafeFilesystemDriver, SafeFilesystemDriverCFG
 import pytest
@@ -6,52 +6,50 @@ from pathlib import Path
 from persefone.utils.filesystem import tree_from_underscore_notation_files
 
 
-class TestDatabaseDataset(object):
+class TestMongoDatabaseDataset(object):
 
-    @pytest.fixture(scope='function')
-    def mongo_client(self, mongo_configurations_folder):
-        cfg_file = Path(mongo_configurations_folder) / 'mongo_test_client_cfg.yml'
-        client = MongoDatabaseClient.create_from_configuration_file(filename=cfg_file)
-        yield client
-        # client.drop_database(key0=client.DROP_KEY_0, key1=client.DROP_KEY_1)
-        client.disconnect()
-
-    @pytest.fixture(scope='function')
-    def mongo_client_mock(self, mongo_configurations_folder):
-        cfg_file = Path(mongo_configurations_folder) / 'mongo_test_client_cfg_mock.yml'
-        client = MongoDatabaseClient.create_from_configuration_file(filename=cfg_file)
-        yield client
-        client.drop_database(key0=client.DROP_KEY_0, key1=client.DROP_KEY_1)
-        client.disconnect()
-
-    @pytest.fixture
-    def safefs_sample_configuration(self, configurations_folder):
-        from pathlib import Path
-        return Path(configurations_folder) / 'drivers/securefs.yml'
-
-    @pytest.fixture(scope="function")
-    def driver_temp_base_folder(self, tmpdir_factory):
-        fn = tmpdir_factory.mktemp("driver_folder")
-        return fn
-
+    @pytest.mark.mongo_mock_server  # NOT EXECUTE IF --mongo_real_server option is passed
     def test_creation_mock(self,
-                           mongo_client_mock,
+                           temp_mongo_mock_database,
                            safefs_sample_configuration,
                            minimnist_folder,
                            driver_temp_base_folder):
 
-        self._test_creation(mongo_client_mock, safefs_sample_configuration, minimnist_folder, driver_temp_base_folder)
-        self._test_creation_recursive_delete(mongo_client_mock, safefs_sample_configuration, minimnist_folder, driver_temp_base_folder)
+        self._test_creation(temp_mongo_mock_database, safefs_sample_configuration, minimnist_folder, driver_temp_base_folder)
+        self._test_creation_recursive_delete(temp_mongo_mock_database, safefs_sample_configuration, minimnist_folder, driver_temp_base_folder)
 
     @pytest.mark.mongo_real_server  # EXECUTE ONLY IF --mongo_real_server option is passed
     def test_creation(self,
-                      mongo_client,
+                      temp_mongo_database,
                       safefs_sample_configuration,
                       minimnist_folder,
                       driver_temp_base_folder):
 
-        self._test_creation(mongo_client, safefs_sample_configuration, minimnist_folder, driver_temp_base_folder)
-        self._test_creation_recursive_delete(mongo_client, safefs_sample_configuration, minimnist_folder, driver_temp_base_folder)
+        self._test_creation(temp_mongo_database, safefs_sample_configuration, minimnist_folder, driver_temp_base_folder)
+        self._test_creation_recursive_delete(temp_mongo_database, safefs_sample_configuration, minimnist_folder, driver_temp_base_folder)
+        self._test_reader(temp_mongo_database, safefs_sample_configuration, minimnist_folder, driver_temp_base_folder)
+
+    def dataset_from_tree(self, tree, dataset):
+        for sample_str, items in tree.items():
+            sample = dataset.add_sample(
+                {
+                    'sample': int(sample_str),
+                    'sample_f': float(sample_str),
+                    'sample_points': [float(sample_str)] * 10
+                }
+            )
+            sample_idx = sample.sample_id
+
+            for item_name, filename in items.items():
+                dataset.add_item(sample_idx, item_name)
+
+                dataset.push_resource(
+                    sample_idx,
+                    item_name,
+                    item_name,
+                    filename,
+                    SafeFilesystemDriver.driver_name()
+                )
 
     def _test_creation(self,
                        mongo_client,
@@ -60,8 +58,6 @@ class TestDatabaseDataset(object):
                        driver_temp_base_folder):
 
         tree = tree_from_underscore_notation_files(minimnist_folder)
-        # import pprint
-        # pprint.pprint(tree)
 
         dataset_name = 'FAKEDATASET_TEMP'
         category_name = 'FAKEDATASET_CATEGORY_TEMP'
@@ -72,12 +68,12 @@ class TestDatabaseDataset(object):
         drivers = {
             SafeFilesystemDriver.driver_name(): SafeFilesystemDriver(cfg)
         }
-        dataset = DatabaseDataset(mongo_client, dataset_name, category_name, drivers=drivers)
+        dataset = MongoDataset(mongo_client, dataset_name, category_name, drivers=drivers)
 
         for sample_str, items in tree.items():
-            sample_idx = int(sample_str)
-            sample = dataset.add_sample(sample_idx, {'sample': sample_idx * 2, 'items': items.keys()})
+            sample = dataset.add_sample({'sample': sample_str, 'items': items.keys()})
             assert sample is not None, "Sample should be not None!"
+            sample_idx = sample.sample_id
             sample_r = dataset.get_sample(sample_idx)
             assert sample_r is not None, "Retrieved Sample should be not None!"
             assert sample == sample_r, "Retrieved sample is wrong!"
@@ -98,7 +94,7 @@ class TestDatabaseDataset(object):
                 )
                 assert resource is not None, "Failed to create resource"
 
-                blob = dataset.fetch_resource_to_blob(resource, SafeFilesystemDriver.driver_name())
+                blob = dataset.fetch_resource_to_blob(resource)
 
                 with open(filename, 'rb') as fin:
                     blob_gt = fin.read()
@@ -107,7 +103,7 @@ class TestDatabaseDataset(object):
         dataset.delete(security_name=dataset_name)
         DatasetCategoryRepository.delete_category(name=category_name)
         assert DatasetsRepository.get_dataset(dataset_name=dataset_name) is None, "Dataset should be deleted!"
-        assert len(SamplesRepository.get_samples()) == 0, "No task should be there!"
+        assert SamplesRepository.count_samples() == 0, "No samples should be there!"
 
     def _test_creation_recursive_delete(self,
                                         mongo_client,
@@ -117,8 +113,8 @@ class TestDatabaseDataset(object):
 
         tree = tree_from_underscore_notation_files(minimnist_folder)
 
-        dataset_name = 'FAKEDATASET_TEMP'
-        category_name = 'FAKEDATASET_CATEGORY_TEMP'
+        dataset_name = 'FAKEDATASET_TEMPRECURSIVE'
+        category_name = 'FAKEDATASET_TEMPRECURSIVE_CATEGORY_TEMP'
 
         print("Driver BLOB dataset folder: ", driver_temp_base_folder)
 
@@ -126,12 +122,12 @@ class TestDatabaseDataset(object):
         drivers = {
             SafeFilesystemDriver.driver_name(): SafeFilesystemDriver(cfg)
         }
-        dataset = DatabaseDataset(mongo_client, dataset_name, category_name, drivers=drivers)
+        dataset = MongoDataset(mongo_client, dataset_name, category_name, drivers=drivers)
 
         for sample_str, items in tree.items():
-            sample_idx = int(sample_str)
-            sample = dataset.add_sample(sample_idx, {'sample': sample_idx * 2, 'items': items.keys()})
+            sample = dataset.add_sample({'sample': sample_str, 'items': items.keys()})
             assert sample is not None, "Sample should be not None!"
+            sample_idx = sample.sample_id
             sample_r = dataset.get_sample(sample_idx)
             assert sample_r is not None, "Retrieved Sample should be not None!"
             assert sample == sample_r, "Retrieved sample is wrong!"
@@ -157,14 +153,50 @@ class TestDatabaseDataset(object):
                 )
                 assert resource is not None, "Failed to create resource"
 
-                blob_retrieved = dataset.fetch_resource_to_blob(resource, SafeFilesystemDriver.driver_name())
+                blob_retrieved = dataset.fetch_resource_to_blob(resource)
                 assert blob == blob_retrieved, "Stored blob is strange!"
 
         samples = dataset.get_samples()
         for sample in samples:
             SamplesRepository.delete_sample(dataset_name=dataset_name, sample_idx=sample.sample_id)
-        assert len(SamplesRepository.get_samples()) == 0, "No task should be there!"
+        assert SamplesRepository.count_samples() == 0, "No samples should be there!"
         assert len(ItemsRepository.get_items()) == 0, "No items should be there"
         dataset.delete(security_name=dataset_name)
         DatasetCategoryRepository.delete_category(name=category_name)
         assert DatasetsRepository.get_dataset(dataset_name=dataset_name) is None, "Dataset should be deleted!"
+
+    def _test_reader(self,
+                     mongo_client,
+                     safefs_sample_configuration,
+                     minimnist_folder,
+                     driver_temp_base_folder):
+
+        tree = tree_from_underscore_notation_files(minimnist_folder)
+        dataset_name = 'FAKEDATASET_TEMPFORREADER'
+        category_name = 'FAKEDATASET_TEMPFORREADER_CATEGORY_TEMP'
+        print("READER Driver dataset folder: ", driver_temp_base_folder)
+        cfg = SafeFilesystemDriverCFG.from_dict({'base_folder': driver_temp_base_folder})
+        drivers = {
+            SafeFilesystemDriver.driver_name(): SafeFilesystemDriver(cfg)
+        }
+        dataset = MongoDataset(mongo_client, dataset_name, category_name, drivers=drivers)
+        self.dataset_from_tree(tree, dataset)
+        data_mapping = {
+            'sample': 'y0',
+            'sample_f': 'y1',
+            'sample_points': 'y2',
+            'image': 'x',
+            'image_mask': 'x_mask',
+            'points': 'pts'
+        }
+        reader = MongoDatasetReader(mongo_dataset=dataset, data_mapping=data_mapping)
+
+        for sample in reader:
+
+            for source_key, sample_key in data_mapping.items():
+                assert sample_key in sample, f"Missing key [{source_key}->{sample_key}]"
+
+            assert sample['x'].shape == sample['x_mask'].shape, "Shapes of images/masks is wrong!"
+
+        dataset.delete(security_name=dataset_name)
+        DatasetCategoryRepository.delete_category(name=category_name)

@@ -1,4 +1,4 @@
-from persefone.data.databases.mongo.clients import MongoDatabaseClient, DatabaseTaskManager
+from persefone.data.databases.mongo.clients import MongoDatabaseClient, MongoDatabaseTaskManager
 from persefone.data.databases.mongo.model import MTask
 from persefone.utils.images.drawing import ConsoleImage
 import click
@@ -39,7 +39,7 @@ def print_task(task: MTask):
 def manage_tasks(database_cfg, command):
 
     client = MongoDatabaseClient.create_from_configuration_file(filename=database_cfg)
-    manager = DatabaseTaskManager(mongo_client=client)
+    manager = MongoDatabaseTaskManager(mongo_client=client)
 
     # ==================== TASKS LIST ==================================
     if command == 'LIST':

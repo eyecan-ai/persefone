@@ -1,11 +1,16 @@
 from abc import ABC, abstractmethod
 from typing import List
 from pathlib import Path
+import os
+import stat
 
 # TODO: add docs
 
 
 class AbstractFileDriver(ABC):
+
+    FLAG_NO_UNLINK = stat.UF_NOUNLINK
+    FLAG_IMMUTABLE = stat.UF_IMMUTABLE
 
     def __init__(self):
         self._prefix = 'none'
