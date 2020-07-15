@@ -376,6 +376,7 @@ class MongoDatasetsManager(object):
                 drivers=drivers
             )
             return mongo_dataset
+        return None
 
     def create_dataset(self, dataset_name: str, dataset_category: str, drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]):
         """ Creates MongoDataset

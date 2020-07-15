@@ -1,7 +1,16 @@
 [report]
 exclude_lines =
+    pass
+    __str__
+    __repr__
     # Have to re-enable the standard pragma
     pragma: no cover
 
     # Don't complain if tests don't hit defensive assertion code:
     raise NotImplementedError
+
+
+[run]
+omit =
+    # omit grpc/Proto generated files
+    *pb2*

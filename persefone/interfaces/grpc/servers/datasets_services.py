@@ -180,7 +180,7 @@ class MongoDatasetService(DatasetsService):
         # Inits Response
         response = DDatasetResponse()
 
-        if mongo_dataset.dataset is None:  # No corresponding dataser found
+        if mongo_dataset is None:  # No corresponding dataser found
             # Build response status
             response.status.CopyFrom(ResponseStatusUtils.create_error_status(f"Impossible to delete: [{ request.dataset_name}]"))
         else:

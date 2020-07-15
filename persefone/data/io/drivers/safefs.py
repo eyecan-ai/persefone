@@ -74,11 +74,6 @@ class SafeFilesystemDriver(AbstractFileDriver):
         puri_path.parent.mkdir(parents=True, exist_ok=True)
         return open(puri_path, mode)
 
-    def flag(self, uri: str, flag: int):
-        puri = self._purge_uri(uri)
-        puri_path = self._base_folder / Path(puri)
-        os.chflags(str(puri_path), flags=flag)
-
     def delete(self, uri: str):
         """ Deletes target resource
 

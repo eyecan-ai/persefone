@@ -36,10 +36,6 @@ class AbstractFileDriver(ABC):
         pass
 
     @abstractmethod
-    def flag(self, uri: str, flag: int):
-        pass
-
-    @abstractmethod
     def delete(self, uri: str):
         pass
 
