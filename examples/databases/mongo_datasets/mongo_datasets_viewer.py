@@ -1,10 +1,8 @@
-from persefone.data.databases.h5 import H5SimpleDatabase
-from persefone.data.databases.mongo.clients import MongoDatabaseClient, MongoDataset, MongoDatasetReader
+from persefone.data.databases.mongo.clients import MongoDatabaseClient, MongoDataset
+from persefone.data.databases.mongo.readers import MongoDatasetReader
 from persefone.data.io.drivers.safefs import SafeFilesystemDriver
-import numpy as np
 import click
 import cv2
-import time
 
 
 @click.command("Converts H5 dataset into MongoDB Dataset")
@@ -16,6 +14,7 @@ def mongo_datasets_viewer(database_cfg, driver_cfg, dataset_name):
     driver = SafeFilesystemDriver.create_from_configuration_file(driver_cfg)
     mongo_client = MongoDatabaseClient.create_from_configuration_file(filename=database_cfg)
 
+    # Mongo Dataset handle
     mongo_dataset = MongoDataset(
         mongo_client,
         dataset_name,
@@ -23,35 +22,23 @@ def mongo_datasets_viewer(database_cfg, driver_cfg, dataset_name):
         {driver.driver_name(): driver}
     )
 
-    data_mapping = {
-        'sample_id': 'sample_id',
-        'metadata.classification_label': 'label',
-        'metadata.hook_left': 'hook_left',
-        'metadata.setup_name': 'setup_name',
-        'items.image': 'x'
-    }
-
-    queries = [
-        'sample_id > 0',
-        'metadata.classification_label in [0]',
-        'metadata.labeling_class in ["good","bad"]'
-    ]
-
-    orders = [
-        '-metadata.hook_left'
-    ]
-
-    dataset_reader = MongoDatasetReader(
+    # Dataset Reader
+    dataset_reader = MongoDatasetReader.create_from_configuration_file(
         mongo_dataset=mongo_dataset,
-        data_mapping=data_mapping,
-        queries=queries,
-        orders=orders
+        filename='reader_config.yml'
     )
 
+    # Iterate retrieved samples
     for sample in dataset_reader:
 
         print(sample.keys())
-        print("Sampleid:", sample['sample_id'], sample['label'], sample['hook_left'], sample['setup_name'])
+
+        repr = ''
+        for key, value in dataset_reader.data_mapping.items():
+            if 'item' not in key:
+                repr += f'{value}={sample[value]}; '
+        print(repr)
+
         image = sample['x']
 
         cv2.imshow("image", image)
