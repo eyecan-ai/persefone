@@ -27,7 +27,6 @@ class TestMongoDatabaseDataset(object):
 
         self._test_creation(temp_mongo_database, safefs_sample_configuration, minimnist_folder, driver_temp_base_folder)
         self._test_creation_recursive_delete(temp_mongo_database, safefs_sample_configuration, minimnist_folder, driver_temp_base_folder)
-        self._test_reader(temp_mongo_database, safefs_sample_configuration, minimnist_folder, driver_temp_base_folder)
 
     def dataset_from_tree(self, tree, dataset):
         for sample_str, items in tree.items():
@@ -164,6 +163,9 @@ class TestMongoDatabaseDataset(object):
         dataset.delete(security_name=dataset_name)
         DatasetCategoryRepository.delete_category(name=category_name)
         assert DatasetsRepository.get_dataset(dataset_name=dataset_name) is None, "Dataset should be deleted!"
+
+
+def TestMongoDatasetReader(object):
 
     def _test_reader(self,
                      mongo_client,
