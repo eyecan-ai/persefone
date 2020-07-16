@@ -4,6 +4,7 @@ from persefone.data.io.drivers.common import AbstractFileDriver
 from schema import Schema, Optional
 from pathlib import Path
 import os
+import logging
 
 
 class SafeFilesystemDriverCFG(XConfiguration):
@@ -69,10 +70,18 @@ class SafeFilesystemDriver(AbstractFileDriver):
         :rtype: file
         """
 
-        puri = self._purge_uri(uri)
-        puri_path = self._base_folder / Path(puri)
-        puri_path.parent.mkdir(parents=True, exist_ok=True)
-        return open(puri_path, mode)
+        try:
+            puri = self._purge_uri(uri)
+            puri_path = self._base_folder / Path(puri)
+            puri_path.parent.mkdir(parents=True, exist_ok=True)
+            return open(puri_path, mode)
+        except FileNotFoundError as e:
+            from termcolor import colored, cprint
+            cprint("################ SAFE FS PROBLEM ###############\n\n", 'yellow', 'on_red')
+            cprint(f"-- Check if driver folder exists! [{self._base_folder}]\n\n", 'yellow', 'on_red')
+            cprint("################################################", 'yellow', 'on_red')
+            logging.error(e)
+            raise FileNotFoundError
 
     def delete(self, uri: str):
         """ Deletes target resource

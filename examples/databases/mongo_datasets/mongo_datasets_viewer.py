@@ -41,8 +41,8 @@ def mongo_datasets_viewer(database_cfg, driver_cfg, dataset_name):
 
         image = sample['x']
 
-        cv2.imshow("image", image)
-        c = cv2.waitKey(1)
+        cv2.imshow("image", cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+        c = cv2.waitKey(0)
         if c == ord('q'):
             break
 
