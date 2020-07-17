@@ -39,5 +39,5 @@ class AbstractFileDriver(ABC):
     def delete(self, uri: str):
         pass
 
-    def uri_from_chunks(self, bucket: str, obj: str, filename: str) -> str:
-        return self.full_prefix_qualifier + str(Path(bucket) / Path(obj) / Path(filename))
+    def uri_from_chunks(self, realm: str,  bucket: str, obj: str, filename: str) -> str:
+        return self.full_prefix_qualifier + str(Path(realm) / Path(bucket) / Path(obj) / Path(filename))
