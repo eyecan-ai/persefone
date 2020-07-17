@@ -1,0 +1,55 @@
+_reusable:
+    # Queries for bad samples
+    _query_bad: &query_bad
+        - "metadata.classification_label in [1]"
+        - 'metadata.labeling_class in ["good","bad"]'
+    # Queries for good samples
+    _query_good: &query_good
+        - "metadata.classification_label in [0]"
+        - 'metadata.labeling_class in ["good","bad"]'
+    # CMP fields samples fields mapping
+    _cmp_mapping: &cmpmapping
+        sample_id: sample_id
+        metadata.classification_label: label
+        items.image: x
+    # Full bad samples reader
+    _reader_bad: &reader_bad
+        data_mapping: *cmpmapping
+        queries: *query_bad
+    # Full good samples reader
+    _reader_good: &reader_good
+        data_mapping: *cmpmapping
+        queries: *query_good
+
+datasets:
+    - green_good:
+          dataset: { name: "green" }
+          reader: *reader_good
+    - green_bad:
+          dataset: { name: "green" }
+          reader: *reader_bad
+    - yellow_good:
+          dataset: { name: "yellow" }
+          reader: *reader_good
+    - yellow_bad:
+          dataset: { name: "yellow" }
+          reader: *reader_bad
+    - white_good:
+          dataset: { name: "white" }
+          reader: *reader_good
+    - white_bad:
+          dataset: { name: "white" }
+          reader: *reader_bad
+
+pipeline:
+    | # define a function with this signature: "def generate(self, ops, d):..."
+    def generate(self, ops, d):  
+      gA, gB = ops.split(d['green_good'], 0.8)
+      yA, yB = ops.split(d['yellow_good'], 0.8)
+      wA, wB = ops.split(d['white_good'], 0.8)
+      
+      train = gA + yA + wA
+      val = gB + yB + wB + d['yellow_bad'] + d['green_bad'] + d['white_bad']
+      train = ops.shuffle(train,10)
+      val = ops.shuffle(val,10)
+      return {'train':train, 'val': val}

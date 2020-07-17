@@ -193,7 +193,7 @@ class SamplesRepository(object):
         return sample
 
     @classmethod
-    def get_samples(cls, dataset: Union[MDataset, None] = None) -> QuerySet:
+    def get_samples(cls, dataset: Union[MDataset, None] = None, query_dict: dict = {}, order_bys: list = []) -> QuerySet:
         """ Retrieves list of MSample s of given MDataset
 
         :param dataset: target MDataset or None for all
@@ -203,9 +203,9 @@ class SamplesRepository(object):
         """
 
         if dataset is None:
-            return MSample.objects()
+            return MSample.objects(**query_dict).order_by(*order_bys)
         else:
-            return MSample.objects(dataset=dataset)
+            return MSample.objects(dataset=dataset, **query_dict).order_by(*order_bys)
 
     @classmethod
     def count_samples(cls, dataset: Union[MDataset, None] = None) -> int:

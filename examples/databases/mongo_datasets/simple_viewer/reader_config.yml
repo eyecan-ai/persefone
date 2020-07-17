@@ -1,0 +1,12 @@
+data_mapping:
+    sample_id: sample_id
+    metadata.classification_label: label
+    metadata.hook_left: hook_left
+    metadata.setup_name: setup_name
+    items.image: x
+queries:
+    - "sample_id > 0"
+    - "metadata.classification_label in [0,1]"
+    - 'metadata.labeling_class in ["good","bad"]'
+orders:
+    - "metadata.hook_left"

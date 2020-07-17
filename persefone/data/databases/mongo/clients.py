@@ -5,11 +5,11 @@ from mongoengine import connect, disconnect, DEFAULT_CONNECTION_NAME
 from enum import Enum
 from persefone.data.io.drivers.common import AbstractFileDriver
 from persefone.data.databases.mongo.model import (
-    MTask, MTaskStatus, MItem, MSample, MResource, MDataset
+    MTask, MTaskStatus, MItem, MSample, MResource
 )
 from persefone.data.databases.mongo.repositories import (
-    TasksRepository, DatasetsRepository, DatasetCategoryRepository,
-    SamplesRepository, ItemsRepository, ResourcesRepository
+    TasksRepository, DatasetsRepository,
+    SamplesRepository, ItemsRepository
 )
 from typing import Union, List, Dict
 from pathlib import Path
@@ -498,13 +498,13 @@ class MongoDataset(object):
         """
         return SamplesRepository.get_sample_by_idx(self._dataset, sample_idx)
 
-    def get_samples(self) -> List[MSample]:
+    def get_samples(self, query_dict: dict = {}, order_bys: list = []) -> List[MSample]:
         """ Retrives all samples of current dataset
 
         :return: list of MSample
         :rtype: List[MSample]
         """
-        return list(SamplesRepository.get_samples(dataset=self._dataset))
+        return list(SamplesRepository.get_samples(dataset=self._dataset, query_dict=query_dict, order_bys=order_bys))
 
     def count_samples(self) -> int:
         """ Counts samples
@@ -670,7 +670,7 @@ class MongoDataset(object):
 
     def fetch_resource_to_blob(self,
                                resource: MResource) -> bytes:
-        """ Fetches a resource into bytes array 
+        """ Fetches a resource into bytes array
 
         :param resource: target resource
         :type resource: MResource
@@ -720,54 +720,3 @@ class MongoDataset(object):
                     raise NotImplementedError("Blob data is not interpretable!")
 
         return data
-
-
-class MongoDatasetReader(object):
-
-    def __init__(self,
-                 mongo_dataset: MongoDataset,
-                 data_mapping: dict = {},
-                 preferred_driver: str = None):
-        """ Reader wrapper for a MongoDataset
-
-        :param mongo_dataset: target MongoDataset
-        :type mongo_dataset: MongoDataset
-        :param data_mapping: key mapping to retrieves metadata and items in final output, defaults to {}
-        :type data_mapping: dict, optional
-        :param preferred_driver: the preferred driver used during data fetches, defaults to None
-        :type preferred_driver: str, optional
-        """
-
-        self._mongo_dataset = mongo_dataset
-        self._data_mapping = data_mapping
-        self._preferred_driver = preferred_driver
-
-    def __len__(self):
-        return self._mongo_dataset.count_samples()
-
-    def __getitem__(self, idx):
-        if idx >= len(self):
-            raise IndexError
-
-        sample: MSample = self._mongo_dataset.get_sample(idx)
-
-        metadata = sample.metadata
-        items = self._mongo_dataset.get_items(sample.sample_id)
-
-        output_data = {}
-        for k, v in metadata.items():
-            if k in self._data_mapping:
-                output_data[self._data_mapping[k]] = v
-
-        for item in items:
-            item: MItem
-            if item.name in self._data_mapping:
-
-                data = None
-                for resource in item.resources:
-                    data = self._mongo_dataset.fetch_resource_to_numpyarray(resource)
-                    break
-
-                output_data[self._data_mapping[item.name]] = data
-
-        return output_data
