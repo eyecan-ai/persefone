@@ -1,0 +1,34 @@
+datasets:
+    - data_good:
+          dataset:
+              name: "green"
+          reader:
+              data_mapping:
+                  sample_id: sample_id
+                  metadata.classification_label: label
+                  metadata.hook_left: hook_left
+                  metadata.setup_name: setup_name
+                  items.image: x
+              queries:
+                  - "metadata.classification_label in [0]"
+                  - 'metadata.labeling_class in ["good","bad"]'
+    - data_bad:
+          dataset:
+              name: "green"
+          reader:
+              data_mapping:
+                  sample_id: sample_id
+                  metadata.classification_label: label
+                  metadata.hook_left: hook_left
+                  metadata.setup_name: setup_name
+                  items.image: x
+              queries:
+                  - "metadata.classification_label in [1]"
+                  - 'metadata.labeling_class in ["good","bad"]'
+pipeline:
+    | # define a function with this signature: "def generate(self, ops, d):..."
+    def generate(self, ops, d):
+      A, B = ops.split(d['data_good'], 0.8)
+      train = A
+      val = B + d['data_bad']
+      return {'train':train, 'val': val}

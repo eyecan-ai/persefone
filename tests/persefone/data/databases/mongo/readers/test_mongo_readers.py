@@ -15,8 +15,15 @@ class TestMongoDatasetReader(object):
                          temp_mongo_mock_database: MongoDatabaseClient,
                          safefs_sample_configuration,
                          minimnist_folder,
-                         driver_temp_base_folder):
-        pass
+                         driver_temp_base_folder,
+                         tmpdir_factory):
+        self._test_reader(
+            temp_mongo_mock_database,
+            safefs_sample_configuration,
+            minimnist_folder,
+            driver_temp_base_folder,
+            tmpdir_factory
+        )
 
     @pytest.mark.mongo_real_server  # EXECUTE ONLY IF --mongo_real_server option is passed
     def test_reader(self,

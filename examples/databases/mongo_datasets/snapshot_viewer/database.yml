@@ -1,0 +1,5 @@
+host: localhost
+port: 27017
+user: root
+pass: ""
+db: "cmp_demo"
