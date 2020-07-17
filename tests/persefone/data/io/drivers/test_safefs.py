@@ -15,13 +15,14 @@ class TestSafeFS(object):
         driver = SafeFilesystemDriver(cfg)
         print("Driver name", driver.driver_name())
 
+        realms = ['kingdom', 'hell']
         buckets = ['sadopaskdsapod', 'sdaasdsad', 'dsadasdas']
         objects = ['obj0', 'obj1', 'obj2']
         filenames = ['00000.png', '00000.txt', '00000.pt']
 
         uris = []
-        for bucket, objects, filename in product(buckets, objects, filenames):
-            uri = driver.uri_from_chunks(bucket, objects, filename)
+        for realm, bucket, objects, filename in product(realms, buckets, objects, filenames):
+            uri = driver.uri_from_chunks(realm, bucket, objects, filename)
             uris.append(uri)
             with driver.get(uri, 'wb') as f:
                 if 'png' in filename:

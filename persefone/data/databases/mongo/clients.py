@@ -52,6 +52,10 @@ class MongoDatabaseClient(object):
         self._connection = None
 
     @property
+    def db_name(self):
+        return self._cfg.params.db
+
+    @property
     def connected(self):
         return self._connection is not None
 
@@ -647,7 +651,7 @@ class MongoDataset(object):
 
             if '.' not in extension:
                 extension = f'.{extension}'
-            uri = driver.uri_from_chunks(self._dataset.name, str(sample_idx), item_name + f'{extension}')
+            uri = driver.uri_from_chunks(self._client.db_name, self._dataset.name, str(sample_idx), item_name + f'{extension}')
             if target_resource is None:
                 # Brand new resource
                 target_resource = ItemsRepository.create_item_resource(item, resource_name, driver_name, uri)

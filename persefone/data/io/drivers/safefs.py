@@ -1,9 +1,7 @@
-from fs import open_fs
 from persefone.utils.configurations import XConfiguration
 from persefone.data.io.drivers.common import AbstractFileDriver
-from schema import Schema, Optional
+from schema import Schema
 from pathlib import Path
-import os
 import logging
 
 
@@ -76,7 +74,7 @@ class SafeFilesystemDriver(AbstractFileDriver):
             puri_path.parent.mkdir(parents=True, exist_ok=True)
             return open(puri_path, mode)
         except FileNotFoundError as e:
-            from termcolor import colored, cprint
+            from termcolor import cprint
             cprint("################ SAFE FS PROBLEM ###############\n\n", 'yellow', 'on_red')
             cprint(f"-- Check if driver folder exists! [{self._base_folder}]\n\n", 'yellow', 'on_red')
             cprint("################################################", 'yellow', 'on_red')
