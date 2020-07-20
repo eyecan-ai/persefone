@@ -61,6 +61,9 @@ class TestDTensorWithEncodingUtils(object):
     def testing_arrays(self):
         return [
             {'size': 0, 'shape': (256, 256, 3)},
+            {'size': 0, 'shape': (1000, 1000, 3)},
+            {'size': 0, 'shape': (100, 100)},
+            {'size': 0, 'shape': (100, 100)},
         ]
 
     def test_numpy_compressed_images_conversion_into_bundle(self, testing_arrays):

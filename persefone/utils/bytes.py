@@ -13,6 +13,10 @@ class DataCoding(object):
         'jpg': True,
         'jpeg': True
     }
+    IMAGE_CODECS_HAS_ALPHA = {
+        'png': True
+    }
+
     NUMPY_CODECS = ['npy']
     TEXT_CODECS = ['txt']
 
@@ -81,10 +85,24 @@ class DataCoding(object):
 
         :param codec: [description]
         :type codec: str
-        :return: [description]
+        :return: TRUE if codec is lossy
         :rtype: bool
         """
 
         if codec in cls.IMAGE_CODECS_IS_LOSSY:
             return cls.IMAGE_CODECS_IS_LOSSY[codec]
+        return False
+
+    @classmethod
+    def has_codec_alpha(cls, codec: str) -> bool:
+        """ Checks if codec has alpha channel
+
+        :param codec: [description]
+        :type codec: str
+        :return: TRUE for alpha channel available
+        :rtype: bool
+        """
+
+        if codec in cls.IMAGE_CODECS_HAS_ALPHA:
+            return cls.IMAGE_CODECS_HAS_ALPHA[codec]
         return False

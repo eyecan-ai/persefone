@@ -3,6 +3,7 @@ from persefone.interfaces.grpc.clients.tensor_services import SimpleTensorServic
 from persefone.interfaces.grpc.tensor_services_pb2_grpc import SimpleTensorServiceServicer, add_SimpleTensorServiceServicer_to_server
 from persefone.interfaces.proto.data_pb2 import DTensorBundle
 from persefone.interfaces.proto.utils.dtensor import DTensorUtils
+from persefone.utils.bytes import DataCoding
 
 import numpy as np
 import pytest
@@ -124,6 +125,19 @@ class TestMetaImagesServiceClient(object):
         ]
 
     @pytest.fixture()
+    def testing_compressed_images(self):
+        return [
+            {'dtype': np.uint8, 'shape': (600, 800, 3), 'codec': 'jpg'},
+            {'dtype': np.uint8, 'shape': (600, 800, 3), 'codec': 'png'},
+            {'dtype': np.uint8, 'shape': (200, 200), 'codec': 'jpg'},
+            {'dtype': np.uint8, 'shape': (600, 800), 'codec': 'png'},
+            {'dtype': np.uint8, 'shape': (100, 200), 'codec': 'tiff'},
+            {'dtype': np.uint8, 'shape': (200, 100, 3), 'codec': 'tiff'},
+            {'dtype': np.uint8, 'shape': (100, 200), 'codec': 'bmp'},
+            {'dtype': np.uint8, 'shape': (200, 100, 3), 'codec': 'bmp'},
+        ]
+
+    @pytest.fixture()
     def testing_metadata(self):
         return [
             {'action': 'inference', 'batch_size': 16, 'quantization': False},
@@ -159,6 +173,44 @@ class TestMetaImagesServiceClient(object):
 
                 reply_images, reply_meta = client.send_meta_images(images_to_send, metadata)
                 assert len(reply_images) == len(images_to_send), "Number of reply images is wrong!"
+
+                print("Reply metadata: ", reply_meta)
+                for k, v in metadata.items():
+                    assert k in reply_meta, f"Missing metadata key: {k}"
+                    assert self._compare_param(metadata[k], reply_meta[k]), f"Value of '{k}' is different in reply metadata"
+
+        mock_server.stop()
+
+    def test_service_online_compressed_images(self, mock_server, testing_compressed_images, testing_metadata):
+        """ Tests an Online service sending multiple bundles """
+
+        mock_server.start(decorate_action=False)
+
+        while not mock_server.active:
+            time.sleep(0.1)
+
+        # client end point
+        client = MetaImagesServiceClient()
+
+        images_to_send = []
+        codecs = []
+
+        for image_cfg in testing_compressed_images:
+
+            img = np.array(np.random.uniform(0, 255, image_cfg['shape']), dtype=image_cfg['dtype'])
+            images_to_send.append(img)
+            codecs.append(image_cfg['codec'])
+
+            for metadata in testing_metadata:
+
+                reply_images, reply_meta = client.send_meta_images(images_to_send, metadata, codecs=codecs)
+                assert len(reply_images) == len(images_to_send), "Number of reply images is wrong!"
+
+                for image_idx, reply_image in enumerate(reply_images):
+                    assert reply_image.shape == images_to_send[image_idx].shape, "Retrived image shape is wrong"
+                    assert reply_image.dtype == images_to_send[image_idx].dtype, "Retrived image dtype is wrong"
+                    if not DataCoding.is_codec_lossy(codecs[image_idx]):
+                        assert np.array_equal(reply_image, images_to_send[image_idx]), "Retrived image content is wrong!"
 
                 print("Reply metadata: ", reply_meta)
                 for k, v in metadata.items():
