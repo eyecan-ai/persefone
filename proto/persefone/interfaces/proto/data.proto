@@ -32,6 +32,13 @@ enum DType {
     DT_VARIANT = 21;  // Arbitrary C++ data types
     DT_UINT32 = 22;
     DT_UINT64 = 23;
+
+    // IMAGES
+    IT_JPEG = 1000;
+    IT_PNG = 1001;
+    IT_TIFF = 1002;
+    IT_BMP = 1003;
+    
 }
 
 message DShape{
@@ -53,3 +60,26 @@ message DTensorBundle{
   repeated DTensor tensors = 1;
   string action = 2;
 }
+
+
+// message DImage {
+//   string type = 1;
+//   bytes data = 2;
+//   uint32 width = 3;
+//   uint32 height = 4;
+//   uint32 channels = 5;
+// }
+
+// message DImageBundle{
+//   repeated DImage images = 1;
+//   string action = 2;
+// }
+
+
+// message DGenericBundle{
+//   oneof payload{
+//     DTensorBundle tensor_bundle = 1;
+//     DImageBundle image_bundle = 2;
+//   }
+//   string action = 3;
+// }

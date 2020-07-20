@@ -3,16 +3,30 @@ from io import BytesIO
 import imageio
 import numpy as np
 from pathlib import Path
+from typing import Tuple
 
 
 class DataCoding(object):
 
     IMAGE_CODECS = ['jpg', 'jpeg', 'png', 'tiff', 'bmp']
+    IMAGE_CODECS_IS_LOSSY = {
+        'jpg': True,
+        'jpeg': True
+    }
     NUMPY_CODECS = ['npy']
     TEXT_CODECS = ['txt']
 
     @classmethod
-    def bytes_to_data(cls, data: bytes, data_encoding: str):
+    def bytes_to_data(cls, data: bytes, data_encoding: str) -> np.ndarray:
+        """ Converts bytes with corresponding encoding into numpy array
+
+        :param data: source bytes
+        :type data: bytes
+        :param data_encoding: bytes encoding
+        :type data_encoding: str
+        :return: numpy array
+        :rtype: np.ndarray
+        """
         data_encoding = data_encoding.replace('.', '')
 
         if data_encoding in cls.IMAGE_CODECS:
@@ -28,19 +42,49 @@ class DataCoding(object):
             return None
 
     @classmethod
-    def file_to_bytes(cls, filename: str):
+    def file_to_bytes(cls, filename: str) -> Tuple[bytes, str]:
+        """ Converts image from file as (bytes, encoding)
+
+        :param filename: source filename
+        :type filename: str
+        :return: pair (bytes, codec string)
+        :rtype: Tuple[bytes, str]
+        """
         filename = Path(filename)
         extension = filename.suffix.replace('.', '')
         return open(filename, 'rb').read(), extension
 
     @classmethod
-    def numpy_image_to_bytes(cls, array: np.ndarray, data_encoding: str):
+    def numpy_image_to_bytes(cls, array: np.ndarray, data_encoding: str) -> bytes:
+        """ Converts image stored as numpy array into bytes with custom data encoding
+
+        :param array: source image numpy array
+        :type array: np.ndarray
+        :param data_encoding: codec string representation
+        :type data_encoding: str
+        :return: bytes representation
+        :rtype: bytes
+        """
         data_encoding = data_encoding.replace('.', '')
 
         data = bytes()
         if data_encoding in cls.IMAGE_CODECS:
             buffer = BytesIO(data)
             imageio.imwrite(buffer, array, format=data_encoding)
-            return buffer.getvalue(), data_encoding
+            return buffer.getvalue()
         else:
             return None
+
+    @classmethod
+    def is_codec_lossy(cls, codec: str) -> bool:
+        """ Checks if codec should be lossy
+
+        :param codec: [description]
+        :type codec: str
+        :return: [description]
+        :rtype: bool
+        """
+
+        if codec in cls.IMAGE_CODECS_IS_LOSSY:
+            return cls.IMAGE_CODECS_IS_LOSSY[codec]
+        return False

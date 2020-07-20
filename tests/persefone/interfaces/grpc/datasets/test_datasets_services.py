@@ -115,7 +115,8 @@ class TestMongoDatasetService(object):
                     assert np.array_equal(original_data, retrieved_data), "Retrieved data content is not valid"
 
                     fake_image = np.random.uniform(0, 255, (32, 32, 3)).astype(np.uint8)
-                    fake_data, fake_encoding = DataCoding.numpy_image_to_bytes(fake_image, 'png')
+                    fake_encoding = 'png'
+                    fake_data = DataCoding.numpy_image_to_bytes(fake_image, fake_encoding)
                     item_updated = client.update_item(dataset_name, sample['sample_id'], item_name, fake_data, fake_encoding)
                     assert client.update_item(dataset_name + 'XX1', sample['sample_id'], item_name, fake_data, fake_encoding) is None, (
                         "Should be wrong dataset"
