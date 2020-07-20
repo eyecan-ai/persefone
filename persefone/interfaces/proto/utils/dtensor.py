@@ -1,7 +1,8 @@
 from persefone.interfaces.proto.data_pb2 import DTensor, DShape, DType, DTensorBundle
 import persefone.interfaces.proto.data_pb2 as proto_data
+from persefone.utils.bytes import DataCoding
 import numpy as np
-from typing import List, Tuple
+from typing import List, Tuple, Union
 from numpy import ndarray
 import logging
 
@@ -19,6 +20,16 @@ class DTensorUtils(object):
     }
 
     NUMPY_TYPES_MAPPING_INV = None
+
+    # Images Types
+    IMAGES_TYPES_MAPPING = {
+        'jpg': proto_data.IT_JPEG,
+        'png': proto_data.IT_PNG,
+        'tiff': proto_data.IT_TIFF,
+        'bmp': proto_data.IT_BMP,
+    }
+
+    IMAGES_TYPES_MAPPING_INV = None
 
     def __init__(self):
         pass
@@ -60,6 +71,42 @@ class DTensorUtils(object):
             raise NotImplementedError(f'DTensor Dtype={dtype} not supported yet!')
 
     @classmethod
+    def imagecodec_to_dtype(cls, codec: str) -> DType:
+        """ Converts an Image codec, defined by string, in a DType value
+
+        :param codec: source codec (e.g. 'jpeg')
+        :type codec: str
+        :raises NotImplementedError:  Raises exception for not mapped codecs
+        :return: corresponding dtype
+        :rtype: DType
+        """
+
+        codec = codec.lower()
+        if codec in cls.IMAGES_TYPES_MAPPING:
+            return cls.IMAGES_TYPES_MAPPING[codec]
+        else:
+            raise NotImplementedError(f'Codec={codec} not supported yer')
+
+    @classmethod
+    def dtype_to_imagecodec(cls, dtype: DType) -> str:
+        """ Covnerts a protobuf DType to corresponding image codec
+
+        :param dtype: protobuf DTYpe object to convert
+        :type dtype: DType
+        :raises NotImplementedError: Raises exception for not mapped dtypes
+        :return: corresponding image codec
+        :rtype: str
+        """
+
+        if cls.IMAGES_TYPES_MAPPING_INV is None:
+            cls.IMAGES_TYPES_MAPPING_INV = {v: k for k, v in cls.IMAGES_TYPES_MAPPING.items()}
+
+        if dtype in cls.IMAGES_TYPES_MAPPING_INV:
+            return cls.IMAGES_TYPES_MAPPING_INV[dtype]
+        else:
+            raise NotImplementedError(f'DTensor Dtype={dtype} not supported yet!')
+
+    @classmethod
     def numpyshape_to_dshape(cls, shape: tuple) -> DShape:
         """ Converts numpy shape tuple to DShape object
 
@@ -75,20 +122,28 @@ class DTensorUtils(object):
         return DShape(dim=dims)
 
     @classmethod
-    def numpy_to_dtensor(cls, array: ndarray) -> DTensor:
+    def numpy_to_dtensor(cls, array: ndarray, codec: str = None) -> DTensor:
         """ Converts generic numpy multidimensional array to protobuf DTensor
 
         :param array: source numpy array
         :type array: ndarray
+        :param codec: code used for data
+        :type codec: str
         :return: corresponding DTensor object
         :rtype: DTensor
         """
 
         dtensor = DTensor()
-        dtensor.dtype = cls.numpytype_to_dtype(array.dtype)
-        dshape = cls.numpyshape_to_dshape(array.shape)
-        dtensor.shape.CopyFrom(dshape)
-        dtensor.content = array.tobytes()
+        if codec is None:
+            dtensor.dtype = cls.numpytype_to_dtype(array.dtype)
+            dshape = cls.numpyshape_to_dshape(array.shape)
+            dtensor.shape.CopyFrom(dshape)
+            dtensor.content = array.tobytes()
+        else:
+            dtensor.dtype = cls.imagecodec_to_dtype(codec)
+            dshape = cls.numpyshape_to_dshape(array.shape)
+            dtensor.shape.CopyFrom(dshape)
+            dtensor.content = DataCoding.numpy_image_to_bytes(array, data_encoding=codec)
         return dtensor
 
     @classmethod
@@ -107,9 +162,14 @@ class DTensorUtils(object):
             dims.append(d.size)
         dims = tuple(dims)
 
-        dtype = cls.dtype_to_numpytype(dtensor.dtype)
-        array = np.frombuffer(dtensor.content, dtype).reshape(dims)
-        return array
+        try:
+            dtype = cls.dtype_to_numpytype(dtensor.dtype)
+            array = np.frombuffer(dtensor.content, dtype).reshape(dims)
+            return array
+        except NotImplementedError:
+            codec = cls.dtype_to_imagecodec(dtensor.dtype)
+            array = DataCoding.bytes_to_data(dtensor.content, codec)
+            return array
 
     @classmethod
     def is_valid_dtensor(cls, dtensor: DTensor) -> bool:
@@ -143,6 +203,32 @@ class DTensorUtils(object):
         dtensors = []
         for array in arrays:
             dtensors.append(cls.numpy_to_dtensor(array))
+
+        bundle = DTensorBundle()
+        bundle.tensors.extend(dtensors)
+        bundle.action = action
+        return bundle
+
+    @classmethod
+    def images_to_dtensor_bundle(cls, arrays: List[ndarray], codecs: Union[str, List[str]], action: str) -> DTensorBundle:
+        """ Converst a list of numpy array (storing images), with relative codecs, with an action string, to protobuf DTensorBundle
+
+        :param arrays: source numpy arrays list
+        :type arrays: List[ndarray]
+        :param codecs: codec/codecs for images
+        :type codecs: Union[str, List[str]]
+        :param action: generic action string
+        :type action: str
+        :return: corresponding protobuf DTensorBundle
+        :rtype: DTensorBundle
+        """
+
+        if isinstance(codecs, str):
+            codecs = [codecs] * len(arrays)
+
+        dtensors = []
+        for array, codec in zip(arrays, codecs):
+            dtensors.append(cls.numpy_to_dtensor(array, codec=codec))
 
         bundle = DTensorBundle()
         bundle.tensors.extend(dtensors)

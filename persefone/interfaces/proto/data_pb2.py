@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n%persefone/interfaces/proto/data.proto\x12\tpersefone\"q\n\x06\x44Shape\x12(\n\x03\x64im\x18\x02 \x03(\x0b\x32\x1b.persefone.DShape.Dimension\x12\x14\n\x0c\x61\x64imensional\x18\x03 \x01(\x08\x1a\'\n\tDimension\x12\x0c\n\x04size\x18\x01 \x01(\x03\x12\x0c\n\x04name\x18\x02 \x01(\t\"]\n\x07\x44Tensor\x12\x1f\n\x05\x64type\x18\x01 \x01(\x0e\x32\x10.persefone.DType\x12 \n\x05shape\x18\x02 \x01(\x0b\x32\x11.persefone.DShape\x12\x0f\n\x07\x63ontent\x18\x03 \x01(\x0c\"D\n\rDTensorBundle\x12#\n\x07tensors\x18\x01 \x03(\x0b\x32\x12.persefone.DTensor\x12\x0e\n\x06\x61\x63tion\x18\x02 \x01(\t*\xf1\x02\n\x05\x44Type\x12\x0e\n\nDT_INVALID\x10\x00\x12\x0c\n\x08\x44T_FLOAT\x10\x01\x12\r\n\tDT_DOUBLE\x10\x02\x12\x0c\n\x08\x44T_INT32\x10\x03\x12\x0c\n\x08\x44T_UINT8\x10\x04\x12\x0c\n\x08\x44T_INT16\x10\x05\x12\x0b\n\x07\x44T_INT8\x10\x06\x12\r\n\tDT_STRING\x10\x07\x12\x10\n\x0c\x44T_COMPLEX64\x10\x08\x12\x0c\n\x08\x44T_INT64\x10\t\x12\x0b\n\x07\x44T_BOOL\x10\n\x12\x0c\n\x08\x44T_QINT8\x10\x0b\x12\r\n\tDT_QUINT8\x10\x0c\x12\r\n\tDT_QINT32\x10\r\x12\x0f\n\x0b\x44T_BFLOAT16\x10\x0e\x12\r\n\tDT_QINT16\x10\x0f\x12\x0e\n\nDT_QUINT16\x10\x10\x12\r\n\tDT_UINT16\x10\x11\x12\x11\n\rDT_COMPLEX128\x10\x12\x12\x0b\n\x07\x44T_HALF\x10\x13\x12\x0f\n\x0b\x44T_RESOURCE\x10\x14\x12\x0e\n\nDT_VARIANT\x10\x15\x12\r\n\tDT_UINT32\x10\x16\x12\r\n\tDT_UINT64\x10\x17\x62\x06proto3'
+  serialized_pb=b'\n%persefone/interfaces/proto/data.proto\x12\tpersefone\"q\n\x06\x44Shape\x12(\n\x03\x64im\x18\x02 \x03(\x0b\x32\x1b.persefone.DShape.Dimension\x12\x14\n\x0c\x61\x64imensional\x18\x03 \x01(\x08\x1a\'\n\tDimension\x12\x0c\n\x04size\x18\x01 \x01(\x03\x12\x0c\n\x04name\x18\x02 \x01(\t\"]\n\x07\x44Tensor\x12\x1f\n\x05\x64type\x18\x01 \x01(\x0e\x32\x10.persefone.DType\x12 \n\x05shape\x18\x02 \x01(\x0b\x32\x11.persefone.DShape\x12\x0f\n\x07\x63ontent\x18\x03 \x01(\x0c\"D\n\rDTensorBundle\x12#\n\x07tensors\x18\x01 \x03(\x0b\x32\x12.persefone.DTensor\x12\x0e\n\x06\x61\x63tion\x18\x02 \x01(\t*\xa7\x03\n\x05\x44Type\x12\x0e\n\nDT_INVALID\x10\x00\x12\x0c\n\x08\x44T_FLOAT\x10\x01\x12\r\n\tDT_DOUBLE\x10\x02\x12\x0c\n\x08\x44T_INT32\x10\x03\x12\x0c\n\x08\x44T_UINT8\x10\x04\x12\x0c\n\x08\x44T_INT16\x10\x05\x12\x0b\n\x07\x44T_INT8\x10\x06\x12\r\n\tDT_STRING\x10\x07\x12\x10\n\x0c\x44T_COMPLEX64\x10\x08\x12\x0c\n\x08\x44T_INT64\x10\t\x12\x0b\n\x07\x44T_BOOL\x10\n\x12\x0c\n\x08\x44T_QINT8\x10\x0b\x12\r\n\tDT_QUINT8\x10\x0c\x12\r\n\tDT_QINT32\x10\r\x12\x0f\n\x0b\x44T_BFLOAT16\x10\x0e\x12\r\n\tDT_QINT16\x10\x0f\x12\x0e\n\nDT_QUINT16\x10\x10\x12\r\n\tDT_UINT16\x10\x11\x12\x11\n\rDT_COMPLEX128\x10\x12\x12\x0b\n\x07\x44T_HALF\x10\x13\x12\x0f\n\x0b\x44T_RESOURCE\x10\x14\x12\x0e\n\nDT_VARIANT\x10\x15\x12\r\n\tDT_UINT32\x10\x16\x12\r\n\tDT_UINT64\x10\x17\x12\x0c\n\x07IT_JPEG\x10\xe8\x07\x12\x0b\n\x06IT_PNG\x10\xe9\x07\x12\x0c\n\x07IT_TIFF\x10\xea\x07\x12\x0b\n\x06IT_BMP\x10\xeb\x07\x62\x06proto3'
 )
 
 _DTYPE = _descriptor.EnumDescriptor(
@@ -150,11 +150,31 @@ _DTYPE = _descriptor.EnumDescriptor(
       serialized_options=None,
       type=None,
       create_key=_descriptor._internal_create_key),
+    _descriptor.EnumValueDescriptor(
+      name='IT_JPEG', index=24, number=1000,
+      serialized_options=None,
+      type=None,
+      create_key=_descriptor._internal_create_key),
+    _descriptor.EnumValueDescriptor(
+      name='IT_PNG', index=25, number=1001,
+      serialized_options=None,
+      type=None,
+      create_key=_descriptor._internal_create_key),
+    _descriptor.EnumValueDescriptor(
+      name='IT_TIFF', index=26, number=1002,
+      serialized_options=None,
+      type=None,
+      create_key=_descriptor._internal_create_key),
+    _descriptor.EnumValueDescriptor(
+      name='IT_BMP', index=27, number=1003,
+      serialized_options=None,
+      type=None,
+      create_key=_descriptor._internal_create_key),
   ],
   containing_type=None,
   serialized_options=None,
   serialized_start=333,
-  serialized_end=702,
+  serialized_end=756,
 )
 _sym_db.RegisterEnumDescriptor(_DTYPE)
 
@@ -183,6 +203,10 @@ DT_RESOURCE = 20
 DT_VARIANT = 21
 DT_UINT32 = 22
 DT_UINT64 = 23
+IT_JPEG = 1000
+IT_PNG = 1001
+IT_TIFF = 1002
+IT_BMP = 1003
 
 
 
