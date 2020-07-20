@@ -15,7 +15,7 @@ class MongoSnapshotCFG(XConfiguration):
         XConfiguration.__init__(self, filename=filename)
         self.set_schema(Schema({
             # NAME
-            '_reusable': dict,
+            Optional('_reusable'): dict,
             'datasets': [
                 {str: {
                     'dataset': {'name': str},
