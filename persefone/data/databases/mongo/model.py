@@ -81,6 +81,7 @@ class MTask(Document):
     input_payload = DictField(default={})
     working_payload = DictField(default={})
     output_payload = DictField(default={})
+    datasets = ListField(ReferenceField(MDataset))
 
 
 class MModelCategory(Document):
@@ -96,9 +97,9 @@ class MModelCategory(Document):
 class MModel(Document):
 
     name = StringField(required=True, unique=True)
+    task = ReferenceField(MTask)
     category = ReferenceField(MModelCategory)
     resources = ListField(ReferenceField(MResource), ordering='name')
-    datesets = ListField(ReferenceField(MDataset))
 
     def __str__(self) -> str:
         return f"MModel[{self.name=},{self.category=}]"

@@ -5,11 +5,12 @@ from mongoengine import connect, disconnect, DEFAULT_CONNECTION_NAME
 from enum import Enum
 from persefone.data.io.drivers.common import AbstractFileDriver
 from persefone.data.databases.mongo.model import (
-    MTask, MTaskStatus, MItem, MSample, MResource
+    MTask, MTaskStatus, MItem, MSample, MResource, MModel, MModelCategory
 )
 from persefone.data.databases.mongo.repositories import (
     TasksRepository, DatasetsRepository,
-    SamplesRepository, ItemsRepository
+    SamplesRepository, ItemsRepository,
+    ModelsRepository, ModelCategoryRepository
 )
 from typing import Union, List, Dict
 from pathlib import Path
@@ -39,7 +40,8 @@ class MongoDatabaseClient(object):
     DROP_KEY_1 = 'soidjsaoidjsaoijdxsaoxsakmx2132131231@@@!!!!'
 
     def __init__(self, cfg: MongoDatabaseClientCFG):
-        """ Creates a Mongo Databsae client wrapper to manage connections
+        """ Creates a Mongo Databsae client wrapper to manage connections and to provide
+        a generic handle to each Object interacting with database
 
         :param cfg: MongoDatabaseClientCFG configuration
         :type cfg: MongoDatabaseClientCFG
@@ -132,7 +134,9 @@ class MongoDatabaseTaskManagerType(Enum):
 
 class MongoDatabaseTaskManager(object):
 
-    def __init__(self, mongo_client: MongoDatabaseClient, manager_type: MongoDatabaseTaskManagerType = MongoDatabaseTaskManagerType.TASK_GOD):
+    def __init__(self,
+                 mongo_client: MongoDatabaseClient,
+                 manager_type: MongoDatabaseTaskManagerType = MongoDatabaseTaskManagerType.TASK_GOD):
         """ Creates a DatabaseTaskManager as interface to tasks management
 
         :param mongo_client: MongoDatabaseClient used for database connection
@@ -320,6 +324,114 @@ class MongoDatabaseTaskManager(object):
         return False
 
 
+class MongoModelsManager(object):
+
+    def __init__(self, mongo_client: MongoDatabaseClient):
+        """ Creates a ModelsManager as interface to models management
+
+        :param mongo_client: MongoDatabaseClient used for database connection
+        :type mongo_client: MongoDatabaseClient
+        """
+
+        self._mongo_client = mongo_client
+
+    def new_model(self, name: str, category_name: str, parent_task: MTask) -> Union[MModel, None]:
+        """ Creates MModel
+
+        :param name: model name
+        :type name: str
+        :param category_name: model category name
+        :type category_name: str
+        :return: created MModel or None
+        :rtype: Union[MModel, None]
+        """
+        if not self._mongo_client.connected:
+            self._mongo_client.connect()
+
+        model = ModelsRepository.new_model(model_name=name, model_category=category_name)
+        if model is not None:
+            model.task = parent_task
+            model.save()
+            return model
+        else:
+            return None
+
+    def get_model(self, name: str) -> Union[MModel, None]:
+        """ Retrieves single model by name
+
+        :param name: task name
+        :type name: str
+        :return: target MTask or None if name not found
+        :rtype: Union[MModel, None]
+        """
+
+        if not self._mongo_client.connected:
+            self._mongo_client.connect()
+
+        return ModelsRepository.get_model(model_name=name)
+
+    def get_models(self, model_category: str = None) -> List[MModel]:
+        """ Retrieves MModel list based on category if any
+
+        :param model_category: model category name (can be None for all)
+        :type model_category: str
+        :return: list of retrieved MTask
+        :rtype: List[MModel]
+        """
+
+        if not self._mongo_client.connected:
+            self._mongo_client.connect()
+
+        category = ModelCategoryRepository.get_category(name=model_category, create_if_none=False)
+        if category is not None:
+            return list(ModelsRepository.get_models(model_category=category))
+        else:
+            return list(ModelsRepository.get_models())
+
+    def delete_model(self, name: str) -> bool:
+        """ Deletes MModel
+
+        :param name: model name
+        :type name: str
+        :return: TRUE if deletion occurs
+        :rtype: bool
+        """
+        return ModelsRepository.delete_model(name)
+
+    def get_models_by_datasets(self, dataset_names: Union[List[str], str]) -> List[MModel]:
+        """ Retrieves MModel list by dataset
+
+        :param dataset_names: dataset name
+        :type dataset_names: Union[List[str], str]
+        :return: MModel list
+        :rtype: List[MModel]
+        """
+
+        if not isinstance(dataset_names, list):
+            dataset_names = [dataset_names]
+
+        datasets = []
+        for dataset_name in dataset_names:
+            if dataset_name is not None:
+                datasets.append(DatasetsRepository.get_dataset(dataset_name))
+
+        return list(ModelsRepository.get_models_by_dataset(datasets=datasets))
+
+    def get_model_by_task(self, task_name: str) -> Union[MModel, None]:
+        """ Retrives MModel by task name
+
+        :param task_name: target task name
+        :type task_name: str
+        :return: MModel or None
+        :rtype: Union[MModel, None]
+        """
+        task = TasksRepository.get_task_by_name(name=task_name)
+        if task is not None:
+            return ModelsRepository.get_model_by_task(task=task)
+        else:
+            return None
+
+
 class MongoDatasetsManager(object):
 
     def __init__(self, mongo_client: MongoDatabaseClient):
@@ -382,7 +494,10 @@ class MongoDatasetsManager(object):
             return mongo_dataset
         return None
 
-    def create_dataset(self, dataset_name: str, dataset_category: str, drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]):
+    def create_dataset(self,
+                       dataset_name: str,
+                       dataset_category: str,
+                       drivers: Union[Dict[str, AbstractFileDriver], List[AbstractFileDriver]]):
         """ Creates MongoDataset
 
         :param dataset_name: dataset name

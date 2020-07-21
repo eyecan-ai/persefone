@@ -122,6 +122,19 @@ class TestDatasetManagement(object):
 
         assert len(created_datasets) == n_datasets, "Some dataset was lost!"
 
+        # Check model query set
+        created_models = list(ModelsRepository.get_models())
+        assert len(created_models) == n_models, "Number of retrieved models is wrong!"
+        models_categories = set()
+        for model in created_models:
+            models_categories.add(model.category)
+        cat_sum = 0
+        for model_cat in models_categories:
+            sub_models = list(ModelsRepository.get_models(model_category=model_cat))
+            assert len(sub_models) != n_models, "Number of specific cat models is wrong!"
+            cat_sum += len(sub_models)
+        assert cat_sum == n_models, "Sum of sub category models is wrong!"
+
         for model_idx in range(n_models):
 
             model_name = RepositoryTestingData.model_name(model_idx)
@@ -129,13 +142,22 @@ class TestDatasetManagement(object):
             assert ModelsRepository.get_model(model_name + "!IMPOSSIBLE!!!") is None, "No model should be found!"
             assert ModelsRepository.new_model(model.name, model.category) is None, "Duplicates models are not allowed!"
             assert model is not None, "Model creation fails!"
+            assert model.task is not None, "Testing models should have a task!"
+            assert model == ModelsRepository.get_model_by_task(model.task), "Model should be equal to its task model"
+
+            assert len(model.task.datasets) == len(created_datasets), "Each task should have each dataset as child!"
+            for task_dataset in model.task.datasets:
+                assert task_dataset in created_datasets, "Task dataset not found in previously created datasets"
 
             model_category: MModelCategory = model.category
             not_unique_category = ModelCategoryRepository.new_category(model_category.name)
             assert not_unique_category == model_category, "New Not-unique category attempt should return conflicting category instead"
 
-            for r_dataset in model.datesets:
+            for r_dataset in model.task.datasets:
                 assert r_dataset in created_datasets, "Retrived Model>Dataset not found!"
+                assert model in ModelsRepository.get_models_by_dataset(r_dataset), "Model should be in query which involves itself"
+
+            assert model in ModelsRepository.get_models_by_dataset(model.task.datasets), "Model should be in query which involves itself"
 
             for resource in model.resources:
 
@@ -146,3 +168,9 @@ class TestDatasetManagement(object):
                     driver_name = RepositoryTestingData.driver_name(resource_idx)
                     if resource.driver == driver_name:
                         assert resource.uri == RepositoryTestingData.uri(model_idx, resource_idx)
+
+        for model_idx in range(n_models):
+            model_name = RepositoryTestingData.model_name(model_idx)
+            model: MModel = ModelsRepository.get_model(model_name)
+            assert ModelsRepository.delete_model(model.name) is True, "Deletion of MModel should be ok!"
+            assert ModelsRepository.delete_model(model.name) is False, "Double Deletion of MModel should be invalid!"
