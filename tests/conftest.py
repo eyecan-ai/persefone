@@ -1,5 +1,4 @@
 import pytest
-import pytest
 from persefone.data.databases.mongo.clients import MongoDatabaseClient
 from pathlib import Path
 

@@ -49,7 +49,10 @@ class MetaImagesServiceClient(BaseTensorServiceClient):
     def __init__(self, host='localhost', port=50051, cfg=TensorServiceClientCFG()):
         super(MetaImagesServiceClient, self).__init__(host=host, port=port, cfg=cfg)
 
-    def create_bundle(self, images: Union[List[np.ndarray], np.ndarray], metadata: dict = {}, codecs: Union[str, List[str]] = None) -> DTensorBundle:
+    def create_bundle(self,
+                      images: Union[List[np.ndarray], np.ndarray],
+                      metadata: dict = {},
+                      codecs: Union[str, List[str]] = None) -> DTensorBundle:
         """ Creates bundles from a list of images, their codecs and an action string
 
         :param images: list of np.ndarray images
@@ -91,7 +94,9 @@ class MetaImagesServiceClient(BaseTensorServiceClient):
 
         return reply_arrays, reply_metadata
 
-    def send_meta_images(self, images: Union[List[np.ndarray], np.ndarray], metadata: dict = {}, codecs: Union[str, List[str]] = None) -> Tuple[List[np.ndarray], str]:
+    def send_meta_images(self,
+                         images: Union[List[np.ndarray], np.ndarray], metadata: dict = {},
+                         codecs: Union[str, List[str]] = None) -> Tuple[List[np.ndarray], str]:
         """ Sends images with metadata to server. Metadata will be converted in a JSON string in order
         to be encapsulated in the action string field of the generic protobuf DTensorBundle message
 

@@ -1,6 +1,5 @@
 
 from persefone.data.io.drivers.safefs import SafeFilesystemDriver, SafeFilesystemDriverCFG
-import pytest
 import numpy as np
 from itertools import product
 from PIL import Image

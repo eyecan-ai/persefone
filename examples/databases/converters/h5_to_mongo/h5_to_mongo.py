@@ -36,7 +36,6 @@ def h5_to_mongo(database_cfg, driver_cfg, h5_file, new_dataset_name, new_dataset
                 metadata[k] = v
 
             mongo_sample = mongo_dataset.add_sample(metadata=metadata)
-            #print("New sample: ", mongo_sample.sample_id)
 
             # print(dict(item.attrs))
             for h5_item_name, h5_data in h5_sample.items():

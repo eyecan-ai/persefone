@@ -1,7 +1,6 @@
 from schema import Schema
 from box import Box, box_from_file
 from pathlib import Path
-import typing
 
 # TODO: add documentation
 

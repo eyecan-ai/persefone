@@ -1,6 +1,5 @@
 
 import pytest
-from persefone.data.databases.mongo.clients import MongoDatabaseClient
 from persefone.data.io.drivers.safefs import SafeFilesystemDriver, SafeFilesystemDriverCFG
 from pathlib import Path
 from persefone.utils.filesystem import tree_from_underscore_notation_files
@@ -8,7 +7,6 @@ from persefone.interfaces.grpc.servers.datasets_services import MongoDatasetServ
 from persefone.interfaces.grpc.clients.datasets_services import DatasetsSimpleServiceClient
 from persefone.utils.bytes import DataCoding
 import grpc
-
 from concurrent import futures
 import threading
 import numpy as np
@@ -65,7 +63,9 @@ class TestMongoDatasetService(object):
 
                 sample = client.new_sample(dataset_name, metadata={'sample': sample_str, 'items': [1, 2, 3]})
                 assert sample is not None, "Sample creation should be ok!"
-                assert client.new_sample(dataset_name + "_IMPOSSIBLE!!", metadata={}) is None, 'Impossible to create sample on dataset not found'
+                assert client.new_sample(dataset_name + "_IMPOSSIBLE!!", metadata={}) is None, (
+                    'Impossible to create sample on dataset not found'
+                )
                 print("SAMPLE", sample)
                 assert 'metadata' in sample, "metadata key is missing"
                 assert 'sample_id' in sample, "Sample ID is missing"
@@ -186,3 +186,7 @@ class TestMongoDatasetService(object):
         assert len(subitems) == 0, "No breadcrumbs please!"
         # for i in p.glob('**/*'):
         #     print(i.name)
+
+        # Service teardown
+        server.stop(grace=None)
+        t.join()

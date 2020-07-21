@@ -1,7 +1,6 @@
 
 from persefone.data.databases.mongo.model import MTask, MTaskStatus
-from persefone.data.databases.mongo.clients import MongoDatabaseClient, MongoDatabaseTaskManager, MongoDatabaseTaskManagerType
-from pathlib import Path
+from persefone.data.databases.mongo.clients import MongoDatabaseTaskManager, MongoDatabaseTaskManagerType
 import pytest
 import numpy as np
 

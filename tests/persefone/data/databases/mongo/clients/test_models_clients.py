@@ -1,9 +1,6 @@
-from persefone.data.databases.mongo.model import MModel
 from persefone.data.databases.mongo.clients import MongoModelsManager, MongoDatabaseTaskManager, MongoDatabaseTaskManagerType
 from persefone.data.databases.mongo.repositories import RepositoryTestingData, DatasetsRepository
-from pathlib import Path
 import pytest
-import numpy as np
 
 
 class TestModelsManager(object):
@@ -54,7 +51,7 @@ class TestModelsManager(object):
         custom_cat = "CAT_EGO"
         custom_models = []
         for task_id, task in enumerate(tasks):
-            model = models_manager.new_model(f"NewModel_{task_id}", custom_cat, task)
+            model = models_manager.new_model(f"NewModel_{task_id}", custom_cat, task.name)
             assert model is not None, "Model should be ok!"
             custom_models.append(model)
             assert model == models_manager.get_model_by_task(model.task.name), "Model should be equal to ist task's model"

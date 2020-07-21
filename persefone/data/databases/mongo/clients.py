@@ -5,7 +5,7 @@ from mongoengine import connect, disconnect, DEFAULT_CONNECTION_NAME
 from enum import Enum
 from persefone.data.io.drivers.common import AbstractFileDriver
 from persefone.data.databases.mongo.model import (
-    MTask, MTaskStatus, MItem, MSample, MResource, MModel, MModelCategory
+    MTask, MTaskStatus, MItem, MSample, MResource, MModel
 )
 from persefone.data.databases.mongo.repositories import (
     TasksRepository, DatasetsRepository,
@@ -335,26 +335,31 @@ class MongoModelsManager(object):
 
         self._mongo_client = mongo_client
 
-    def new_model(self, name: str, category_name: str, parent_task: MTask) -> Union[MModel, None]:
+    def new_model(self, name: str, category_name: str, parent_task_name: str) -> Union[MModel, None]:
         """ Creates MModel
 
         :param name: model name
         :type name: str
         :param category_name: model category name
         :type category_name: str
+        :param parent_task_name: parent task name
+        :type parent_task_name str
         :return: created MModel or None
         :rtype: Union[MModel, None]
         """
         if not self._mongo_client.connected:
             self._mongo_client.connect()
 
-        model = ModelsRepository.new_model(model_name=name, model_category=category_name)
-        if model is not None:
-            model.task = parent_task
-            model.save()
-            return model
+        task = TasksRepository.get_task_by_name(name=parent_task_name)
+        if task is not None:
+            model = ModelsRepository.new_model(model_name=name, model_category=category_name)
+            if model is not None:
+                model.task = task
+                model.save()
+                return model
         else:
-            return None
+            logging.error(f"Trying to create model [{name}] with parent task [{parent_task_name}] which is None!")
+        return None
 
     def get_model(self, name: str) -> Union[MModel, None]:
         """ Retrieves single model by name
