@@ -217,9 +217,19 @@ class SamplesRepository(object):
         :rtype: int
         """
         if dataset is None:
-            return len(list(MSample.objects()))
+            # return len(list(MSample.objects()))
+            try:
+                return MSample.objects().count()
+            except Exception as e:
+                logging.error(e)
+                return len(list(MSample.objects()))
         else:
-            return len(list(MSample.objects(dataset=dataset)))
+            # return len(list(MSample.objects(dataset=dataset)))
+            try:
+                return MSample.objects(dataset=dataset).count()
+            except Exception as e:
+                logging.error(e)
+                return len(list(MSample.objects(dataset=dataset)))
 
     @classmethod
     def get_sample_by_idx(cls, dataset: MDataset, idx: int) -> Union[MSample, None]:
@@ -622,6 +632,18 @@ class ModelCategoryRepository(object):
             else:
                 logging.error(e)
         return category
+
+    @classmethod
+    def get_categories(cls, name: str = '') -> QuerySet:
+        """ Retrieves categories by query string
+
+        :param name: query string, defaults to ''
+        :type name: str, optional
+        :return: Set of MModelCategories
+        :rtype: QuerySet
+        """
+
+        return MModelCategory.objects(name__contains=name)
 
 
 class ModelsRepository(object):

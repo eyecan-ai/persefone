@@ -64,6 +64,9 @@ class TestMongoInferenceServices(object):
         models = client.models_list()
         assert len(models) == n_models, "Models should be not emtpy"
 
+        models_categories = client.trainable_models(name='')
+        assert len(models_categories) == 2, "Two categories must be there!"
+
         # Activations
         for model_name in models:
 

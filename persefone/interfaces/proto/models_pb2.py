@@ -19,10 +19,49 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\'persefone/interfaces/proto/models.proto\x12\tpersefone\"(\n\x06\x44Model\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x10\n\x08\x63\x61tegory\x18\x02 \x01(\tb\x06proto3'
+  serialized_pb=b'\n\'persefone/interfaces/proto/models.proto\x12\tpersefone\"3\n\x0e\x44ModelCategory\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x02 \x01(\t\"C\n\x06\x44Model\x12\x0c\n\x04name\x18\x01 \x01(\t\x12+\n\x08\x63\x61tegory\x18\x02 \x01(\x0b\x32\x19.persefone.DModelCategoryb\x06proto3'
 )
 
 
+
+
+_DMODELCATEGORY = _descriptor.Descriptor(
+  name='DModelCategory',
+  full_name='persefone.DModelCategory',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='name', full_name='persefone.DModelCategory.name', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='description', full_name='persefone.DModelCategory.description', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=54,
+  serialized_end=105,
+)
 
 
 _DMODEL = _descriptor.Descriptor(
@@ -42,8 +81,8 @@ _DMODEL = _descriptor.Descriptor(
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
       name='category', full_name='persefone.DModel.category', index=1,
-      number=2, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=b"".decode('utf-8'),
+      number=2, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
@@ -59,12 +98,21 @@ _DMODEL = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=54,
-  serialized_end=94,
+  serialized_start=107,
+  serialized_end=174,
 )
 
+_DMODEL.fields_by_name['category'].message_type = _DMODELCATEGORY
+DESCRIPTOR.message_types_by_name['DModelCategory'] = _DMODELCATEGORY
 DESCRIPTOR.message_types_by_name['DModel'] = _DMODEL
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
+
+DModelCategory = _reflection.GeneratedProtocolMessageType('DModelCategory', (_message.Message,), {
+  'DESCRIPTOR' : _DMODELCATEGORY,
+  '__module__' : 'persefone.interfaces.proto.models_pb2'
+  # @@protoc_insertion_point(class_scope:persefone.DModelCategory)
+  })
+_sym_db.RegisterMessage(DModelCategory)
 
 DModel = _reflection.GeneratedProtocolMessageType('DModel', (_message.Message,), {
   'DESCRIPTOR' : _DMODEL,

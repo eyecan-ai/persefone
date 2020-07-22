@@ -1,9 +1,15 @@
 syntax = "proto3";
 package persefone;
 
+
+message DModelCategory{
+    string name = 1;
+    string description = 2;
+}
+
 message DModel {
     string name = 1;
-    string category = 2;
+    DModelCategory category = 2;
 }
 
 

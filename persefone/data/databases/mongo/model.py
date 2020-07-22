@@ -95,6 +95,7 @@ class MModelCategory(Document):
 
 
 class MModel(Document):
+    """ Model model """
 
     name = StringField(required=True, unique=True)
     task = ReferenceField(MTask)

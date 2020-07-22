@@ -87,10 +87,12 @@ class MongoDatasetService(DatasetsService):
         assert isinstance(driver, AbstractFileDriver), f"Invalid driver: {driver}"
         self._drivers = [driver]
 
-    def _create_ddataset(self, mongo_dataset: MongoDataset) -> DDataset:
+    def _create_ddataset(self, mongo_dataset: MongoDataset, with_samples: bool = False) -> DDataset:
         ddataset = DDataset()
         ddataset.name = mongo_dataset.dataset.name
         ddataset.category = mongo_dataset.dataset.category.name
+        if with_samples:
+            ddataset.number_of_samples = mongo_dataset.count_samples()
         return ddataset
 
     def _create_dsample(self, sample: MSample) -> DSample:
@@ -214,32 +216,33 @@ class MongoDatasetService(DatasetsService):
             response.status.CopyFrom(ResponseStatusUtils.create_ok_status())
 
             # Creates DDataset from Mongo Dataset object
-            ddataset = self._create_ddataset(mongo_dataset)
+            ddataset = self._create_ddataset(mongo_dataset, with_samples=True)
 
-            # Fetches dataset samples
-            samples = mongo_dataset.get_samples()
-            for sample in samples:
+            if request.fetch_data:
+                # Fetches dataset samples
+                samples = mongo_dataset.get_samples()
+                for sample in samples:
 
-                # Creates DSample from MSample
-                dsample = self._create_dsample(sample)
+                    # Creates DSample from MSample
+                    dsample = self._create_dsample(sample)
 
-                # Fetches sample items
-                items = mongo_dataset.get_items(sample_idx=sample.sample_id)
+                    # Fetches sample items
+                    items = mongo_dataset.get_items(sample_idx=sample.sample_id)
 
-                for item in items:
+                    for item in items:
 
-                    # Creates DItem from MItem
-                    ditem = self._create_ditem(item)
+                        # Creates DItem from MItem
+                        ditem = self._create_ditem(item)
 
-                    # if fetch_data == True in request, fetches also tensor data in each DItem
-                    if request.fetch_data:
-                        self._fetch_resource(mongo_dataset, ditem, item.resources)
+                        # if fetch_data == True in request, fetches also tensor data in each DItem
+                        # if request.fetch_data:
+                        #     self._fetch_resource(mongo_dataset, ditem, item.resources)
 
-                    # Fills DSample with DItems
-                    dsample.items.append(ditem)
+                        # Fills DSample with DItems
+                        dsample.items.append(ditem)
 
-                # Fills DDataset with DSample s
-                ddataset.samples.append(dsample)
+                    # Fills DDataset with DSample s
+                    ddataset.samples.append(dsample)
 
             # Fills Response with DDataset
             response.datasets.append(ddataset)

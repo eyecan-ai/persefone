@@ -19,6 +19,7 @@ message DDataset {
     string name = 1;
     string category = 2;
     repeated DSample samples = 3;
+    int32 number_of_samples = 4;
 }
 
 

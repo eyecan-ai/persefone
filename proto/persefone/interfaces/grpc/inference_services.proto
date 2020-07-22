@@ -7,10 +7,21 @@ import "persefone/interfaces/proto/data.proto";
 
 
 service InferenceService{
+    rpc TrainableModels(DModelCategoryRequest) returns (DModelCategoryResponse) {}
     rpc ModelsList(DModelRequest) returns (DModelResponse) {}
     rpc ActivateModel(DModelRequest) returns (DModelResponse) {}
     rpc DeactivateModel(DModelRequest) returns (DModelResponse) {}
     rpc Inference(DInferenceRequest) returns (DInferenceResponse) {}
+}
+
+message DModelCategoryRequest{
+    string model_category = 1;
+    bool fetch_data = 2;
+}
+
+message DModelCategoryResponse{
+    ResponseStatus status = 1;
+    repeated DModelCategory categories = 2;
 }
 
 message DModelRequest{

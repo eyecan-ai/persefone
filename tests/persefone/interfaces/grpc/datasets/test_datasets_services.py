@@ -151,25 +151,15 @@ class TestMongoDatasetService(object):
             assert 'samples' in dataset, "sample key is missing"
 
             samples = dataset['samples']
-            assert len(samples) > 0, "Samples number is wrong"
-
-            for sample in samples:
-                assert 'sample_id' in sample, "sample_id key is missing"
-                assert 'items' in sample, "items key is missing"
-
-                for item in sample['items']:
-                    assert 'name' in item, "name key is missing"
-                    assert len(item['data']) == 0, "item data should be empty if not fetched explicity"
-                    assert 'has_data' in item, "has_data key is missing"
-                    assert item['has_data'] is False, "has_data should be false"
+            assert len(samples) == 0, "Samples number is wrong"
 
         for dataset_idx, dataset_name in enumerate(dataset_names):
             dataset = client.get_dataset(dataset_name, fetch_data=True)
             samples = dataset['samples']
             for sample in samples:
                 for item in sample['items']:
-                    assert len(item['data']) > 0, "item data should be not empty if  fetched"
-                    assert item['has_data'] is True, "has_data should be true"
+                    assert len(item['data']) == 0, "item data should be not empty if  fetched"
+                    assert item['has_data'] is False, "has_data should be true"
 
         assert len(client.datasets_list()) == len(dataset_names), "Datasets list is wrong!"
 

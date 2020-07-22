@@ -56,6 +56,10 @@ class TestModelsManager(object):
             custom_models.append(model)
             assert model == models_manager.get_model_by_task(model.task.name), "Model should be equal to ist task's model"
 
+            model_cat = models_manager.get_category(model.category.name)
+            assert model_cat is not None, "Model category should be not none"
+            assert model_cat.name == model.category.name, "Model category name is wrong!"
+
             dataset_names = [x.name for x in task.datasets]
             assert model in models_manager.get_models_by_datasets(dataset_names), "Model should be in query whit its task dataset"
             for d_name in dataset_names:

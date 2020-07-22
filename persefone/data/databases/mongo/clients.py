@@ -5,7 +5,7 @@ from mongoengine import connect, disconnect, DEFAULT_CONNECTION_NAME
 from enum import Enum
 from persefone.data.io.drivers.common import AbstractFileDriver
 from persefone.data.databases.mongo.model import (
-    MTask, MTaskStatus, MItem, MSample, MResource, MModel
+    MTask, MTaskStatus, MItem, MSample, MResource, MModel, MModelCategory
 )
 from persefone.data.databases.mongo.repositories import (
     TasksRepository, DatasetsRepository,
@@ -374,6 +374,48 @@ class MongoModelsManager(object):
             self._mongo_client.connect()
 
         return ModelsRepository.get_model(model_name=name)
+
+    def get_categories(self, category_name: str) -> List[MModelCategory]:
+        """ Retrives model categories by query string
+
+        :param name: category_name query string
+        :type name: str
+        :return: MModelCategory if any
+        :rtype: Union[MModelCategory, None]
+        """
+
+        if not self._mongo_client.connected:
+            self._mongo_client.connect()
+
+        return list(ModelCategoryRepository.get_categories(name=category_name))
+
+    def get_category(self, category_name: str) -> Union[MModelCategory, None]:
+        """ Retrives model category
+
+        :param name: category_name query string
+        :type name: str
+        :return: MModelCategory if any
+        :rtype: Union[MModelCategory, None]
+        """
+
+        if not self._mongo_client.connected:
+            self._mongo_client.connect()
+
+        return ModelCategoryRepository.get_category(name=category_name)
+
+    def new_category(self, category_name: str) -> Union[MModelCategory, None]:
+        """ Creates new model category
+
+        :param name: category_name
+        :type name: str
+        :return: MModelCategory if any
+        :rtype: Union[MModelCategory, None]
+        """
+
+        if not self._mongo_client.connected:
+            self._mongo_client.connect()
+
+        return ModelCategoryRepository.get_category(name=category_name, create_if_none=True)
 
     def get_models(self, model_category: str = None) -> List[MModel]:
         """ Retrieves MModel list based on category if any

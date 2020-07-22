@@ -14,6 +14,11 @@ class InferenceServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
+        self.TrainableModels = channel.unary_unary(
+                '/persefone.InferenceService/TrainableModels',
+                request_serializer=persefone_dot_interfaces_dot_grpc_dot_inference__services__pb2.DModelCategoryRequest.SerializeToString,
+                response_deserializer=persefone_dot_interfaces_dot_grpc_dot_inference__services__pb2.DModelCategoryResponse.FromString,
+                )
         self.ModelsList = channel.unary_unary(
                 '/persefone.InferenceService/ModelsList',
                 request_serializer=persefone_dot_interfaces_dot_grpc_dot_inference__services__pb2.DModelRequest.SerializeToString,
@@ -38,6 +43,12 @@ class InferenceServiceStub(object):
 
 class InferenceServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
+
+    def TrainableModels(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def ModelsList(self, request, context):
         """Missing associated documentation comment in .proto file."""
@@ -66,6 +77,11 @@ class InferenceServiceServicer(object):
 
 def add_InferenceServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
+            'TrainableModels': grpc.unary_unary_rpc_method_handler(
+                    servicer.TrainableModels,
+                    request_deserializer=persefone_dot_interfaces_dot_grpc_dot_inference__services__pb2.DModelCategoryRequest.FromString,
+                    response_serializer=persefone_dot_interfaces_dot_grpc_dot_inference__services__pb2.DModelCategoryResponse.SerializeToString,
+            ),
             'ModelsList': grpc.unary_unary_rpc_method_handler(
                     servicer.ModelsList,
                     request_deserializer=persefone_dot_interfaces_dot_grpc_dot_inference__services__pb2.DModelRequest.FromString,
@@ -95,6 +111,22 @@ def add_InferenceServiceServicer_to_server(servicer, server):
  # This class is part of an EXPERIMENTAL API.
 class InferenceService(object):
     """Missing associated documentation comment in .proto file."""
+
+    @staticmethod
+    def TrainableModels(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/persefone.InferenceService/TrainableModels',
+            persefone_dot_interfaces_dot_grpc_dot_inference__services__pb2.DModelCategoryRequest.SerializeToString,
+            persefone_dot_interfaces_dot_grpc_dot_inference__services__pb2.DModelCategoryResponse.FromString,
+            options, channel_credentials,
+            call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def ModelsList(request,

@@ -1,6 +1,7 @@
 from persefone.interfaces.grpc.inference_services_pb2_grpc import InferenceServiceStub
 from persefone.interfaces.grpc.inference_services_pb2 import (
-    DModelRequest, DModelResponse, DInferenceRequest, DInferenceResponse
+    DModelRequest, DModelResponse, DInferenceRequest, DInferenceResponse,
+    DModelCategoryRequest, DModelCategoryResponse
 )
 from persefone.interfaces.proto.utils.comm import ResponseStatusUtils
 from persefone.interfaces.proto.utils.dtensor import DTensorUtils
@@ -28,6 +29,9 @@ class InferenceServiceClient(object):
             port = int(port)
         self._channel = grpc.insecure_channel(f'{host}:{port}', options=cfg.options)
         self._stub = InferenceServiceStub(self._channel)
+
+    def TrainableModels(self, request: DModelCategoryRequest) -> DModelCategoryResponse:
+        return self._stub.TrainableModels(request)
 
     def ModelsList(self, request: DModelRequest) -> DModelResponse:
         return self._stub.ModelsList(request)
@@ -113,6 +117,19 @@ class InferenceSimpleServiceClient(InferenceServiceClient):
             reply_arrays, reply_action = DTensorUtils.dtensor_bundle_to_numpy(response.bundle)
             reply_metadata = json.loads(reply_action)
             return reply_arrays, reply_metadata
+        else:
+            logging.error(response.status.message)
+            raise SystemError(response.status.message)
+
+    def trainable_models(self, name: str = '') -> List[str]:
+
+        request = DModelCategoryRequest()
+        request.model_category = name
+
+        response = self.TrainableModels(request)
+
+        if response.status.code == ResponseStatusUtils.STATUS_CODE_OK:
+            return [x.name for x in response.categories]
         else:
             logging.error(response.status.message)
             raise SystemError(response.status.message)

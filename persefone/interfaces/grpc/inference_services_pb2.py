@@ -22,11 +22,89 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n2persefone/interfaces/grpc/inference_services.proto\x12\tpersefone\x1a%persefone/interfaces/proto/comm.proto\x1a\'persefone/interfaces/proto/models.proto\x1a%persefone/interfaces/proto/data.proto\"O\n\rDModelRequest\x12\x12\n\nmodel_name\x18\x01 \x01(\t\x12\x16\n\x0emodel_category\x18\x02 \x01(\t\x12\x12\n\nfetch_data\x18\x03 \x01(\x08\"^\n\x0e\x44ModelResponse\x12)\n\x06status\x18\x01 \x01(\x0b\x32\x19.persefone.ResponseStatus\x12!\n\x06models\x18\x02 \x03(\x0b\x32\x11.persefone.DModel\"=\n\x11\x44InferenceRequest\x12(\n\x06\x62undle\x18\x02 \x01(\x0b\x32\x18.persefone.DTensorBundle\"i\n\x12\x44InferenceResponse\x12)\n\x06status\x18\x01 \x01(\x0b\x32\x19.persefone.ResponseStatus\x12(\n\x06\x62undle\x18\x02 \x01(\x0b\x32\x18.persefone.DTensorBundle2\xb5\x02\n\x10InferenceService\x12\x43\n\nModelsList\x12\x18.persefone.DModelRequest\x1a\x19.persefone.DModelResponse\"\x00\x12\x46\n\rActivateModel\x12\x18.persefone.DModelRequest\x1a\x19.persefone.DModelResponse\"\x00\x12H\n\x0f\x44\x65\x61\x63tivateModel\x12\x18.persefone.DModelRequest\x1a\x19.persefone.DModelResponse\"\x00\x12J\n\tInference\x12\x1c.persefone.DInferenceRequest\x1a\x1d.persefone.DInferenceResponse\"\x00\x62\x06proto3'
+  serialized_pb=b'\n2persefone/interfaces/grpc/inference_services.proto\x12\tpersefone\x1a%persefone/interfaces/proto/comm.proto\x1a\'persefone/interfaces/proto/models.proto\x1a%persefone/interfaces/proto/data.proto\"C\n\x15\x44ModelCategoryRequest\x12\x16\n\x0emodel_category\x18\x01 \x01(\t\x12\x12\n\nfetch_data\x18\x02 \x01(\x08\"r\n\x16\x44ModelCategoryResponse\x12)\n\x06status\x18\x01 \x01(\x0b\x32\x19.persefone.ResponseStatus\x12-\n\ncategories\x18\x02 \x03(\x0b\x32\x19.persefone.DModelCategory\"O\n\rDModelRequest\x12\x12\n\nmodel_name\x18\x01 \x01(\t\x12\x16\n\x0emodel_category\x18\x02 \x01(\t\x12\x12\n\nfetch_data\x18\x03 \x01(\x08\"^\n\x0e\x44ModelResponse\x12)\n\x06status\x18\x01 \x01(\x0b\x32\x19.persefone.ResponseStatus\x12!\n\x06models\x18\x02 \x03(\x0b\x32\x11.persefone.DModel\"=\n\x11\x44InferenceRequest\x12(\n\x06\x62undle\x18\x02 \x01(\x0b\x32\x18.persefone.DTensorBundle\"i\n\x12\x44InferenceResponse\x12)\n\x06status\x18\x01 \x01(\x0b\x32\x19.persefone.ResponseStatus\x12(\n\x06\x62undle\x18\x02 \x01(\x0b\x32\x18.persefone.DTensorBundle2\x8f\x03\n\x10InferenceService\x12X\n\x0fTrainableModels\x12 .persefone.DModelCategoryRequest\x1a!.persefone.DModelCategoryResponse\"\x00\x12\x43\n\nModelsList\x12\x18.persefone.DModelRequest\x1a\x19.persefone.DModelResponse\"\x00\x12\x46\n\rActivateModel\x12\x18.persefone.DModelRequest\x1a\x19.persefone.DModelResponse\"\x00\x12H\n\x0f\x44\x65\x61\x63tivateModel\x12\x18.persefone.DModelRequest\x1a\x19.persefone.DModelResponse\"\x00\x12J\n\tInference\x12\x1c.persefone.DInferenceRequest\x1a\x1d.persefone.DInferenceResponse\"\x00\x62\x06proto3'
   ,
   dependencies=[persefone_dot_interfaces_dot_proto_dot_comm__pb2.DESCRIPTOR,persefone_dot_interfaces_dot_proto_dot_models__pb2.DESCRIPTOR,persefone_dot_interfaces_dot_proto_dot_data__pb2.DESCRIPTOR,])
 
 
+
+
+_DMODELCATEGORYREQUEST = _descriptor.Descriptor(
+  name='DModelCategoryRequest',
+  full_name='persefone.DModelCategoryRequest',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='model_category', full_name='persefone.DModelCategoryRequest.model_category', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='fetch_data', full_name='persefone.DModelCategoryRequest.fetch_data', index=1,
+      number=2, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=184,
+  serialized_end=251,
+)
+
+
+_DMODELCATEGORYRESPONSE = _descriptor.Descriptor(
+  name='DModelCategoryResponse',
+  full_name='persefone.DModelCategoryResponse',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='status', full_name='persefone.DModelCategoryResponse.status', index=0,
+      number=1, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='categories', full_name='persefone.DModelCategoryResponse.categories', index=1,
+      number=2, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=253,
+  serialized_end=367,
+)
 
 
 _DMODELREQUEST = _descriptor.Descriptor(
@@ -70,8 +148,8 @@ _DMODELREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=184,
-  serialized_end=263,
+  serialized_start=369,
+  serialized_end=448,
 )
 
 
@@ -109,8 +187,8 @@ _DMODELRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=265,
-  serialized_end=359,
+  serialized_start=450,
+  serialized_end=544,
 )
 
 
@@ -141,8 +219,8 @@ _DINFERENCEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=361,
-  serialized_end=422,
+  serialized_start=546,
+  serialized_end=607,
 )
 
 
@@ -180,20 +258,38 @@ _DINFERENCERESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=424,
-  serialized_end=529,
+  serialized_start=609,
+  serialized_end=714,
 )
 
+_DMODELCATEGORYRESPONSE.fields_by_name['status'].message_type = persefone_dot_interfaces_dot_proto_dot_comm__pb2._RESPONSESTATUS
+_DMODELCATEGORYRESPONSE.fields_by_name['categories'].message_type = persefone_dot_interfaces_dot_proto_dot_models__pb2._DMODELCATEGORY
 _DMODELRESPONSE.fields_by_name['status'].message_type = persefone_dot_interfaces_dot_proto_dot_comm__pb2._RESPONSESTATUS
 _DMODELRESPONSE.fields_by_name['models'].message_type = persefone_dot_interfaces_dot_proto_dot_models__pb2._DMODEL
 _DINFERENCEREQUEST.fields_by_name['bundle'].message_type = persefone_dot_interfaces_dot_proto_dot_data__pb2._DTENSORBUNDLE
 _DINFERENCERESPONSE.fields_by_name['status'].message_type = persefone_dot_interfaces_dot_proto_dot_comm__pb2._RESPONSESTATUS
 _DINFERENCERESPONSE.fields_by_name['bundle'].message_type = persefone_dot_interfaces_dot_proto_dot_data__pb2._DTENSORBUNDLE
+DESCRIPTOR.message_types_by_name['DModelCategoryRequest'] = _DMODELCATEGORYREQUEST
+DESCRIPTOR.message_types_by_name['DModelCategoryResponse'] = _DMODELCATEGORYRESPONSE
 DESCRIPTOR.message_types_by_name['DModelRequest'] = _DMODELREQUEST
 DESCRIPTOR.message_types_by_name['DModelResponse'] = _DMODELRESPONSE
 DESCRIPTOR.message_types_by_name['DInferenceRequest'] = _DINFERENCEREQUEST
 DESCRIPTOR.message_types_by_name['DInferenceResponse'] = _DINFERENCERESPONSE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
+
+DModelCategoryRequest = _reflection.GeneratedProtocolMessageType('DModelCategoryRequest', (_message.Message,), {
+  'DESCRIPTOR' : _DMODELCATEGORYREQUEST,
+  '__module__' : 'persefone.interfaces.grpc.inference_services_pb2'
+  # @@protoc_insertion_point(class_scope:persefone.DModelCategoryRequest)
+  })
+_sym_db.RegisterMessage(DModelCategoryRequest)
+
+DModelCategoryResponse = _reflection.GeneratedProtocolMessageType('DModelCategoryResponse', (_message.Message,), {
+  'DESCRIPTOR' : _DMODELCATEGORYRESPONSE,
+  '__module__' : 'persefone.interfaces.grpc.inference_services_pb2'
+  # @@protoc_insertion_point(class_scope:persefone.DModelCategoryResponse)
+  })
+_sym_db.RegisterMessage(DModelCategoryResponse)
 
 DModelRequest = _reflection.GeneratedProtocolMessageType('DModelRequest', (_message.Message,), {
   'DESCRIPTOR' : _DMODELREQUEST,
@@ -232,13 +328,23 @@ _INFERENCESERVICE = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=532,
-  serialized_end=841,
+  serialized_start=717,
+  serialized_end=1116,
   methods=[
+  _descriptor.MethodDescriptor(
+    name='TrainableModels',
+    full_name='persefone.InferenceService.TrainableModels',
+    index=0,
+    containing_service=None,
+    input_type=_DMODELCATEGORYREQUEST,
+    output_type=_DMODELCATEGORYRESPONSE,
+    serialized_options=None,
+    create_key=_descriptor._internal_create_key,
+  ),
   _descriptor.MethodDescriptor(
     name='ModelsList',
     full_name='persefone.InferenceService.ModelsList',
-    index=0,
+    index=1,
     containing_service=None,
     input_type=_DMODELREQUEST,
     output_type=_DMODELRESPONSE,
@@ -248,7 +354,7 @@ _INFERENCESERVICE = _descriptor.ServiceDescriptor(
   _descriptor.MethodDescriptor(
     name='ActivateModel',
     full_name='persefone.InferenceService.ActivateModel',
-    index=1,
+    index=2,
     containing_service=None,
     input_type=_DMODELREQUEST,
     output_type=_DMODELRESPONSE,
@@ -258,7 +364,7 @@ _INFERENCESERVICE = _descriptor.ServiceDescriptor(
   _descriptor.MethodDescriptor(
     name='DeactivateModel',
     full_name='persefone.InferenceService.DeactivateModel',
-    index=2,
+    index=3,
     containing_service=None,
     input_type=_DMODELREQUEST,
     output_type=_DMODELRESPONSE,
@@ -268,7 +374,7 @@ _INFERENCESERVICE = _descriptor.ServiceDescriptor(
   _descriptor.MethodDescriptor(
     name='Inference',
     full_name='persefone.InferenceService.Inference',
-    index=3,
+    index=4,
     containing_service=None,
     input_type=_DINFERENCEREQUEST,
     output_type=_DINFERENCERESPONSE,

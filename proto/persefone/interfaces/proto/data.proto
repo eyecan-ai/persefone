@@ -61,25 +61,3 @@ message DTensorBundle{
   string action = 2;
 }
 
-
-// message DImage {
-//   string type = 1;
-//   bytes data = 2;
-//   uint32 width = 3;
-//   uint32 height = 4;
-//   uint32 channels = 5;
-// }
-
-// message DImageBundle{
-//   repeated DImage images = 1;
-//   string action = 2;
-// }
-
-
-// message DGenericBundle{
-//   oneof payload{
-//     DTensorBundle tensor_bundle = 1;
-//     DImageBundle image_bundle = 2;
-//   }
-//   string action = 3;
-// }

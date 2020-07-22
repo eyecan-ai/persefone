@@ -1,14 +1,15 @@
 
 from persefone.data.io.drivers.common import AbstractFileDriver
-from persefone.data.databases.mongo.model import MModel
+from persefone.data.databases.mongo.model import MModel, MModelCategory
 from persefone.data.databases.mongo.clients import MongoModelsManager, MongoDatabaseClient
 from persefone.interfaces.proto.utils.comm import ResponseStatusUtils
 from persefone.interfaces.grpc.inference_services_pb2_grpc import InferenceServiceServicer, add_InferenceServiceServicer_to_server
 from persefone.interfaces.proto.models_pb2 import (
-    DModel
+    DModel, DModelCategory
 )
 from persefone.interfaces.grpc.inference_services_pb2 import (
-    DModelRequest, DModelResponse, DInferenceRequest, DInferenceResponse
+    DModelRequest, DModelResponse, DInferenceRequest, DInferenceResponse,
+    DModelCategoryRequest, DModelCategoryResponse
 )
 from persefone.interfaces.proto.utils.dtensor import DTensorUtils
 from typing import Callable
@@ -33,6 +34,10 @@ class InferenceService(ABC, InferenceServiceServicer):
 
     def register(self, grpc_server):
         add_InferenceServiceServicer_to_server(self, grpc_server)
+
+    @abstractmethod
+    def TrainableModels(self, request: DModelCategoryRequest, context: grpc.ServicerContext) -> DModelCategoryResponse:
+        pass
 
     @abstractmethod
     def ModelsList(self, request: DModelRequest, context: grpc.ServicerContext) -> DModelResponse:
@@ -77,15 +82,31 @@ class MongoInferenceService(InferenceService):
         model_category = request.model_category
         return MongoModelsManager(self._mongo_client).get_models(model_category=model_category)
 
-    def _get_model(self, request: DModelRequest):
+    def _get_model(self, request: DModelRequest) -> MModel:
         model_name = request.model_name
         return MongoModelsManager(self._mongo_client).get_model(name=model_name)
+
+    # def _get_model_category(self, request: DModelCategoryRequest) -> MModelCategory:
+    #     model_category = request.model_category
+    #     return MongoModelsManager(self._mongo_client).get_model_category(category_name=model_category)
+
+    def _get_model_categories(self, request: DModelCategoryRequest) -> MModelCategory:
+        model_category = request.model_category
+        return MongoModelsManager(self._mongo_client).get_categories(category_name=model_category)
 
     def _create_dmodel(self, model: MModel) -> DModel:
         dmodel = DModel()
         dmodel.name = model.name
-        dmodel.category = model.category.name
+        category = DModelCategory()
+        category.name = model.category.name
+        dmodel.category.CopyFrom(category)
         return dmodel
+
+    def _create_dmodelcategory(self, model_category: MModelCategory) -> DModelCategory:
+        dmodelcategory = DModelCategory()
+        dmodelcategory.name = model_category.name
+        dmodelcategory.description = model_category.description
+        return dmodelcategory
 
     def ModelsList(self, request: DModelRequest, context: grpc.ServicerContext) -> DModelResponse:
 
@@ -164,5 +185,20 @@ class MongoInferenceService(InferenceService):
             reply_bundle = DTensorUtils.numpy_to_dtensor_bundle(reply_arrays, reply_action)
             response.status.CopyFrom(ResponseStatusUtils.create_ok_status(f""))
             response.bundle.CopyFrom(reply_bundle)
+
+        return response
+
+    def TrainableModels(self, request: DModelCategoryRequest, context) -> DModelCategoryResponse:
+
+        # Fetches model s if any
+        model_categories = self._get_model_categories(request)
+
+        # Inits Response
+        response = DModelCategoryResponse()
+
+        response.status.CopyFrom(ResponseStatusUtils.create_ok_status(f""))
+
+        for model_category in model_categories:
+            response.categories.append(self._create_dmodelcategory(model_category))
 
         return response
