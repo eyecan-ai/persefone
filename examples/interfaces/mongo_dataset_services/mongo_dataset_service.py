@@ -1,10 +1,8 @@
-from persefone.data.databases.mongo.clients import MongoDatabaseClient, MongoDataset
-from persefone.data.databases.mongo.readers import MongoDatasetReader
+from persefone.data.databases.mongo.clients import MongoDatabaseClient
 from persefone.interfaces.grpc.servers.datasets_services import MongoDatasetService, DatasetsServiceCFG
 from persefone.utils.cli_options import cli_host_options
 from persefone.data.io.drivers.safefs import SafeFilesystemDriver
 import click
-import cv2
 import grpc
 from concurrent import futures
 import threading

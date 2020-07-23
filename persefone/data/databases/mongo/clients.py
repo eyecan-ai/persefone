@@ -18,6 +18,7 @@ import numpy as np
 from PIL import Image
 import logging
 import io
+import subprocess
 
 
 class MongoDatabaseClientCFG(XConfiguration):
@@ -33,6 +34,16 @@ class MongoDatabaseClientCFG(XConfiguration):
             'db': str,
             Optional('mock'): bool
         }))
+
+
+class MongoDumper(object):
+
+    @classmethod
+    def dump_to_files(cls, database_name: str, output_folder: str):
+        output_folder = Path(output_folder)
+        output_filename = output_folder / f'database_name.gz'
+        cmd = f'mongodump --gzip --db={database_name} --archive={str(output_filename)}'
+        subprocess.call(cmd.split(' '))
 
 
 class MongoDatabaseClient(object):
@@ -621,6 +632,10 @@ class MongoDataset(object):
             assert self._dataset is not None, "Something goes wrong creating Dataset"
 
     @property
+    def drivers(self):
+        return self._drivers
+
+    @property
     def dataset(self):
         return self._dataset
 
@@ -653,6 +668,39 @@ class MongoDataset(object):
             self._dataset.delete()
             return True
         return False
+
+    def deep_rename(self, old_realm: str, new_realm: str, samples: List[MSample] = None) -> bool:
+        """ Deeply renames all driver based on new dataset name
+
+        :param old_realm: old realm name
+        :type old_realm: str
+        :param new_realm: new realm name
+        :type new_realm: str
+        :param samples: samples list (if not provided, applies to all samples), defaults to None
+        :type samples: List[MSample], optional
+        :raises ModuleNotFoundError: Raises error if drivers are not compliant
+        :return: TRUE
+        :rtype: bool
+        """
+
+        if samples is None:
+            samples = self.get_samples()
+
+        for sample in samples:
+            items = self.get_items(sample.sample_id)
+            for item in items:
+                for resource in item.resources:
+                    resource: MResource
+
+                    if resource.driver in self._drivers:
+                        driver = self._drivers[resource.driver]
+                        realm, bucket, obj, filename = driver.chunks_from_uri(resource.uri)
+                        if realm == old_realm:
+                            resource.uri = driver.uri_from_chunks(new_realm, bucket, obj, filename)
+                            resource.save()
+                    else:
+                        raise ModuleNotFoundError(f"No avaibale driver [{resource.driver}] to delete resource!")
+        return True
 
     def get_sample(self, sample_idx: int) -> Union[MSample, None]:
         """ Retrieves single sample by idx

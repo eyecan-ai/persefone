@@ -28,7 +28,6 @@ def h5_to_mongo(database_cfg, driver_cfg, h5_file, new_dataset_name, new_dataset
 
     with db:
         for h5_sample in tqdm(db):
-
             metadata = {}  # TODO: Conversion with external mapper!!!
             for k, v in dict(h5_sample.attrs).items():
                 if isinstance(v, np.int64):
