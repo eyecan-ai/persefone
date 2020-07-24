@@ -33,6 +33,7 @@ class TestDatasetManagement(object):
     def test_real_database_data_creation(self, temp_mongo_database):
         self._data_creation_on_active_dataset(temp_mongo_database)
 
+    @pytest.mark.mongo_mock_server  # NOT EXECUTE IF --mongo_real_server option is passed
     def test_mock_database_data_creation(self, temp_mongo_mock_database):
         self._data_creation_on_active_dataset(temp_mongo_mock_database)
 
