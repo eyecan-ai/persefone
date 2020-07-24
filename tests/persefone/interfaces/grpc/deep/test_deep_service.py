@@ -1,18 +1,12 @@
 
-from persefone.interfaces.proto.utils.comm import MetadataUtils
-import deepdiff
-from persefone.interfaces.grpc.deep_services_pb2 import DDeepServiceRequest, DDeepServiceResponse
-import pytest
-from persefone.data.io.drivers.safefs import SafeFilesystemDriver, SafeFilesystemDriverCFG
-from persefone.interfaces.grpc.servers.deep_services import DeepService, EchoDeepService, MongoDeepService
-from persefone.interfaces.grpc.clients.deep_services import DeepServiceClient, DeepServiceCFG, DeepServicePack, SimpleDeepServiceClient
-from persefone.utils.bytes import DataCoding
+from persefone.interfaces.grpc.servers.deep_services import EchoDeepService
+from persefone.interfaces.grpc.clients.deep_services import DeepServiceCFG, DeepServicePack, SimpleDeepServiceClient
 import grpc
-from google.protobuf import json_format
 from concurrent import futures
 import threading
 from deepdiff import DeepDiff
 import numpy as np
+import pytest
 
 
 class TestEchoDeepService(object):

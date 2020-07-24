@@ -1,7 +1,5 @@
 from persefone.interfaces.proto.utils.dtensor import DTensorUtils
-from persefone.interfaces.proto.data_pb2 import DTensorBundle
 from persefone.interfaces.proto.utils.comm import MetadataUtils
-import numpy as np
 from persefone.interfaces.grpc.deep_services_pb2_grpc import DeepServiceStub
 from persefone.interfaces.grpc.deep_services_pb2 import (
     DDeepServiceRequest, DDeepServiceResponse
