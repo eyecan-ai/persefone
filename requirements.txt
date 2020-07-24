@@ -33,3 +33,4 @@ sty==1.0.0b12
 tabulate==0.8.7
 fs==2.4.11
 termcolor==1.1.0
+deepdiff==5.0.1

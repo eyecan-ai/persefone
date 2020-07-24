@@ -1,4 +1,8 @@
+from google.protobuf import json_format
+from google.protobuf.message import Message
+import numpy as np
 from persefone.interfaces.proto.comm_pb2 import ResponseStatus
+import json
 
 
 class ResponseStatusUtils(object):
@@ -19,3 +23,21 @@ class ResponseStatusUtils(object):
         status.code = code
         status.message = message
         return status
+
+
+class MetadataUtils(object):
+
+    class NumpyEncoder(json.JSONEncoder):
+
+        def default(self, obj):
+            if isinstance(obj, np.ndarray):
+                return obj.tolist()
+            return json.JSONEncoder.default(self, obj)
+
+    @classmethod
+    def dict_to_struct(cls, metadata: dict, message: Message):
+        json_format.Parse(json.dumps(metadata, cls=cls.NumpyEncoder), message)
+
+    @ classmethod
+    def struct_to_dict(cls, message: Message):
+        return json_format.MessageToDict(message)
