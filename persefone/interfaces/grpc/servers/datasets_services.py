@@ -161,7 +161,9 @@ class MongoDatasetService(DatasetsService):
 
         if mongo_dataset is None:  # No corresponding dataser found
             # Build response status
-            response.status.CopyFrom(ResponseStatusUtils.create_error_status(f"Impossible to create: [{request.dataset_name}]"))
+            response.status.CopyFrom(ResponseStatusUtils.create_error_status(
+                f"Impossible to create: [{request.dataset_name}]. Check for name conflicts!")
+            )
         else:
             # Build response status
             response.status.CopyFrom(ResponseStatusUtils.create_ok_status())
@@ -184,7 +186,7 @@ class MongoDatasetService(DatasetsService):
 
         if mongo_dataset is None:  # No corresponding dataser found
             # Build response status
-            response.status.CopyFrom(ResponseStatusUtils.create_error_status(f"Impossible to delete: [{ request.dataset_name}]"))
+            response.status.CopyFrom(ResponseStatusUtils.create_error_status(f"Dataset: [{ request.dataset_name}] not found!"))
         else:
 
             if mongo_dataset.delete(security_name=request.dataset_name):
@@ -257,7 +259,7 @@ class MongoDatasetService(DatasetsService):
         # Inits Response
         response = DSampleResponse()
 
-        if mongo_dataset is None:  # No corresponding dataser found
+        if mongo_dataset is None:  # No corresponding dataset found
 
             # Build response status
             response.status.CopyFrom(ResponseStatusUtils.create_error_status(f"No dataset found: [{request.dataset_name}]"))
