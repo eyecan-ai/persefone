@@ -1,48 +1,148 @@
 
 
-from persefone.data.databases.mongo.clients import MongoDatabaseClient
+from enum import unique
+from persefone.data.databases import mongo
+
+import mongoengine
+from persefone.data.databases.mongo.clients import MongoDatabaseClient, MongoDatabaseClientCFG
 import pickle
-from typing import Any, Union
+from typing import Any, List, Union
 from mongoengine.document import Document
-from mongoengine.fields import FileField, GenericLazyReferenceField, MapField, StringField
+from mongoengine.fields import DictField, FileField, GenericLazyReferenceField, LazyReferenceField, ListField, MapField, ReferenceField, StringField
 import logging
 
 
-class MNode(Document):
-    """ Model model """
+class NodesPath(object):
+    PATH_SEPARATOR = '/'
 
-    namespace_f = StringField(required=True)
-    category_f = StringField()
-    name_f = StringField(required=True, unique_with='namespace_f')
-    data_f = FileField()
-    links_f = MapField(field=GenericLazyReferenceField())
+    def __init__(self, value):
+        self._value = value
+        if self._value.startswith(self.PATH_SEPARATOR):
+            self._value = self._value[:1]
+        self._chunks = value.split(self.PATH_SEPARATOR)
+        self._chunks = [x for x in self._chunks if len(x) > 0]
+        self._valid = False
+        if len(self._chunks) > 2:
+            self._valid = True
+
+    @property
+    def value(self):
+        return self._value
+
+    @property
+    def valid(self):
+        return self._valid
 
     @property
     def namespace(self):
-        return self.namespace_f
-
-    @namespace.setter
-    def namespace(self, namespace):
-        self.namespace_f = namespace
-        self.save()
-
-    @property
-    def name(self):
-        return self.name_f
-
-    @name.setter
-    def name(self, name):
-        self.name_f = name
-        self.save()
+        if self.valid:
+            return self._chunks[0]
+        return None
 
     @property
     def category(self):
-        return self.category_f
+        if self.valid:
+            return self._chunks[1]
+        return None
 
-    @category.setter
-    def category(self, category):
-        self.category_f = category
+    @property
+    def items(self):
+        if self.valid:
+            return self._chunks[2:]
+        return []
+
+    @classmethod
+    def builds_path(cls, namespace: str, category: str, items: List[str]):
+        p = f'{namespace}{cls.PATH_SEPARATOR}{category}'
+        for item in items:
+            p += f'{cls.PATH_SEPARATOR}{item}'
+        return NodesPath(p)
+
+
+class MLink(Document):
+    """ Link model """
+
+    start_node_ = LazyReferenceField("MNode")
+    end_node_ = LazyReferenceField("MNode")
+    link_type_ = StringField()
+    metadata_ = DictField()
+
+    meta = {
+        'indexes': [
+            ('start_node_', 'end_node_')  # text index
+        ]
+    }
+
+    @property
+    def start_node(self):
+        return self.start_node_
+
+    @property
+    def end_node(self):
+        return self.end_node_
+
+    @property
+    def link_type(self):
+        return self.link_type_
+
+    @link_type.setter
+    def link_type(self, tp: str):
+        self.link_type_ = tp
         self.save()
+
+    @property
+    def metadata(self):
+        return self.metadata_
+
+    @metadata.setter
+    def metadata(self, d: dict):
+        self.metadata_ = d
+        self.save()
+
+    @classmethod
+    def outbound_of(cls, node: 'MNode'):
+        return MLink.objects(start_node_=node).order_by('start_node___name', 'end_node___name', 'link_type')
+
+    @classmethod
+    def inbound_of(cls, node: 'MNode'):
+        return MLink.objects(end_node_=node).order_by('start_node___name', 'end_node___name', 'link_type')
+
+
+class MNode(Document):
+    """ Node model """
+
+    name_ = StringField(required=True)
+    node_type_ = StringField()
+    data_ = FileField()
+    metadata_ = DictField()
+
+    meta = {
+        'indexes': [
+            '$name_'  # text index
+        ]
+    }
+
+    @property
+    def name(self):
+        return self.name_
+
+    @name.setter
+    def name(self, name):
+        self.name_ = name
+        self.save()
+
+    @property
+    def node_type(self):
+        return self.node_type_
+
+    @node_type.setter
+    def node_type(self, tp: str):
+        self.node_type_ = tp
+        self.save()
+
+    @property
+    def path(self):
+        return NodesPath(self.name)
 
     @property
     def data(self):
@@ -58,22 +158,54 @@ class MNode(Document):
             self.data_f = pickle.dumps(data)
             self.save()
 
-    @property
-    def links(self):
-        return self.links_f
+    def link_to(self, node: 'MNode', metadata={}, link_type: str = ''):
+        link = MLink()
+        link.start_node_ = self
+        link.end_node_ = node
+        link.metadata_ = metadata
+        link.link_type_ = link_type
+        link.save()
 
-    def link_to(self, node: 'MNode', link_name: str):
-        self.links_f[link_name] = node
-        self.save()
+    @property
+    def outbound(self):
+        return MLink.outbound_of(self)
+
+    @property
+    def inbound(self):
+        return MLink.inbound_of(self)
+
+    @classmethod
+    def get_by_name(cls, name: str):
+        return MNode.objects.get(name_=name)
+
+    @classmethod
+    def create(cls, name: str):
+        path = NodesPath(name)
+        if not path.valid:
+            raise NameError(f'Node name "{name}" is not valid')
+
+        node = MNode(name)
+        node.save()
+        return node
+
+
+# Register MNOde - MLink reverse delete rules
+MNode.register_delete_rule(MLink, 'start_node_', mongoengine.CASCADE)
+MNode.register_delete_rule(MLink, 'end_node_', mongoengine.CASCADE)
 
 
 class NodesRealm(object):
 
-    def __init__(self, mongo_client: MongoDatabaseClient):
-        self._mongo_client = mongo_client
+    def __init__(self, client_cfg: MongoDatabaseClientCFG):
+        self._client_cfg = client_cfg
+        self._mongo_client = MongoDatabaseClient(cfg=self._client_cfg)
         self._mongo_client.connect()
 
-    def __getitem__(self, fullname):
+    def __getitem__(self, path):
+
+        np = NodesPath(path)
+        if not np.valid:
+            return None
 
         fullname = str(fullname)
 

@@ -65,6 +65,10 @@ class MongoDatabaseClient(object):
         self._connection = None
 
     @property
+    def cfg(self):
+        return self._cfg
+
+    @property
     def db_name(self):
         return self._cfg.params.db
 
