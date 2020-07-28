@@ -1,5 +1,7 @@
 
 
+from persefone.utils.mongo.queries import MongoQueryParser
+from typing import List
 from persefone.data.databases.mongo.nodes.nodes import MLink, MNode, NodesBucket
 from mongoengine.errors import DoesNotExist
 from persefone.data.databases.mongo.clients import MongoDatabaseClientCFG
@@ -57,6 +59,18 @@ class DatasetsBucket(NodesBucket):
     def get_sample(self, dataset_name: str, sample_id: str):
         return self.get_node_by_name(self.namespace / dataset_name / self._sample_id_name(sample_id))
 
+    def get_samples_by_query(self, dataset_name: str, queries: list = None, orders_by: list = None):
+        if queries is None:
+            queries = []
+        if orders_by is None:
+            orders_by = []
+
+        queries.append(f"node_type == '{self.NODE_TYPE_SAMPLE}'")
+        queries.append(f"metadata.#dataset_name == '{dataset_name}'")
+        query_dict = MongoQueryParser.parse_queries_list(queries)
+        orders_bys = MongoQueryParser.parse_orders_list(orders_by)
+        return MNode.get_by_queries(query_dict, orders_bys)
+
     def get_item(self, dataset_name: str, sample_id: int, item_name: str):
         return self.get_node_by_name(self.namespace / dataset_name / self._sample_id_name(sample_id) / item_name)
 
@@ -91,10 +105,12 @@ class DatasetsBucket(NodesBucket):
             raise NameError(f"Sample with sample id '{sample_id}' was found")
         except DoesNotExist:
 
-            sample_node = self[self.namespace / dataset_name / self._sample_id_name(sample_id)]
-            metadata['_sample_id'] = sample_id
-            sample_node.metadata_ = metadata
+            sample_node: MNode = self[self.namespace / dataset_name / self._sample_id_name(sample_id)]
+            metadata['#sample_id'] = sample_id
+            metadata['#dataset_name'] = dataset_name
+            sample_node.metadata = metadata
             sample_node.node_type = self.NODE_TYPE_SAMPLE
+            sample_node.save()
             dataset_node.link_to(sample_node, link_type=self.LINK_TYPE_DATASET2SAMPLE)
             return sample_node
 
@@ -113,3 +129,13 @@ class DatasetsBucket(NodesBucket):
             item_node.node_type = self.NODE_TYPE_ITEM
             item_node.put_data(blob_data, blob_encoding)
             return item_node
+
+
+class DatasetsBucketReader(object):
+
+    def __init__(self, datasets_bucket: DatasetsBucket,
+                 data_mapping: dict = {},
+                 queries: List[str] = [],
+                 orders: List[str] = []):
+
+        self._samples = list(self.mongo_dataset.get_samples(query_dict=self._query_dict, order_bys=self._orders_bys))

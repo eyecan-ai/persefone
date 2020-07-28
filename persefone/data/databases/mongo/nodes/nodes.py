@@ -78,50 +78,32 @@ class NodesPath(object):
 class MLink(Document):
     """ Link model """
 
-    start_node_ = LazyReferenceField("MNode", passthrough=True)
-    end_node_ = LazyReferenceField("MNode", passthrough=True)
-    link_type_ = StringField()
-    metadata_ = DictField()
+    start_node = LazyReferenceField("MNode")
+    end_node = LazyReferenceField("MNode")
+    link_type = StringField()
+    metadata = DictField()
 
     meta = {
         'indexes': [
-            ('start_node_', 'end_node_')  # text index
+            ('start_node', 'end_node')  # text index
         ]
     }
 
-    @property
-    def start_node(self):
-        return self.start_node_
-
-    @property
-    def end_node(self):
-        return self.end_node_
-
-    @property
-    def link_type(self):
-        return self.link_type_
-
-    @link_type.setter
-    def link_type(self, tp: str):
-        self.link_type_ = tp
+    def set_link_type(self, tp: str):
+        self.link_type = tp
         self.save()
 
-    @property
-    def metadata(self):
-        return self.metadata_
-
-    @metadata.setter
-    def metadata(self, d: dict):
-        self.metadata_ = d
+    def set_metadata(self, d: dict):
+        self.metadata = d
         self.save()
 
     @classmethod
     def outbound_of(cls, node: 'MNode', link_type: str = None):
         try:
             if link_type is None:
-                return MLink.objects(start_node_=node)  # .order_by('start_node___name', 'end_node___name', 'link_type_')
+                return MLink.objects(start_node=node)
             else:
-                return MLink.objects(start_node_=node, link_type_=link_type)  # .order_by('start_node___name', 'end_node___name')
+                return MLink.objects(start_node=node, link_type=link_type)
         except:
             return []
 
@@ -129,9 +111,9 @@ class MLink(Document):
     def inbound_of(cls, node: 'MNode', link_type: str = None):
         try:
             if link_type is None:
-                return MLink.objects(end_node_=node).order_by('start_node___name', 'end_node___name', 'link_type_')
+                return MLink.objects(end_node=node).order_by('start_node__name', 'end_node__name', 'link_type')
             else:
-                return MLink.objects(end_node_=node, link_type_=link_type).order_by('start_node___name', 'end_node___name')
+                return MLink.objects(end_node=node, link_type=link_type).order_by('start_node__name', 'end_node__name')
         except:
             return []
 
@@ -142,34 +124,30 @@ class MLink(Document):
     @classmethod
     def links_of(cls, node_0: 'MNode', node_1: 'MNode', link_type: str = None):
         if link_type is None:
-            return MLink.objects(start_node_=node_0, end_node_=node_1).order_by(
-                'start_node___name', 'end_node___name', 'link_type_')
+            return MLink.objects(start_node=node_0, end_node=node_1).order_by(
+                'start_node__name', 'end_node__name', 'link_type')
         else:
-            return MLink.objects(start_node_=node_0, end_node_=node_1, link_type_=link_type).order_by(
-                'start_node___name', 'end_node___name')
+            return MLink.objects(start_node=node_0, end_node=node_1, link_type=link_type).order_by(
+                'start_node__name', 'end_node__name')
 
     @classmethod
     def links_by_type(cls, link_type: str):
-        return MLink.objects(link_type_=link_type).order_by(
-            'start_node___name', 'end_node___name')
+        return MLink.objects(link_type=link_type).order_by(
+            'start_node__name', 'end_node__name')
 
 
 class MNode(Document):
     """ Node model """
 
-    name_ = StringField(required=True)
-    node_type_ = StringField()
-    data_ = FileField()
-    metadata_ = DictField()
+    name = StringField(required=True)
+    node_type = StringField()
+    data = FileField()
+    metadata = DictField()
     meta = {
         'indexes': [
-            '$name_'  # text index
+            '$name'  # text index
         ]
     }
-
-    @property
-    def name(self):
-        return self.name_
 
     @property
     def last_name(self):
@@ -178,50 +156,38 @@ class MNode(Document):
             return np.items[-1]
         return None
 
-    # @ name.setter
-    # def name(self, name):
-    #     self.name_ = name
-    #     self.save()
+    def set_node_type(self, tp: str):
+        self.node_type = tp
+        self.save()
 
-    @property
-    def node_type(self):
-        return self.node_type_
-
-    @node_type.setter
-    def node_type(self, tp: str):
-        self.node_type_ = tp
+    def set_metadata(self, d: dict):
+        self.metadata = d
         self.save()
 
     @property
     def path(self):
         return NodesPath(self.name)
 
-    # @data.setter
-    # def data(self, data):
-    #     if data is not None:
-    #         self.data_.put(data)
-    #         self.save()
-
     def put_data(self, data, data_encoding):
         if data is not None:
-            self.data_.put(data, content_type=data_encoding)
+            self.data.put(data, content_type=data_encoding)
             self.save()
 
     def get_data(self):
-        self.data_.seek(0)
-        d = self.data_.read()
+        self.data.seek(0)
+        d = self.data.read()
         if d is not None:
-            return d, self.data_.content_type
+            return d, self.data.content_type
         return None, None
 
     def link_to(self, node: 'MNode', metadata={}, link_type: str = ''):
         link = MLink()
-        link.start_node_ = self
-        link.end_node_ = node
+        link.start_node = self
+        link.end_node = node
         link.metadata_ = metadata
         if len(link_type) == 0:
             link_type = f'{self.node_type}_2_{node.node_type}'
-        link.link_type_ = link_type
+        link.link_type = link_type
         link.save()
         return link
 
@@ -253,7 +219,7 @@ class MNode(Document):
 
         name = NodesPath(name).value
         try:
-            return MNode.objects.get(name_=str(name))
+            return MNode.objects.get(name=str(name))
         except DoesNotExist:
             if create_if_none:
                 return MNode.create(str(name), metadata=metadata, node_type=node_type)
@@ -262,7 +228,14 @@ class MNode(Document):
 
     @classmethod
     def get_by_node_type(cls, node_type: str):
-        return MNode.objects(node_type_=node_type)
+        return MNode.objects(node_type=node_type)
+
+    @classmethod
+    def get_by_queries(cls, query_dict: dict = {}, orders_bys: list = None):
+        if orders_bys is None:
+            orders_bys = []
+
+        return MNode.objects(**query_dict).order_by(*orders_bys)
 
     @classmethod
     def create(cls, name: str, metadata: dict = None, node_type: str = None):
@@ -270,14 +243,14 @@ class MNode(Document):
         # if not path.valid:
         #     raise NameError(f'Node name "{name}" is not valid')
         name = NodesPath(name).value
-        node = MNode(name_=name, metadata_=metadata, node_type_=node_type)
+        node = MNode(name=name, metadata=metadata, node_type=node_type)
         node.save()
         return node
 
 
 # Register MNOde - MLink reverse delete rules
-MNode.register_delete_rule(MLink, 'start_node_', mongoengine.CASCADE)
-MNode.register_delete_rule(MLink, 'end_node_', mongoengine.CASCADE)
+MNode.register_delete_rule(MLink, 'start_node', mongoengine.CASCADE)
+MNode.register_delete_rule(MLink, 'end_node', mongoengine.CASCADE)
 
 
 class NodesBucket(object):

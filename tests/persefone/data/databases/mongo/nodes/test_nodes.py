@@ -121,8 +121,8 @@ class TestNodesManagement(object):
             ne.link_to(no, metadata={'start': ne.metadata_['number']}, link_type='e2o')
             no.link_to(ne, metadata={'start': no.metadata_['number']}, link_type='o2e')
 
-        o2e = MLink.objects(link_type_='o2e')
-        e2o = MLink.objects(link_type_='e2o')
+        o2e = MLink.objects(link_type='o2e')
+        e2o = MLink.objects(link_type='e2o')
         assert len(o2e) == n_nodes, "number of o2e links is wrong"
         assert len(e2o) == n_nodes, "number of e2o links is wrong"
 
@@ -148,8 +148,10 @@ class TestNodesManagement(object):
             assert len(node.outbound()) > 0, "Event -> Odd links must be not empty"
             for link in node.outbound():
                 assert link.start_node == node, "Something was wrong!!"
+
                 with pytest.raises(AttributeError):  # fields of Lazy reference cannot be accessed
                     assert link.start_node.name == node.name
+
                 assert link.start_node.fetch().name == node.name, "Name should be equal"
 
         # Delete all nodes

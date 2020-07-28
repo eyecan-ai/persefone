@@ -13,14 +13,14 @@ import numpy as np
 class TestDatasetsBucket(object):
 
     @pytest.mark.mongo_real_server  # EXECUTE ONLY IF --mongo_real_server option is passed
-    def test_datasets(self, temp_mongo_database: MongoDatabaseClient, minimnist_folder):
+    def test_datasets(self, temp_mongo_persistent_database: MongoDatabaseClient, minimnist_folder):
 
         tree = tree_from_underscore_notation_files(minimnist_folder)
         n_samples = len(tree.items())
         n_items = -1
         impossible_dataset_name = "_ASDasdasdjasdas_IMPOSSIBLE!"
 
-        R = DatasetsBucket(client_cfg=temp_mongo_database.cfg)
+        R = DatasetsBucket(client_cfg=temp_mongo_persistent_database.cfg)
         print(R)
 
         datasets_names = ['Data_A', 'Data_B']
@@ -42,7 +42,7 @@ class TestDatasetsBucket(object):
             for sample_str, items in tree.items():
                 n_items = len(items.items())
 
-                sample: MNode = R.new_sample(dataset_name, {'sample': sample_str, 'items': items.keys()})
+                sample: MNode = R.new_sample(dataset_name, {'sample': sample_str, 'items': items.keys(), 'even': int(sample_str) % 2 == 0})
 
                 sample_id = int(sample.last_name)
                 sample_r = R.get_sample(dataset_name, sample_id)
@@ -96,6 +96,21 @@ class TestDatasetsBucket(object):
                     # assert item is not None, "Item should be not None!"
                     # item_r = dataset.get_item(sample_idx, item_name)
                     # assert item_r is not None, "Retrieved Item should be not None!"
+
+            assert len(R.get_samples(dataset_name)) == n_samples, "Number of samples is wrong"
+            assert len(R.get_samples_by_query(dataset_name)) == n_samples, "Number of  queryed samples is wrong"
+
+            samples_sub = R.get_samples_by_query(dataset_name, queries=['metadata.even == True'])
+            assert len(samples_sub) > 0, "Event samples must be not empty"
+            assert len(samples_sub) < n_samples, "Event samples must be not empty"
+
+            samples_sub = R.get_samples_by_query(dataset_name, queries=['metadata.even == False'])
+            assert len(samples_sub) > 0, "Event samples must be not empty"
+            assert len(samples_sub) < n_samples, "Event samples must be not empty"
+
+            samples_sub = R.get_samples_by_query(dataset_name, queries=['metadata.even == True', 'metadata.sample contains "0"'])
+            assert len(samples_sub) > 0, "Event samples must be not empty"
+            assert len(samples_sub) < n_samples, "Event samples must be not empty"
 
         n_datasets = len(datasets_names)
         datasets = R.get_datasets()
