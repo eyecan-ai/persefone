@@ -11,16 +11,16 @@ from tqdm import tqdm
 @click.option('--database_cfg', default='database.yml', help="Database configuration file", show_default=True)
 @click.option('--h5_file', required=True, help="H5 Dataset file to convert")
 @click.option('--new_dataset_name', required=True, help="New Dataset desired name")
-@click.option('--new_dataset_category', required=True, help="New Dataset desired category name")
-def h5_to_datasets_bucket(database_cfg, h5_file, new_dataset_name, new_dataset_category):
+def h5_to_datasets_bucket(database_cfg, h5_file, new_dataset_name):
 
     bucket = DatasetsBucket(client_cfg=MongoDatabaseClientCFG(filename=database_cfg))
     db = H5SimpleDatabase(filename=h5_file)
 
     dataset = bucket.new_dataset(new_dataset_name)
-    dataset.metadata = {'category': new_dataset_category}
+    assert dataset is not None
 
     with db:
+        samples_counter = 0
         for h5_sample in tqdm(db):
             metadata = {}  # TODO: Conversion with external mapper!!!
             for k, v in dict(h5_sample.attrs).items():
@@ -28,7 +28,8 @@ def h5_to_datasets_bucket(database_cfg, h5_file, new_dataset_name, new_dataset_c
                     v = int(v)
                 metadata[k] = v
 
-            sample: MNode = bucket.new_sample(new_dataset_name, metadata=metadata)
+            sample: MNode = bucket.new_sample(new_dataset_name, metadata=metadata, sample_id=samples_counter)
+            samples_counter += 1
             sample_id = int(sample.last_name)
 
             # print(dict(item.attrs))

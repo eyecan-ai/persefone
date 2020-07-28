@@ -1,10 +1,17 @@
 
 
+from os import link
+
+import logging
+from persefone.data.databases.mongo.snapshots import SnapshotOperations
+from schema import Optional, Schema
+from persefone.utils.configurations import XConfiguration
 from persefone.utils.mongo.queries import MongoQueryParser
 from typing import List
 from persefone.data.databases.mongo.nodes.nodes import MLink, MNode, NodesBucket
 from mongoengine.errors import DoesNotExist
 from persefone.data.databases.mongo.clients import MongoDatabaseClientCFG
+from persefone.utils.bytes import DataCoding
 
 
 class DatasetsBucket(NodesBucket):
@@ -35,6 +42,7 @@ class DatasetsBucket(NodesBucket):
 
             dataset_node: MNode = self[self.namespace / dataset_name]
             dataset_node.node_type = self.NODE_TYPE_DATASET
+            dataset_node.save()
 
             namespace_node.link_to(dataset_node, link_type=self.LINK_TYPE_NAMESPACE2GENERIC)
             return dataset_node
@@ -56,6 +64,9 @@ class DatasetsBucket(NodesBucket):
         dataset_node: MNode = self.get_dataset(dataset_name)
         return dataset_node.outbound_nodes(link_type=self.LINK_TYPE_DATASET2SAMPLE)
 
+    def count_samples(self, dataset_name: str):
+        return len(self.get_samples(dataset_name))
+
     def get_sample(self, dataset_name: str, sample_id: str):
         return self.get_node_by_name(self.namespace / dataset_name / self._sample_id_name(sample_id))
 
@@ -65,6 +76,8 @@ class DatasetsBucket(NodesBucket):
         if orders_by is None:
             orders_by = []
 
+        orders_by = orders_by.copy()
+        queries = queries.copy()
         queries.append(f"node_type == '{self.NODE_TYPE_SAMPLE}'")
         queries.append(f"metadata.#dataset_name == '{dataset_name}'")
         query_dict = MongoQueryParser.parse_queries_list(queries)
@@ -130,12 +143,235 @@ class DatasetsBucket(NodesBucket):
             item_node.put_data(blob_data, blob_encoding)
             return item_node
 
+    @classmethod
+    def remap_sample_with_items(cls, sample: MNode, data_mapping: dict):
+
+        output_data = {}
+
+        # Fetches plain data
+        metadata = sample.metadata
+
+        for k, v in metadata.items():
+            extended_k = f'metadata.{k}'
+            if extended_k in data_mapping:
+                output_data[data_mapping[extended_k]] = v
+
+        # Fetches Items
+        items = MLink.outbound_nodes_of(sample, link_type=cls.LINK_TYPE_SAMPLE2ITEM)
+        for item in items:
+            item: MNode
+            extended_name = f'items.{item.last_name}'
+            if extended_name in data_mapping:
+                data, encoding = item.get_data()
+                output_data[data_mapping[extended_name]] = DataCoding.bytes_to_data(data, encoding)
+
+        return output_data
+
+
+class DatasetsBucketReaderCFG(XConfiguration):
+
+    def __init__(self, filename=None):
+        XConfiguration.__init__(self, filename=filename)
+
+        self.set_schema(Schema({
+            # DATA MAPPING
+            'data_mapping': {str: str},
+            # QUERIES
+            Optional('queries'): [str],
+            # ORDERS
+            Optional('orders'): [str],
+        }))
+
 
 class DatasetsBucketReader(object):
 
     def __init__(self, datasets_bucket: DatasetsBucket,
+                 dataset_name: str,
                  data_mapping: dict = {},
                  queries: List[str] = [],
                  orders: List[str] = []):
 
-        self._samples = list(self.mongo_dataset.get_samples(query_dict=self._query_dict, order_bys=self._orders_bys))
+        self._data_mapping = data_mapping
+        self._datasets_bucket = datasets_bucket
+        self._samples = list(self._datasets_bucket.get_samples_by_query(
+            dataset_name=dataset_name,
+            queries=queries,
+            orders_by=orders
+        ))
+        self._queries = queries
+        self._orders = orders
+
+    @property
+    def orders(self):
+        return self._orders
+
+    @property
+    def queries(self):
+        return self._queries
+
+    @property
+    def data_mapping(self):
+        return self._data_mapping
+
+    @property
+    def samples(self):
+        return self._samples
+
+    def __len__(self):
+        return len(self._samples)
+
+    def __getitem__(self, idx):
+        if idx > len(self):
+            raise IndexError
+        sample = self.samples[idx]
+        return DatasetsBucket.remap_sample_with_items(sample, self._data_mapping)
+
+    @classmethod
+    def builds_from_configuration_file(cls, bucket: DatasetsBucket, dataset_name: str, filename):
+        cfg = DatasetsBucketReaderCFG(filename=filename)
+        return DatasetsBucketReader(
+            bucket,
+            dataset_name,
+            data_mapping=cfg.params.data_mapping,
+            queries=cfg.params.get('queries', []),
+            orders=cfg.params.get('orders', [])
+        )
+
+    @classmethod
+    def builds_from_configuration_dict(cls, bucket: DatasetsBucket, dataset_name: str, cfg: dict):
+        cfg = DatasetsBucketReaderCFG.from_dict(cfg)
+        return DatasetsBucketReader(
+            bucket,
+            dataset_name,
+            data_mapping=cfg.params.data_mapping,
+            queries=cfg.params.get('queries', []),
+            orders=cfg.params.get('orders', [])
+        )
+
+
+class DatasetsBucketSamplesListReader(object):
+
+    def __init__(self, samples: List[MNode], data_mapping: dict):
+        self._samples = samples
+        self._data_mapping = data_mapping
+
+    @property
+    def samples(self):
+        return self._samples
+
+    @property
+    def data_mapping(self):
+        return self._data_mapping
+
+    def __len__(self):
+        return len(self._samples)
+
+    def __getitem__(self, idx):
+        if idx > len(self):
+            raise IndexError
+        sample = self.samples[idx]
+        return DatasetsBucket.remap_sample_with_items(sample, self._data_mapping)
+
+
+class DatasetsBucketIsolatedSample(object):
+
+    def __init__(self, sample: MNode, data_mapping: dict):
+        self.sample = sample
+        self.data_mapping = data_mapping
+
+
+class DatasetsBucketIsolatedSamplesListReader(object):
+
+    def __init__(self, isolated_samples: List[DatasetsBucketIsolatedSample]):
+        self._isolated_samples = isolated_samples
+
+    @property
+    def isolated_samples(self):
+        return self._isolated_samples
+
+    def __len__(self):
+        return len(self.isolated_samples)
+
+    def __getitem__(self, idx):
+        if idx > len(self):
+            raise IndexError
+        isolated_sample = self.isolated_samples[idx]
+        return DatasetsBucket.remap_sample_with_items(isolated_sample.sample, isolated_sample.data_mapping)
+
+
+class DatasetsBucketSnapshotCFG(XConfiguration):
+
+    def __init__(self, filename=None):
+        XConfiguration.__init__(self, filename=filename)
+        self.set_schema(Schema({
+            # NAME
+            Optional('_reusable'): dict,
+            'datasets': [
+                {str: {
+                    'dataset': {'name': str},
+                    'reader': {'data_mapping': {str: str},
+                               Optional('queries'): [str],
+                               Optional('orders'): [str]
+                               }
+                }
+                }
+            ],
+            'pipeline': str
+        }))
+
+
+class DatasetsBucketSnapshot(object):
+
+    def __init__(self, bucket: DatasetsBucket, cfg: DatasetsBucketSnapshotCFG):
+
+        self._cfg = cfg
+        self._cfg.validate()
+        self._bucket = bucket
+        self._readers_map = {}
+
+        for dataset in cfg.params.datasets:
+            reader_name = list(dataset.keys())[0]
+            dataset_name = dataset[reader_name]['dataset']['name']
+
+            reader = DatasetsBucketReader.builds_from_configuration_dict(
+                self._bucket,
+                dataset_name,
+                dataset[reader_name]['reader']
+            )
+
+            self._readers_map[reader_name] = reader
+
+        # Generates a TrampSample map befor spuffle
+        self._samples_map = {}
+        for reader_name, reader in self._readers_map.items():
+            self._samples_map[reader_name] = []
+            reader: DatasetsBucketReader
+            for sample in reader.samples:
+
+                self._samples_map[reader_name].append(
+                    DatasetsBucketIsolatedSample(sample, reader.data_mapping)
+                )
+
+        # Tries to load custom generate_output_list function from configuration file
+        try:
+            exec(self._cfg.params.pipeline)
+            self.__class__.generate_output_lists = locals()['generate']
+            output_data = self.generate_output_lists(SnapshotOperations, self._samples_map)
+        except Exception as e:
+            logging.error(e)
+            output_data = self._samples_map
+            raise NotImplementedError()
+
+        # Transforms output data as a dict of MongoMixedSampleIterator
+        self._output_data = {}
+        for output_name, isolated_samples_list in output_data.items():
+            self._output_data[output_name] = DatasetsBucketIsolatedSamplesListReader(
+                isolated_samples=isolated_samples_list
+            )
+
+    @property
+    def output_data(self):
+        return self._output_data
+
+    def generate_output_lists(self, ops: SnapshotOperations, samples_map):
+        return samples_map

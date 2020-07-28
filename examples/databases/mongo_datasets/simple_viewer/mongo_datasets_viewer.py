@@ -25,7 +25,7 @@ def mongo_datasets_viewer(database_cfg, driver_cfg, dataset_name):
     # Dataset Reader
     dataset_reader = MongoDatasetReader.create_from_configuration_file(
         mongo_dataset=mongo_dataset,
-        filename='reader_config.yml'
+        filename='reader_config.yml'  # TODO is wrong!
     )
 
     # Iterate retrieved samples

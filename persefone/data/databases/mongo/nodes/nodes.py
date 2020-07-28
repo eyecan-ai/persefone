@@ -224,7 +224,7 @@ class MNode(Document):
             if create_if_none:
                 return MNode.create(str(name), metadata=metadata, node_type=node_type)
             else:
-                raise DoesNotExist()
+                raise DoesNotExist(f"Node with name '{name}' does not exist!")
 
     @classmethod
     def get_by_node_type(cls, node_type: str):
