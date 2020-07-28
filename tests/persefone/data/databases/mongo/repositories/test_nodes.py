@@ -1,6 +1,9 @@
 
+from mongoengine.errors import DoesNotExist
+from numpy.lib.arraysetops import isin
+from persefone.utils.filesystem import tree_from_underscore_notation_files
 from deepdiff import DeepDiff
-from persefone.data.databases.mongo.nodes.nodes import MLink, MNode, NodesPath, NodesRealm
+from persefone.data.databases.mongo.nodes.nodes import DatasetsNodesRealm, MLink, MNode, NodesPath, NodesRealm
 from persefone.data.databases.mongo.clients import MongoDatabaseClient
 import time
 import pytest
@@ -9,6 +12,7 @@ import pickle
 import torch
 from itertools import product
 from tqdm import tqdm
+from persefone.utils.bytes import DataCoding
 
 
 class TestNodesManagement(object):
@@ -31,14 +35,16 @@ class TestNodesManagement(object):
     def node_paths(self):
         return [
             ('', False),
-            ('realm', False),
+            ('realm', True),
             ('realm///', False),
             ('realm//jiuojiojsad', False),
-            ('adasdasda/jiuojiojsad/', False),
+            ('adasdasda/jiuojiojsad/', True),
             ('realm/category/one', True),
             ('realm/category/one_special', True),
+            ('realm/category/one_special/', True),
             ('realm/category/one_special/two/three', True),
             ('realm/category/one_special/two/three/4/1/2.2/hello/$2$', True),
+            ('realm/category/one_special/two//three/4/1/2.2/hello/$2$', False),
         ]
 
     def test_path_separators(self, node_paths):
@@ -46,23 +52,51 @@ class TestNodesManagement(object):
         for p, should_be in node_paths:
 
             np = NodesPath(p)
-            print(np.items)
             assert np.valid is should_be, f"Node path {p} should be {'valid' if should_be else 'invalid'}"
 
             if not p.startswith(NodesPath.PATH_SEPARATOR):
                 np_with_start = NodesPath(f'{NodesPath.PATH_SEPARATOR}{p}')
+            #     #print("Adding to ", p, np_with_start, np_with_start.valid, np_with_start.value)
                 assert np_with_start.valid is should_be, f"Node path {p} with added Separator should be {'valid' if should_be else 'invalid'}"
+
+            if not p.endswith(NodesPath.PATH_SEPARATOR):
+                np_with_start = NodesPath(f'{p}{NodesPath.PATH_SEPARATOR}')
+            #     #print("Adding to ", p, np_with_start, np_with_start.valid, np_with_start.value)
+                assert np_with_start.valid is should_be, f"Node path {p} with added Separator (end) should be {'valid' if should_be else 'invalid'}"
+
+            if np.valid:
+                assert not np.value.startswith(NodesPath.PATH_SEPARATOR), "No separator in front!"
+                assert not np.value.endswith(NodesPath.PATH_SEPARATOR), "No separator in tail!"
 
             if should_be:
                 np2 = NodesPath.builds_path(
-                    np.namespace,
-                    np.category,
-                    np.items
+                    *np.items
                 )
                 assert np.value == np2.value, "Paths values does not match!"
 
+            if should_be:
+                assert np.parent_path.value in np.value, "Parent path should be contained in child path"
+
+                pieces = [np]
+                parent: NodesPath = np.parent_path
+                infinite_loop_watch = 1000
+                while parent.valid:
+                    pieces.append(parent)
+                    parent = parent.parent_path
+                    infinite_loop_watch -= 1
+                    if infinite_loop_watch <= 0:
+                        break
+                assert not infinite_loop_watch < 0, "Recurisve loop detected! "
+
+                assert len(pieces) == len(np.items), "Parents and items must match in size"
+                assert len(pieces) == len(np.subpaths()), "Subpaths must match in size"
+
+                for subpath in np.subpaths():
+                    assert all(x in np.items for x in subpath.items), "Some item is missing in subpaths"
+            print("==")
+
     @pytest.mark.mongo_real_server  # EXECUTE ONLY IF --mongo_real_server option is passed
-    def test_nodes(self, temp_mongo_persistent_database):
+    def test_nodes(self, temp_mongo_database):
 
         n_nodes = 32
         nodes_even = []
@@ -71,7 +105,8 @@ class TestNodesManagement(object):
             n = i * 2
 
             # Evens
-            node_e = MNode(name_=f'/realm/even/{n}')
+            node_e = MNode.create(name=f'/realm/even/{n}')
+            assert node_e is not None, "Node creation should be ok"
             node_e.metadata_ = {
                 'number': n,
                 'type': 'even'
@@ -80,10 +115,11 @@ class TestNodesManagement(object):
             nodes_even.append(node_e)
 
             # Odds
-            node_o = MNode(name_=f'/realm/odds/{n + 1}')
+            node_o = MNode.create(name=f'/realm/odds/{n}')
+            assert node_o is not None, "Node creation should be ok"
             node_o.metadata_ = {
                 'number': n + 1,
-                'type': 'even'
+                'type': 'odd'
             }
             node_o.save()
             nodes_odd.append(node_o)
@@ -115,13 +151,13 @@ class TestNodesManagement(object):
         # Checks for Even -> Odd links empty
         for node in nodes_even:
             node: MNode
-            assert len(node.outbound) == 0, "Event -> Odd links must be empty"
+            assert len(node.outbound_nodes()) == 0, "Event -> Odd links must be empty"
 
         # Checks for Odd -> Even links non empty
         for node in nodes_odd:
             node: MNode
-            assert len(node.outbound) > 0, "Event -> Odd links must be not empty"
-            for link in node.outbound:
+            assert len(node.outbound()) > 0, "Event -> Odd links must be not empty"
+            for link in node.outbound():
                 assert link.start_node == node, "Something was wrong!!"
                 with pytest.raises(AttributeError):  # fields of Lazy reference cannot be accessed
                     assert link.start_node.name == node.name
@@ -136,77 +172,139 @@ class TestNodesManagement(object):
         assert len(MLink.objects()) == 0, "No nodes must be there!"
 
     # @pytest.mark.mongo_real_server  # EXECUTE ONLY IF --mongo_real_server option is passed
-    # def test_nodes_creation(self, temp_mongo_persistent_database: MongoDatabaseClient, node_data):
+    # def test_nodes_realm(self, temp_mongo_persistent_database: MongoDatabaseClient):
 
     #     NR = NodesRealm(client_cfg=temp_mongo_persistent_database.cfg)
 
-    #     for idx, data in enumerate(node_data):
-    #         name = f'nm.node_{idx}'
-    #         NR[name].data = data
+    #     from pathlib import Path
 
-    #     for idx, data in enumerate(node_data):
-    #         name = f'nm.node_{idx}'
-    #         print(name)
-    #         retrieved_data = NR[name].data
+    #     print(NR[NR.realm / 'cat' / 'object'])
+    #     print(NR.get_node_by_chunks(NR.realm, 'cat', 'object'))
+    #     print(NR)
 
-    #         if isinstance(retrieved_data, np.ndarray):
-    #             assert np.array_equal(data, retrieved_data)
-    #         elif isinstance(retrieved_data, torch.Tensor):
-    #             assert data.equal(retrieved_data)
-    #         elif isinstance(retrieved_data, dict):
-    #             ddiff = DeepDiff(data, retrieved_data, ignore_order=True, ignore_numeric_type_changes=True)
-    #             assert not ddiff
-    #         else:
-    #             assert data == retrieved_data
+    @pytest.mark.mongo_real_server  # EXECUTE ONLY IF --mongo_real_server option is passed
+    def test_datasets(self, temp_mongo_database: MongoDatabaseClient, minimnist_folder):
 
-    #         # NR[name].delete()
+        tree = tree_from_underscore_notation_files(minimnist_folder)
+        n_samples = len(tree.items())
+        n_items = -1
+        impossible_dataset_name = "_ASDasdasdjasdas_IMPOSSIBLE!"
 
-    # @pytest.mark.mongo_real_server  # EXECUTE ONLY IF --mongo_real_server option is passed
-    # def test_nodes_links(self, temp_mongo_persistent_database: MongoDatabaseClient):
+        R = DatasetsNodesRealm(client_cfg=temp_mongo_database.cfg)
+        print(R)
 
-    #     NR = NodesRealm(mongo_client=temp_mongo_persistent_database)
+        datasets_names = ['Data_A', 'Data_B']
 
-    #     import cv2
+        for dataset_name in datasets_names:
+            dataset = R.new_dataset(dataset_name)
 
-    #     for node in NR.get_nodes_by_category('sample'):
-    #         print(node.namespace, node.name)
-    #         for k, item in node.links.items():
-    #             data = item.data
+            with pytest.raises(NameError):
+                dataset = R.new_dataset(dataset_name)
 
-    #             cv2.imshow("image", data)
-    #             cv2.waitKey(1)
-    #     # dataset_name = 'pino'
-    #     # n_samples = 1000
-    #     # n_items = 3
+            assert dataset is not None, "Dataset creation should be valid"
+            dataset_r = R.get_dataset(dataset_name)
 
-    #     # NR[dataset_name].category = 'dataset'
+            with pytest.raises(DoesNotExist):
+                R.get_dataset(impossible_dataset_name)
 
-    #     # for sample_id in tqdm(range(n_samples)):
-    #     #     print(sample_id)
+            assert dataset == dataset_r, "Retrieved dataset is wrong"
 
-    #     #     sample_name = f'{dataset_name}_sample_{str(sample_id).zfill(5)}'
+            for sample_str, items in tree.items():
+                n_items = len(items.items())
 
-    #     #     NR[sample_name].category = 'sample'
-    #     #     NR[sample_name].data = {'a': 2.2}
-    #     #     NR[dataset_name].link_to(NR[sample_name], sample_name)
+                sample: MNode = R.new_sample(dataset_name, {'sample': sample_str, 'items': items.keys()})
 
-    #     #     for item_id in range(n_items):
+                sample_id = int(sample.last_name)
+                sample_r = R.get_sample(dataset_name, sample_id)
 
-    #     #         item_name = f'{sample_name}_item_{str(item_id).zfill(5)}'
-    #     #         NR[item_name].category = 'item'
-    #     #         NR[item_name].data = np.random.uniform(0, 255, (512, 512, 3)).astype(np.uint8)
-    #     #         NR[sample_name].link_to(NR[item_name], item_name)
+                with pytest.raises(DoesNotExist):
+                    R.get_sample(impossible_dataset_name, sample_id)
 
-    #         # items = range(32)
-    #         # evens = [x for x in items if x % 2 == 0]
-    #         # odds = [x for x in items if x % 2 == 1]
-    #         # fives = [x for x in items if x % 5 == 0 and x > 0]
+                with pytest.raises(DoesNotExist):
+                    R.get_sample(dataset_name, n_samples * 10)
 
-    #         # p_evens = product(evens, evens)
+                with pytest.raises(DoesNotExist):
+                    R.get_sample(impossible_dataset_name, n_samples * 10)
 
-    #         # for first, second in p_evens:
-    #         #     if first != second:
-    #         #         NR[first].data = np.random.uniform(0, 255, (512, 512, 3)).astype(np.uint8)
-    #         #         NR[first].link_to(NR[second], f'{second}')
-    #         #         NR[first].category = 'even'
-    #         #         NR[second].category = 'even'
+                assert sample == sample_r, "Retrieved sample is wrong"
+
+                for item_name, filename in items.items():
+                    blob, encoding = DataCoding.file_to_bytes(filename)
+
+                    item: MNode = R.new_item(dataset_name, sample_id, item_name, blob_data=blob, blob_encoding=encoding)
+
+                    with pytest.raises(NameError):
+                        R.new_item(dataset_name, sample_id, item_name, blob_data=blob, blob_encoding=encoding)
+
+                    item_r: MNode = R.get_item(dataset_name, sample_id, item_name)
+                    assert item == item_r, "Retrieved item is wrong!"
+
+                    with pytest.raises(DoesNotExist):
+                        R.get_item(impossible_dataset_name, sample_id, item_name)
+                    with pytest.raises(DoesNotExist):
+                        R.get_item(dataset_name, n_samples * 10, item_name)
+                    with pytest.raises(DoesNotExist):
+                        R.get_item(dataset_name, sample_id, impossible_dataset_name)
+                    with pytest.raises(DoesNotExist):
+                        R.get_item(impossible_dataset_name, n_samples * 10, impossible_dataset_name)
+
+                    blob_r, encoding_r = item_r.get_data()
+                    assert blob_r is not None, "Retrieved Blob is empty!"
+                    assert encoding_r is not None, "Retrieved Blob encoding is empty!"
+
+                    assert blob_r == blob, "Retrievd Blob is different from original one"
+                    assert encoding_r == encoding, "Retrievd Blob encoding is different from original onw"
+
+                    a = DataCoding.bytes_to_data(blob, encoding)
+                    b = DataCoding.bytes_to_data(blob_r, encoding_r)
+
+                    assert type(a) == type(b), "Decoding must produces same data!"
+                    if isinstance(a, np.ndarray):
+                        assert np.array_equal(a, b), "If data is an array, it should be consistent after decoding!"
+
+                    # item = dataset.add_item(sample_idx, item_name)
+                    # assert item is not None, "Item should be not None!"
+                    # item_r = dataset.get_item(sample_idx, item_name)
+                    # assert item_r is not None, "Retrieved Item should be not None!"
+
+        n_datasets = len(datasets_names)
+        datasets = R.get_datasets()
+        assert len(datasets) == n_datasets, "Number of datasets is wrong"
+        assert len(MLink.outbound_nodes_of(R.get_namespace_node())) == n_datasets, "Datasets must be children of namespace"
+
+        whole_samples = MNode.get_by_node_type(R.NODE_TYPE_SAMPLE)
+        assert len(whole_samples) == n_samples * len(datasets_names), "Number of whole samples is wrong"
+        assert len(MLink.links_by_type(DatasetsNodesRealm.LINK_TYPE_DATASET2SAMPLE)) == n_samples * n_datasets, (
+            "Number of linked samples is wrong"
+        )
+
+        whole_items = MNode.get_by_node_type(R.NODE_TYPE_ITEM)
+        assert len(whole_items) == n_items * n_samples * n_datasets, "Number of whole items is wrong"
+        assert len(MLink.links_by_type(DatasetsNodesRealm.LINK_TYPE_SAMPLE2ITEM)) == n_samples * n_datasets * n_items, (
+            "Number of linked samples is wrong"
+        )
+
+        for dataset in datasets:
+            dataset: MNode
+
+            samples = R.get_samples(dataset.last_name)
+            assert len(samples) == n_samples, "Number of retrieved samples is wrong"
+
+            for sample in samples:
+
+                items = R.get_items(dataset.last_name, int(sample.last_name))
+
+                assert len(items) == n_items, "Number of items is wrong"
+
+            with pytest.raises(DoesNotExist):
+                R.delete_dataset(impossible_dataset_name)
+
+            R.delete_dataset(dataset.last_name)
+
+        datasets = R.get_datasets()
+        assert len(datasets) == 0, "No datasets should be there"
+        assert len(MNode.get_by_node_type(R.NODE_TYPE_SAMPLE)) == 0, "No samples should be there"
+        assert len(MNode.get_by_node_type(R.NODE_TYPE_ITEM)) == 0, "No items should be there"
+
+        assert R.get_namespace_node() is not None, "Namespace None should be valid!"
+        R.get_namespace_node().delete()
