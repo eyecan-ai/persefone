@@ -1,3 +1,4 @@
+import itertools
 from persefone.data.databases.mongo.nodes.nodes import MLink, MNode, NodesPath
 import pytest
 import numpy as np
@@ -90,6 +91,7 @@ class TestNodesManagement(object):
         n_nodes = 32
         nodes_even = []
         nodes_odd = []
+        node_type = 'xxx'
         for i in range(n_nodes):
             n = i * 2
 
@@ -100,8 +102,13 @@ class TestNodesManagement(object):
                 'number': n,
                 'type': 'even'
             }
+            node_e.set_node_type('node_even')
             node_e.save()
             nodes_even.append(node_e)
+
+            none_data, none_encoding = node_e.get_data()
+            assert none_data is None, "None bytes should be there"
+            assert none_encoding is None, "None encoding should be there"
 
             # Odds
             node_o = MNode.create(name=f'/realm/odds/{n}')
@@ -110,6 +117,7 @@ class TestNodesManagement(object):
                 'number': n + 1,
                 'type': 'odd'
             }
+            node_o.set_node_type('node_odd')
             node_o.save()
             nodes_odd.append(node_o)
 
@@ -154,6 +162,10 @@ class TestNodesManagement(object):
 
                 assert link.start_node.fetch().name == node.name, "Name should be equal"
 
+            assert len(node.outbound_nodes()) > 0, "Number of outbound nodes is wrong!"
+            assert len(node.outbound_nodes(link_type='o2e')) > 0, "Number of outbound nodes is wrong!"
+            assert len(node.outbound_nodes_by_node_type(node_type='node_odd')) == 0, "Number of outbound nodes by type is wrong!"
+
         # Delete all nodes
         for node in whole_nodes:
             node: MNode
@@ -162,13 +174,54 @@ class TestNodesManagement(object):
         assert len(MNode.objects()) == 0, "No nodes must be there!"
         assert len(MLink.objects()) == 0, "No nodes must be there!"
 
-    # @pytest.mark.mongo_real_server  # EXECUTE ONLY IF --mongo_real_server option is passed
-    # def test_nodes_realm(self, temp_mongo_persistent_database: MongoDatabaseClient):
+    @pytest.mark.mongo_real_server  # EXECUTE ONLY IF --mongo_real_server option is passed
+    def test_nodes_links(self, temp_mongo_database):
 
-    #     NR = NodesRealm(client_cfg=temp_mongo_persistent_database.cfg)
+        n_nodes = 16
+        nodes_even = []
+        nodes_odd = []
 
-    #     from pathlib import Path
+        for i in range(n_nodes):
+            n = i * 2
 
-    #     print(NR[NR.realm / 'cat' / 'object'])
-    #     print(NR.get_node_by_chunks(NR.realm, 'cat', 'object'))
-    #     print(NR)
+            # Evens
+            node_e = MNode.create(name=f'/realm/even/{n}')
+            node_e.set_node_type('node_even')
+            node_e.save()
+            node_e.link_to(node_e, link_type='self')
+            nodes_even.append(node_e)
+
+            # Odds
+            node_o = MNode.create(name=f'/realm/odds/{n + 1}')
+            node_o.set_node_type('node_odd')
+            node_o.save()
+            node_o.link_to(node_o, link_type='self')
+            nodes_odd.append(node_o)
+
+        whole_nodes = nodes_even + nodes_odd
+
+        for ne, no in itertools.product(nodes_even, nodes_odd):
+            ne: MNode
+            no: MNode
+            ne.link_to(no, link_type='e2o')
+
+        for no, ne in itertools.product(nodes_odd, nodes_even):
+            ne: MNode
+            no: MNode
+            no.link_to(ne, link_type='o2e')
+
+        for node in nodes_even:
+            node: MNode
+            assert len(node.outbound_nodes()) == n_nodes + 1, "Number of whole links is wrong"
+            assert len(node.outbound_nodes(link_type='e2o')) == n_nodes, "Number of specific links is wrong"
+            assert len(node.outbound_nodes(link_type='self')) == 1, "Number of self links is wrong"
+            assert len(node.outbound_nodes_by_node_type(node_type='node_even')) == 1, "Number of self nodes is wrong"
+            assert len(node.outbound_nodes_by_node_type(node_type='node_odd')) == n_nodes, "Number of odd nodes is wrong"
+
+        for node in nodes_odd:
+            node: MNode
+            assert len(node.outbound_nodes()) == n_nodes + 1, "ODD: Number of whole links is wrong"
+            assert len(node.outbound_nodes(link_type='o2e')) == n_nodes, "ODD: Number of specific links is wrong"
+            assert len(node.outbound_nodes(link_type='self')) == 1, "ODD: Number of self links is wrong"
+            assert len(node.outbound_nodes_by_node_type(node_type='node_odd')) == 1, "Number of self nodes is wrong"
+            assert len(node.outbound_nodes_by_node_type(node_type='node_even')) == n_nodes, "Number of odd nodes is wrong"

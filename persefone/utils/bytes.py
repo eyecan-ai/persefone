@@ -80,6 +80,27 @@ class DataCoding(object):
             return None
 
     @classmethod
+    def numpy_array_to_bytes(cls, array: np.ndarray, data_encoding: str = 'npy') -> bytes:
+        """ Converts array data stored as numpy array into bytes with custom data encoding
+
+        :param array: source generic numpy array
+        :type array: np.ndarray
+        :param data_encoding: codec string representation
+        :type data_encoding: str
+        :return: bytes representation
+        :rtype: bytes
+        """
+        data_encoding = data_encoding.replace('.', '')
+
+        data = bytes()
+        if data_encoding in cls.NUMPY_CODECS:
+            buffer = BytesIO(data)
+            np.save(buffer, array, allow_pickle=True)
+            return buffer.getvalue()
+        else:
+            return None
+
+    @classmethod
     def is_codec_lossy(cls, codec: str) -> bool:
         """ Checks if codec should be lossy
 

@@ -108,6 +108,10 @@ class MLink(Document):
             return []
 
     @classmethod
+    def outbound_of_by_node_type(cls, node: 'MNode', node_type: str):
+        return [x for x in cls.outbound_of(node) if x.end_node.fetch().node_type == node_type]
+
+    @classmethod
     def inbound_of(cls, node: 'MNode', link_type: str = None):
         try:
             if link_type is None:
@@ -120,6 +124,10 @@ class MLink(Document):
     @classmethod
     def outbound_nodes_of(cls, node: 'MNode', link_type: str = None):
         return [x.end_node.fetch() for x in cls.outbound_of(node, link_type=link_type)]
+
+    @classmethod
+    def outbound_nodes_of_by_node_type(cls, node: 'MNode', node_type: str):
+        return [x.end_node.fetch() for x in cls.outbound_of_by_node_type(node, node_type)]
 
     @classmethod
     def links_of(cls, node_0: 'MNode', node_1: 'MNode', link_type: str = None):
@@ -161,8 +169,13 @@ class MNode(Document):
         self.save()
 
     def set_metadata(self, d: dict):
-        self.metadata = d
-        self.save()
+        if d is not None:
+            self.metadata = d
+            self.save()
+
+    @property
+    def plain_metadata(self):
+        return self.to_mongo()['metadata']
 
     @property
     def path(self):
@@ -174,10 +187,11 @@ class MNode(Document):
             self.save()
 
     def get_data(self):
-        self.data.seek(0)
-        d = self.data.read()
-        if d is not None:
-            return d, self.data.content_type
+        if self.data:
+            self.data.seek(0)
+            d = self.data.read()
+            if d is not None:
+                return d, self.data.content_type
         return None, None
 
     def link_to(self, node: 'MNode', metadata={}, link_type: str = ''):
@@ -194,8 +208,14 @@ class MNode(Document):
     def outbound(self, link_type: str = None):
         return MLink.outbound_of(self, link_type=link_type)
 
+    def outbound_by_node_type(self, node_type):
+        return MLink.outbound_nodes_of_by_node_type(self, node_type)
+
     def outbound_nodes(self, link_type: str = None):
         return MLink.outbound_nodes_of(self, link_type=link_type)
+
+    def outbound_nodes_by_node_type(self, node_type: str):
+        return MLink.outbound_nodes_of_by_node_type(self, node_type)
 
     def inbound(self, link_type: str = None):
         return MLink.inbound_of(self, link_type=link_type)
