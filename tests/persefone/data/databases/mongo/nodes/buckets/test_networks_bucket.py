@@ -185,5 +185,6 @@ class TestNetworksBucket(object):
 
         for model in whole_models:
             model.delete()
+
         assert len(MNode.objects(node_type=networks_bucket.NODE_TYPE_MODEL)) == 0, "No models should be there"
         assert len(MLink.objects(link_type=networks_bucket.LINK_TYPE_TRAINABLE2MODEL)) == 0, "No links to models should be there"
