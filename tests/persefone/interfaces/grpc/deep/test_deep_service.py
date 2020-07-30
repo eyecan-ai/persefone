@@ -29,15 +29,7 @@ class TestEchoDeepService(object):
             }
         }
 
-    @pytest.mark.mongo_real_server  # EXECUTE ONLY IF --mongo_real_server option is passed
-    def test_lifecycle(self, temp_mongo_database, driver_temp_base_folder, random_metadata):
-        self._test_lifecycle(temp_mongo_database, driver_temp_base_folder, random_metadata)
-
-    # @pytest.mark.mongo_mock_server
-    # def test_lifecycle_mock(self, temp_mongo_mock_database, driver_temp_base_folder, minimnist_folder):
-    #     self._test_lifecycle(temp_mongo_mock_database, driver_temp_base_folder, minimnist_folder)
-
-    def _test_lifecycle(self, mongo_client, driver_temp_base_folder, random_metadata):
+    def test_lifecycle(self,  random_metadata):
 
         host = 'localhost'
         port = 10005
@@ -67,6 +59,16 @@ class TestEchoDeepService(object):
         ]
         pack.arrays_action = 'my_Action'
         pack.metadata = random_metadata
+
+        # Self repacking
+        repack_0 = pack.from_deep_service_response(pack.to_response())
+        repack_1 = pack.from_deep_service_request(pack.to_request())
+        for repack in [repack_0, repack_1]:
+            assert not DeepDiff(pack.metadata, repack.metadata, ignore_order=True, ignore_numeric_type_changes=True)
+            # Check numerical data equality
+            assert len(repack.arrays) == len(pack.arrays), "Number of retrieved arrays is wrong!"
+            for idx in range(len(repack.arrays)):
+                assert np.array_equal(pack.arrays[idx], repack.arrays[idx]), f"Array {idx} is different!"
 
         # gRPC
         reply_pack = client.deep_serve(pack)

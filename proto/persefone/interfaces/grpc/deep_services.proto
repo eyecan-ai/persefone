@@ -4,17 +4,17 @@ import "google/protobuf/struct.proto";
 import "persefone/interfaces/proto/comm.proto";
 import "persefone/interfaces/proto/data.proto";
 
-service DeepService{
-    rpc DeepServe(DDeepServiceRequest) returns (DDeepServiceResponse) {}
+service DeepService {
+  rpc DeepServe(DDeepServiceRequest) returns (DDeepServiceResponse) {}
 }
 
-message DDeepServiceRequest{
-    google.protobuf.Struct metadata = 1;
-    DTensorBundle bundle = 2;
+message DDeepServiceRequest {
+  google.protobuf.Struct metadata = 1;
+  DTensorBundle bundle = 2;
 }
 
-message DDeepServiceResponse{
-    ResponseStatus status = 1;
-    google.protobuf.Struct metadata = 2;
-    DTensorBundle bundle = 3;
+message DDeepServiceResponse {
+  ResponseStatus status = 1;
+  google.protobuf.Struct metadata = 2;
+  DTensorBundle bundle = 3;
 }
