@@ -1,5 +1,7 @@
 from abc import ABC
 from concurrent import futures
+
+import numpy
 from persefone.interfaces.grpc.clients.deep_services import DeepServiceCFG, DeepServicePack
 from typing import Callable, Dict
 from persefone.interfaces.proto.utils.comm import ResponseStatusUtils
@@ -26,7 +28,19 @@ class CallbackableDeepService(ABC, DeepServiceServicer):
     def DeepServe(self, request: DDeepServiceRequest, context: grpc.ServicerContext) -> DDeepServiceResponse:
 
         # Pack from request
-        pack = DeepServicePack.from_deep_service_request(request)
+        try:
+            pack = DeepServicePack.from_deep_service_request(request)
+            # if len(pack.arrays) > 0:
+            #     import cv2
+            #     cv2.imshow("image", pack.arrays[0])
+            #     cv2.waitKey(0)
+        except Exception as e:
+            # No valid schema found!
+            response = DDeepServiceResponse()
+            response.status.CopyFrom(
+                ResponseStatusUtils.create_error_status(str(e))
+            )
+            return response
 
         # Iterate available schema
         for name, schema in self._proxy_schema_map.items():
@@ -61,9 +75,12 @@ def action_callback(pack: DeepServicePack) -> DeepServicePack:
 
 
 def ping_callback(pack: DeepServicePack) -> DeepServicePack:
-    pack = DeepServicePack()
-    pack.metadata = {'pong': 'ok'}
-    return pack
+    reply_pack = DeepServicePack()
+    reply_pack.metadata = pack.metadata
+    reply_pack.metadata['_pong'] = True
+    for i in range(len(pack.arrays)):
+        reply_pack.arrays.append(numpy.rot90(pack.arrays[i]))
+    return reply_pack
 
 
 # Create Callbackable service with Schemas map

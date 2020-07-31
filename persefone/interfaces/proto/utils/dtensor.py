@@ -161,15 +161,19 @@ class DTensorUtils(object):
         for d in shape.dim:
             dims.append(d.size)
         dims = tuple(dims)
-
         try:
             dtype = cls.dtype_to_numpytype(dtensor.dtype)
             array = np.frombuffer(dtensor.content, dtype).reshape(dims)
             return array
         except NotImplementedError:
-            codec = cls.dtype_to_imagecodec(dtensor.dtype)
-            array = DataCoding.bytes_to_data(dtensor.content, codec)
-            return array
+            try:
+                codec = cls.dtype_to_imagecodec(dtensor.dtype)
+                array = DataCoding.bytes_to_data(dtensor.content, codec)
+                return array
+            except Exception as e:
+                raise Exception(e)
+        except Exception as e:
+            raise Exception(e)
 
     @classmethod
     def is_valid_dtensor(cls, dtensor: DTensor) -> bool:
