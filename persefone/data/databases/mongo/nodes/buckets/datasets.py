@@ -3,11 +3,13 @@
 from os import link
 
 import logging
+
+from mongoengine.queryset.queryset import QuerySet
 from persefone.data.databases.mongo.snapshots import SnapshotOperations
 from schema import Optional, Schema
 from persefone.utils.configurations import XConfiguration
 from persefone.utils.mongo.queries import MongoQueryParser
-from typing import List
+from typing import Dict, List, Sequence
 from persefone.data.databases.mongo.nodes.nodes import MLink, MNode, NodesBucket
 from mongoengine.errors import DoesNotExist
 from persefone.data.databases.mongo.clients import MongoDatabaseClientCFG
@@ -24,13 +26,31 @@ class DatasetsBucket(NodesBucket):
     LINK_TYPE_SAMPLE2ITEM = 'sample_2_item'
     DEFAULT_SAMPLE_ID_ZERO_PADDING = 7
 
-    def __init__(self, client_cfg: MongoDatabaseClientCFG, namespace: str = None):
+    def __init__(self, client_cfg: MongoDatabaseClientCFG):
+        """ Bucket for Datasets management
+
+        :param client_cfg: database configuration object
+        :type client_cfg: MongoDatabaseClientCFG
+        """
         super(DatasetsBucket, self).__init__(client_cfg, self.DATASET_NAMSPACE_NAME)
 
-    def get_datasets(self):
+    def get_datasets(self) -> Sequence[MNode]:
+        """ Retrives a list of all datasets
+
+        :return: list of datasets nodes
+        :rtype: Sequence[MNode]
+        """
         return self.get_namespace_node().outbound_nodes(link_type=self.LINK_TYPE_NAMESPACE2GENERIC)
 
-    def new_dataset(self, dataset_name):
+    def new_dataset(self, dataset_name: str) -> MNode:
+        """ Creates new dataset node by name
+
+        :param dataset_name: dataset name
+        :type dataset_name: str
+        :raises NameError: raise Exectpion if name collision occurs
+        :return: created MNode
+        :rtype: MNode
+        """
 
         try:
             self.get_dataset(dataset_name)
@@ -60,17 +80,53 @@ class DatasetsBucket(NodesBucket):
 
         return self.get_node_by_name(self.namespace / dataset_name)
 
-    def get_samples(self, dataset_name: str):
+    def get_samples(self, dataset_name: str) -> Sequence[MNode]:
+        """ Retrieves list of samples nodes of target database
+
+        :param dataset_name: target database name
+        :type dataset_name: str
+        :return: list of retrived samples nodes
+        :rtype: Sequence[MNode]
+        """
+
         dataset_node: MNode = self.get_dataset(dataset_name)
         return dataset_node.outbound_nodes(link_type=self.LINK_TYPE_DATASET2SAMPLE)
 
-    def count_samples(self, dataset_name: str):
+    def count_samples(self, dataset_name: str) -> int:
+        """ Counts samples nodes of target dataset
+
+        :param dataset_name: target dataset name
+        :type dataset_name: str
+        :return: number of samples
+        :rtype: int
+        """
         return len(self.get_samples(dataset_name))
 
-    def get_sample(self, dataset_name: str, sample_id: str):
+    def get_sample(self, dataset_name: str, sample_id: int) -> MNode:
+        """  Retrives single sample node by id and target dataset
+
+        :param dataset_name: target dataset name
+        :type dataset_name: str
+        :param sample_id: sample id
+        :type sample_id: int
+        :return: retrived sample node
+        :rtype: MNode
+        """
         return self.get_node_by_name(self.namespace / dataset_name / self._sample_id_name(sample_id))
 
-    def get_samples_by_query(self, dataset_name: str, queries: list = None, orders_by: list = None):
+    def get_samples_by_query(self, dataset_name: str, queries: list = None, orders_by: list = None) -> QuerySet:
+        """ Retrieves sample nodes by query strings
+
+        :param dataset_name: target dataset name
+        :type dataset_name: str
+        :param queries: plain queries strings (e.g. ['metadata.field_0 >= 33.3']) , defaults to None
+        :type queries: list, optional
+        :param orders_by: plain orders strngs (e.g. ['+metadata.field_X']), defaults to None
+        :type orders_by: list, optional
+        :return: list of retrieved MNode
+        :rtype: MNode
+        """
+
         if queries is None:
             queries = []
         if orders_by is None:
@@ -84,14 +140,41 @@ class DatasetsBucket(NodesBucket):
         orders_bys = MongoQueryParser.parse_orders_list(orders_by)
         return MNode.get_by_queries(query_dict, orders_bys)
 
-    def get_item(self, dataset_name: str, sample_id: int, item_name: str):
+    def get_item(self, dataset_name: str, sample_id: int, item_name: str) -> MNode:
+        """ Retrives item node by dataset/sample/name
+
+        :param dataset_name: target dataset
+        :type dataset_name: str
+        :param sample_id: target sample id
+        :type sample_id: int
+        :param item_name: target item name
+        :type item_name: str
+        :return: retrived MNode
+        :rtype: MNode
+        """
         return self.get_node_by_name(self.namespace / dataset_name / self._sample_id_name(sample_id) / item_name)
 
-    def get_items(self, dataset_name: str, sample_id: int):
+    def get_items(self, dataset_name: str, sample_id: int) -> Sequence[MNode]:
+        """ Retrives a list of all item nodes of target dataset/sample
+
+        :param dataset_name: target dataset name
+        :type dataset_name: str
+        :param sample_id: target sample id
+        :type sample_id: int
+        :return: list of retrived item nodes
+        :rtype: Sequence[MNode]
+        """
+
         sample_node: MNode = self.get_sample(dataset_name, sample_id)
         return sample_node.outbound_nodes(link_type=self.LINK_TYPE_SAMPLE2ITEM)
 
-    def delete_dataset(self, dataset_name):
+    def delete_dataset(self, dataset_name: str):
+        """ Recursive deletion of dataset
+
+        :param dataset_name: target dataset name
+        :type dataset_name: str
+        """
+
         dataset_node = self.get_dataset(dataset_name)
         samples = dataset_node.outbound_nodes(link_type=self.LINK_TYPE_DATASET2SAMPLE)
         for sample_node in samples:
@@ -101,10 +184,30 @@ class DatasetsBucket(NodesBucket):
             sample_node.delete()
         dataset_node.delete()
 
-    def _sample_id_name(self, sample_id: int):
+    def _sample_id_name(self, sample_id: int) -> str:
+        """ Converts a sample id (int) in a padded string
+
+        :param sample_id: input sample id
+        :type sample_id: int
+        :return: padded string representation
+        :rtype: str
+        """
+
         return str(sample_id).zfill(self.DEFAULT_SAMPLE_ID_ZERO_PADDING)
 
-    def new_sample(self, dataset_name, metadata: dict = None, sample_id: int = -1):
+    def new_sample(self, dataset_name: str, metadata: dict = None, sample_id: int = -1) -> MNode:
+        """ Creates new sample node
+
+        :param dataset_name: target dataset
+        :type dataset_name: str
+        :param metadata: sample metadata to store, defaults to None
+        :type metadata: dict, optional
+        :param sample_id: new sample id, defaults to -1
+        :type sample_id: int, optional
+        :raises NameError: raise Exception if new sample id is used
+        :return: created sample node
+        :rtype: MNode
+        """
 
         dataset_node: MNode = self.get_dataset(dataset_name)
 
@@ -127,7 +230,23 @@ class DatasetsBucket(NodesBucket):
             dataset_node.link_to(sample_node, link_type=self.LINK_TYPE_DATASET2SAMPLE)
             return sample_node
 
-    def new_item(self, dataset_name: str, sample_id: int, item_name: str, blob_data: bytes = None, blob_encoding: str = None):
+    def new_item(self, dataset_name: str, sample_id: int, item_name: str, blob_data: bytes = None, blob_encoding: str = None) -> MNode:
+        """ Creates Item from blob and encoding
+
+        :param dataset_name: target dataset name
+        :type dataset_name: str
+        :param sample_id: target sample id
+        :type sample_id: int
+        :param item_name: new item name
+        :type item_name: str
+        :param blob_data: input blob data to store, defaults to None
+        :type blob_data: bytes, optional
+        :param blob_encoding: input blob encoding to store, defaults to None
+        :type blob_encoding: str, optional
+        :raises NameError: raise Exception if exits item with the same name
+        :return: created item node
+        :rtype: MNode
+        """
 
         sample_node: MNode = self.get_sample(dataset_name, sample_id)
 
@@ -144,7 +263,16 @@ class DatasetsBucket(NodesBucket):
             return item_node
 
     @classmethod
-    def remap_sample_with_items(cls, sample: MNode, data_mapping: dict):
+    def remap_sample_with_items(cls, sample: MNode, data_mapping: dict) -> dict:
+        """ Remaps a sample, with its items, into a plain dictionary
+
+        :param sample: input sample
+        :type sample: MNode
+        :param data_mapping: data mapping dictionary to remap and filters fields
+        :type data_mapping: dict
+        :return: plain dictionary withre deduced/remapped info from sample and its items
+        :rtype: dict
+        """
 
         output_data = {}
 
@@ -190,6 +318,19 @@ class DatasetsBucketReader(object):
                  data_mapping: dict = {},
                  queries: List[str] = [],
                  orders: List[str] = []):
+        """ A DatasetsBucketReader deals with reading information from datasets bucket representation
+
+        :param datasets_bucket: target bucket
+        :type datasets_bucket: DatasetsBucket
+        :param dataset_name: target dataset name
+        :type dataset_name: str
+        :param data_mapping: data mapping to apply, defaults to {}
+        :type data_mapping: dict, optional
+        :param queries: queries used to filter samples, defaults to []
+        :type queries: List[str], optional
+        :param orders: orders-queries to order samples, defaults to []
+        :type orders: List[str], optional
+        """
 
         self._data_mapping = data_mapping
         self._datasets_bucket = datasets_bucket
@@ -252,6 +393,14 @@ class DatasetsBucketReader(object):
 class DatasetsBucketSamplesListReader(object):
 
     def __init__(self, samples: List[MNode], data_mapping: dict):
+        """ It is a simple Samples iterator, with a commono datamapping schema
+
+        :param samples: input samples list
+        :type samples: List[MNode]
+        :param data_mapping: data mapping to apply
+        :type data_mapping: dict
+        """
+
         self._samples = samples
         self._data_mapping = data_mapping
 
@@ -276,6 +425,13 @@ class DatasetsBucketSamplesListReader(object):
 class DatasetsBucketIsolatedSample(object):
 
     def __init__(self, sample: MNode, data_mapping: dict):
+        """ An isolated samples is a plain sample MNode with its data mapping
+
+        :param sample: input sample
+        :type sample: MNode
+        :param data_mapping: data mapping to apply
+        :type data_mapping: dict
+        """
         self.sample = sample
         self.data_mapping = data_mapping
 
@@ -283,6 +439,11 @@ class DatasetsBucketIsolatedSample(object):
 class DatasetsBucketIsolatedSamplesListReader(object):
 
     def __init__(self, isolated_samples: List[DatasetsBucketIsolatedSample]):
+        """ Isolated samples iterators deal with generic sample MNode despite its source dataset
+
+        :param isolated_samples: list of DatasetsBucketIsolatedSample
+        :type isolated_samples: List[DatasetsBucketIsolatedSample]
+        """
         self._isolated_samples = isolated_samples
 
     @property
@@ -370,7 +531,13 @@ class DatasetsBucketSnapshot(object):
             )
 
     @property
-    def output_data(self):
+    def output_data(self) -> Dict[str, DatasetsBucketIsolatedSamplesListReader]:
+        """ Output data dictionary
+
+        :return: dictionary of samples reader that can be used as data iterators
+        :rtype: Dict[str, DatasetsBucketIsolatedSamplesListReader]
+        """
+
         return self._output_data
 
     def generate_output_lists(self, ops: SnapshotOperations, samples_map):
