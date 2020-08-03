@@ -570,6 +570,6 @@ class NodesBucket(object):
 
         return current_node
 
-    def __del__(self):
+    def disconnect(self):
         if self._mongo_client is not None:
             self._mongo_client.disconnect()
