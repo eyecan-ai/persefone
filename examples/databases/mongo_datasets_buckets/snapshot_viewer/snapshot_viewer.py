@@ -9,7 +9,7 @@ import cv2
 
 @click.command("Converts H5 dataset into MongoDB Dataset")
 @click.option('--database_cfg', default='database.yml', help="Database configuration file", show_default=True)
-@click.option('--snapshot_cfg', default='mongo_snapshot_mixed_datasets.yml', help="Mongo Snapshot configuration file", show_default=True)
+@click.option('--snapshot_cfg', default='snapshot_mixed_datasets.yml', help="Mongo Snapshot configuration file", show_default=True)
 @click.option('--snapshot_key', default='', help="Snapshot key to analyze. Leave blank to show available keys", show_default=True)
 def mongo_snapshot_viewer(database_cfg, snapshot_cfg, snapshot_key):
 
