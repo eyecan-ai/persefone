@@ -1,6 +1,7 @@
 
 
 from pathlib import Path
+from persefone.utils.configurations import XConfiguration
 
 from mongoengine.errors import DoesNotExist
 from mongoengine.queryset.queryset import QuerySet
@@ -506,7 +507,7 @@ class NodesBucket(object):
         :raises TypeError: raise Exception if configuration is wrong!
         """
 
-        if not isinstance(client_cfg, MongoDatabaseClientCFG):
+        if not isinstance(client_cfg, XConfiguration):
             raise TypeError(f"Configuration '{client_cfg}' is invalid!")
         self._namespace = namespace if namespace is not None else self.DEFAULT_NAMESPACE
         self._client_cfg = client_cfg

@@ -7,7 +7,7 @@ import logging
 
 class SafeFilesystemDriverCFG(XConfiguration):
 
-    def __init__(self, filename):
+    def __init__(self, filename=''):
         super(SafeFilesystemDriverCFG, self).__init__(filename=filename)
         self.set_schema(Schema({
             # NAME
