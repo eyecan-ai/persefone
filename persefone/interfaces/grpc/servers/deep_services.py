@@ -71,6 +71,7 @@ class EndpointDeepService(ABC, DeepServiceServicer):
         # Pack from request
         try:
             pack = DeepServicePack.from_deep_service_request(request)
+            print("New pack received", pack.metadata)
         except Exception as e:
             return self._error_response(str(e))
 
@@ -82,7 +83,10 @@ class EndpointDeepService(ABC, DeepServiceServicer):
                 # Callback found
                 if name in self._callbacks_map:
 
-                    reply_pack = self._callbacks_map[name](pack)
+                    try:
+                        reply_pack = self._callbacks_map[name](pack)
+                    except Exception as e:
+                        return self._error_response(str(e))
 
                     # Validate output metadata before send
                     if name in self._output_schema_map:
