@@ -46,7 +46,9 @@ class TestDTensorUtils(object):
         retrieved_arrays, retrieved_command = DTensorUtils.dtensor_bundle_to_numpy(bundle)
 
         assert action_command == retrieved_command, f"Wrong retrieved command: '{retrieved_command}'"
-        assert len(retrieved_arrays) == len(numpy_arrays), f"Number of retrieved arrays is wrong! {len(retrieved_arrays)}/{len(numpy_arrays)}"
+        assert len(retrieved_arrays) == len(numpy_arrays), (
+            f"Number of retrieved arrays is wrong! {len(retrieved_arrays)}/{len(numpy_arrays)}"
+        )
         for idx in range(len(retrieved_arrays)):
             print("Comparing DTensors arrays:", numpy_arrays[idx].shape, retrieved_arrays[idx].shape)
             a, b = numpy_arrays[idx], retrieved_arrays[idx]

@@ -1,5 +1,7 @@
+import pickle
+from typing import Any
 from mongoengine.fields import (
-    Document, StringField,
+    BinaryField, Document, FileField, GenericLazyReferenceField, MapField, StringField,
     DictField, ListField,
     IntField, ReferenceField, DateTimeField
 )
@@ -81,6 +83,7 @@ class MTask(Document):
     input_payload = DictField(default={})
     working_payload = DictField(default={})
     output_payload = DictField(default={})
+    datasets = ListField(ReferenceField(MDataset))
 
 
 class MModelCategory(Document):
@@ -94,11 +97,12 @@ class MModelCategory(Document):
 
 
 class MModel(Document):
+    """ Model model """
 
     name = StringField(required=True, unique=True)
+    task = ReferenceField(MTask)
     category = ReferenceField(MModelCategory)
     resources = ListField(ReferenceField(MResource), ordering='name')
-    datesets = ListField(ReferenceField(MDataset))
 
     def __str__(self) -> str:
         return f"MModel[{self.name=},{self.category=}]"

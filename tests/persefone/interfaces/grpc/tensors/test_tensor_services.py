@@ -4,14 +4,12 @@ from persefone.interfaces.grpc.tensor_services_pb2_grpc import SimpleTensorServi
 from persefone.interfaces.proto.data_pb2 import DTensorBundle
 from persefone.interfaces.proto.utils.dtensor import DTensorUtils
 from persefone.utils.bytes import DataCoding
-
 import numpy as np
 import pytest
 import threading
 import grpc
 import concurrent.futures as futures
 import time
-import random
 
 
 class MockSimpleTensorServiceServicer(SimpleTensorServiceServicer):

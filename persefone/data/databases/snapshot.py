@@ -4,7 +4,6 @@ from persefone.data.databases.pandas import PandasDatabase
 from persefone.data.databases.readers import H5SimpleDataReader
 from persefone.utils.pyutils import get_arg
 from schema import Schema, And, Or, Optional
-from pathlib import Path
 
 
 class SnapshotConfiguration(XConfiguration):

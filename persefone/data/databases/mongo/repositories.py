@@ -1,3 +1,4 @@
+
 from mongoengine.errors import NotUniqueError, DoesNotExist
 from mongoengine.queryset.queryset import QuerySet
 from persefone.data.databases.mongo.model import (
@@ -217,9 +218,19 @@ class SamplesRepository(object):
         :rtype: int
         """
         if dataset is None:
-            return len(list(MSample.objects()))
+            # return len(list(MSample.objects()))
+            try:
+                return MSample.objects().count()
+            except Exception as e:
+                logging.error(e)
+                return len(list(MSample.objects()))
         else:
-            return len(list(MSample.objects(dataset=dataset)))
+            # return len(list(MSample.objects(dataset=dataset)))
+            try:
+                return MSample.objects(dataset=dataset).count()
+            except Exception as e:
+                logging.error(e)
+                return len(list(MSample.objects(dataset=dataset)))
 
     @classmethod
     def get_sample_by_idx(cls, dataset: MDataset, idx: int) -> Union[MSample, None]:
@@ -558,6 +569,26 @@ class TasksRepository(object):
             return False
         return True
 
+    @classmethod
+    def get_tasks_by_dataset(cls, datasets: Union[MDataset, List[MDataset]]) -> QuerySet:
+        """ Retrieves MTask list by associated MDataset list
+
+        :param datasets: list or single MDataset instance
+        :type datasets: Union[MDataset, List[MDataset]]
+        :return: MTask list
+        :rtype: List[MTask]
+        """
+        if not isinstance(datasets, list):
+            datasets = [datasets]
+
+        tasks = []
+        try:
+            tasks = MTask.objects(datasets__in=datasets)
+        except DoesNotExist as e:
+            tasks = []
+            logging.error(e)
+        return tasks
+
 
 class ModelCategoryRepository(object):
 
@@ -602,6 +633,18 @@ class ModelCategoryRepository(object):
             else:
                 logging.error(e)
         return category
+
+    @classmethod
+    def get_categories(cls, name: str = '') -> QuerySet:
+        """ Retrieves categories by query string
+
+        :param name: query string, defaults to ''
+        :type name: str, optional
+        :return: Set of MModelCategories
+        :rtype: QuerySet
+        """
+
+        return MModelCategory.objects(name__contains=name)
 
 
 class ModelsRepository(object):
@@ -650,6 +693,75 @@ class ModelsRepository(object):
         return model
 
     @classmethod
+    def get_models(cls, model_category: MModelCategory = None) -> QuerySet:
+        """Retrieves MModel list by category if any
+
+        :param model_category: model category
+        :type model_category: str
+        :return: MModel list
+        :rtype:  List[MModel]
+        """
+
+        models = []
+        try:
+            if model_category is not None:
+                models = MModel.objects(category=model_category)
+            else:
+                models = MModel.objects()
+        except DoesNotExist as e:
+            models = []
+            logging.error(e)
+        return models
+
+    @classmethod
+    def delete_model(cls, name: str) -> bool:
+        """ Delete MModel
+
+        :param name: model name
+        :type name: str
+        :return: TRUE if deletion occurs
+        :rtype: bool
+        """
+
+        model = cls.get_model(model_name=name)
+        if model is not None:
+            try:
+                model.delete()
+                return True
+            except Exception as e:
+                logging.error(e)
+        return False
+
+    @classmethod
+    def get_models_by_dataset(cls, datasets: Union[MDataset, List[MDataset]]) -> QuerySet:
+        """ Retrieves MModel list by associated MDataset list
+
+        :param datasets: list or single MDataset instance
+        :type datasets: Union[MDataset, List[MDataset]]
+        :return: MModel list
+        :rtype: List[MModel]
+        """
+        if not isinstance(datasets, list):
+            datasets = [datasets]
+
+        tasks = TasksRepository.get_tasks_by_dataset(datasets=datasets)
+        return MModel.objects(task__in=tasks)
+
+    @classmethod
+    def get_model_by_task(cls, task: MTask) -> Union[MModel, None]:
+        """ Retrieves singel MModel associated with task
+
+        :return: Retrived MModel
+        :rtype: Union[MModel, None]
+        """
+
+        try:
+            return MModel.objects.get(task=task)
+        except Exception as e:
+            logging.error(e)
+            return None
+
+    @classmethod
     def create_model_resource(cls, model: MModel, name: str, driver: str, uri: str) -> Union[MResource, None]:
         """ Creates a MResource associated with target MModel
 
@@ -675,8 +787,19 @@ class ModelsRepository(object):
         return resource
 
 
+#######################################################################################################
+#######################################################################################################
+#######################################################################################################
+#######################################################################################################
+#######################################################################################################
+#######################################################################################################
+#######################################################################################################
+#######################################################################################################
+
+
 class RepositoryTestingData(object):
     DATASET_PREFIX = '##_3213213125r2313_DATASET_'
+    TASK_PREFIX = '##_3213213125r2313_TASK_'
     MODEL_PREFIX = '##_3213213125r2313_MODEL_'
     CATEGORY_PREFIX = '##_3213213125r2313_CATEGORY_'
     ITEM_PREFIX = '##_3213213125r2313_item_'
@@ -767,14 +890,25 @@ class RepositoryTestingData(object):
                             cls.uri(item_idx, resource_idx)
                         )
 
+        created_tasks = []
+        for task_idx in range(n_models):
+            task = TasksRepository.new_task(f'{cls.TASK_PREFIX}_{task_idx}', "GenerateTestData@")
+            for dataset_idx, dataset in enumerate(created_datasets):
+                task.datasets.append(dataset)
+            task.save()
+            created_tasks.append(task)
+
+        assert len(TasksRepository.get_tasks_by_dataset(created_datasets[0])) == len(created_tasks), "Tasks by dataset is wrong"
+
         for model_idx in range(n_models):
 
             model_category_name = cls.category_name(model_idx, n_models_categories)
             model_name = cls.model_name(model_idx)
             model = ModelsRepository.new_model(model_name, model_category_name)
+            model.task = created_tasks[model_idx]
 
             for dataset in created_datasets:
-                model.datesets.append(dataset)
+                model.task.datasets.append(dataset)
                 model.save()
 
             for resource_idx in range(n_model_resources):

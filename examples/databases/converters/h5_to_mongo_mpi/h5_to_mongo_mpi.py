@@ -1,6 +1,6 @@
 from persefone.data.databases.h5 import H5SimpleDatabase
 from persefone.data.databases.mongo.clients import MongoDatabaseClient, MongoDataset
-from persefone.data.io.drivers.safefs import SafeFilesystemDriver, SafeFilesystemDriverCFG
+from persefone.data.io.drivers.safefs import SafeFilesystemDriver
 import numpy as np
 import click
 import multiprocessing

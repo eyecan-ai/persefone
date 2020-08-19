@@ -1,5 +1,4 @@
 from persefone.interfaces.grpc.tensor_services_pb2_grpc import SimpleTensorServiceServicer, add_SimpleTensorServiceServicer_to_server
-from persefone.interfaces.grpc.clients.tensor_services import MetaImagesServiceClient
 from persefone.interfaces.proto.data_pb2 import DTensorBundle
 from persefone.interfaces.proto.utils.dtensor import DTensorUtils
 import threading
@@ -21,7 +20,11 @@ class TensorServiceServerCFG(object):
 
 class SimpleTensorServer(SimpleTensorServiceServicer):
 
-    def __init__(self, consume_callback: Callable, host='0.0.0.0', port=50051, max_workers=10, options: TensorServiceServerCFG = TensorServiceServerCFG().options):
+    def __init__(self,
+                 consume_callback: Callable,
+                 host='0.0.0.0',
+                 port=50051,
+                 max_workers=10, options: TensorServiceServerCFG = TensorServiceServerCFG().options):
         """ Creates SimpleTensorServer wrapper with threading-base management for connection accepting
 
         :param consume_callback: low level Consume callback with same interface as gRPC proto declaration

@@ -106,7 +106,8 @@ class TestMongoDatabaseDataset(object):
         dataset = MongoDataset(mongo_client, dataset_name, category_name, drivers=drivers)
 
         for sample_str, items in tree.items():
-            sample = dataset.add_sample({'sample': sample_str, 'items': items.keys()})
+
+            sample = dataset.add_sample({'sample': sample_str, 'items': items.keys(), 'even': int(sample_str) % 2 == 0})
             assert sample is not None, "Sample should be not None!"
             sample_idx = sample.sample_id
             sample_r = dataset.get_sample(sample_idx)

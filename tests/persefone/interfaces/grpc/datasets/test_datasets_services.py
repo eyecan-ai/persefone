@@ -1,6 +1,5 @@
 
 import pytest
-from persefone.data.databases.mongo.clients import MongoDatabaseClient
 from persefone.data.io.drivers.safefs import SafeFilesystemDriver, SafeFilesystemDriverCFG
 from pathlib import Path
 from persefone.utils.filesystem import tree_from_underscore_notation_files
@@ -8,7 +7,6 @@ from persefone.interfaces.grpc.servers.datasets_services import MongoDatasetServ
 from persefone.interfaces.grpc.clients.datasets_services import DatasetsSimpleServiceClient
 from persefone.utils.bytes import DataCoding
 import grpc
-
 from concurrent import futures
 import threading
 import numpy as np
@@ -26,6 +24,7 @@ class TestMongoDatasetService(object):
 
     def _test_lifecycle(self, mongo_client, driver_temp_base_folder, minimnist_folder):
 
+        impossible_tag = "_AISMDSAPDOASDOSSIBLE!@@@_"
         host = 'localhost'
         port = 10005
 
@@ -56,22 +55,42 @@ class TestMongoDatasetService(object):
         for dataset_idx, dataset_name in enumerate(dataset_names):
             category = f'category_{str(dataset_idx % 2)}'
             dataset = client.new_dataset(dataset_name, category)
-            assert client.new_dataset(dataset_name, category) is None, "Double creation should be invalid!"
-            assert client.get_dataset(f'{dataset_name}IMPOSSIBLE_!!') is None, "Not found dataset should be not found!"
+
+            with pytest.raises(SystemError):
+                client.new_dataset(dataset_name, category)  # Name conflicts
+
+            with pytest.raises(SystemError):
+                client.get_dataset(f'{dataset_name}{impossible_tag}')
 
             assert dataset is not None, "Creation should be ok!"
 
             for sample_str, tree_items in tree.items():
 
+                impossible_sample_id = len(tree.items()) + 1
+
+                # Create Sample
                 sample = client.new_sample(dataset_name, metadata={'sample': sample_str, 'items': [1, 2, 3]})
                 assert sample is not None, "Sample creation should be ok!"
-                assert client.new_sample(dataset_name + "_IMPOSSIBLE!!", metadata={}) is None, 'Impossible to create sample on dataset not found'
-                print("SAMPLE", sample)
+
+                # Gets Sample of Not Found Dataset
+                with pytest.raises(SystemError):
+                    client.new_sample(dataset_name + impossible_tag, metadata={})
+
+                # Checks sample fields
                 assert 'metadata' in sample, "metadata key is missing"
                 assert 'sample_id' in sample, "Sample ID is missing"
 
+                # Retrieves Sample
                 retrieved_sample = client.get_sample(dataset_name, sample['sample_id'])
                 assert retrieved_sample is not None, "Retrieved sample should be not None!"
+
+                # Retrives Sample fo Not Found Dataset
+                with pytest.raises(SystemError):
+                    client.get_sample(dataset_name + impossible_tag, sample['sample_id'])
+
+                # Retrives Sample fo Not Found Dataset
+                with pytest.raises(SystemError):
+                    client.get_sample(dataset_name, impossible_sample_id)
 
                 for item_name, filename in tree_items.items():
 
@@ -79,29 +98,31 @@ class TestMongoDatasetService(object):
                     original_data = DataCoding.bytes_to_data(data, data_encoding)
 
                     item = client.new_item(dataset_name, sample['sample_id'], item_name, data, data_encoding)
-                    assert client.new_item(dataset_name, sample['sample_id'], item_name, data, data_encoding) is None, (
-                        "Item with same name not allowed!"
-                    )
-                    assert client.new_item(dataset_name + "XX!", sample['sample_id'], item_name, data, data_encoding) is None, (
-                        "Should be wrong database"
-                    )
-                    assert client.new_item(dataset_name, len(tree_items.items()) + 100, item_name, data, data_encoding) is None, (
-                        "Should be wrong sample id"
-                    )
+
+                    with pytest.raises(SystemError):  # Duplicate item name
+                        client.new_item(dataset_name, sample['sample_id'], item_name, data, data_encoding)
+
+                    with pytest.raises(SystemError):  # Item on not found dataset
+                        client.new_item(dataset_name + impossible_tag, sample['sample_id'], item_name, data, data_encoding)
+
+                    with pytest.raises(SystemError):  # Item on not found sample
+                        client.new_item(dataset_name, impossible_sample_id, item_name, data, data_encoding)
+
                     assert item is not None, "Item creation should be ok!"
                     assert 'name' in item, "name key is missing"
 
                     item_full = client.get_item(dataset_name, sample['sample_id'], item_name, fetch_data=True)
                     assert item_full is not None, "Item creation should be ok!"
-                    assert client.get_item(dataset_name + 'XX!', sample['sample_id'], item_name, fetch_data=True) is None, (
-                        "should be Wrong dataset!"
-                    )
-                    assert client.get_item(dataset_name, len(tree_items.items()) + 100, item_name, fetch_data=True) is None, (
-                        "should be Wrong sample id!"
-                    )
-                    assert client.get_item(dataset_name, sample['sample_id'], item_name + "XX!", fetch_data=True) is None, (
-                        "should be Wrong item name!"
-                    )
+
+                    with pytest.raises(SystemError):  # Item on not found dataset
+                        client.get_item(dataset_name + impossible_tag, sample['sample_id'], item_name, fetch_data=True)
+
+                    with pytest.raises(SystemError):  # Item on not found sample
+                        client.get_item(dataset_name, impossible_sample_id, item_name, fetch_data=True)
+
+                    with pytest.raises(SystemError):  # Item not found
+                        client.get_item(dataset_name, sample['sample_id'], item_name + impossible_tag, fetch_data=True)
+
                     assert 'name' in item_full, "name key is missing"
                     assert 'data' in item_full, "data key is missing"
                     assert len(item_full) > 0, "data base64 bytes should be not empty!"
@@ -117,18 +138,22 @@ class TestMongoDatasetService(object):
                     fake_image = np.random.uniform(0, 255, (32, 32, 3)).astype(np.uint8)
                     fake_encoding = 'png'
                     fake_data = DataCoding.numpy_image_to_bytes(fake_image, fake_encoding)
+
+                    # UPdate Item
                     item_updated = client.update_item(dataset_name, sample['sample_id'], item_name, fake_data, fake_encoding)
-                    assert client.update_item(dataset_name + 'XX1', sample['sample_id'], item_name, fake_data, fake_encoding) is None, (
-                        "Should be wrong dataset"
-                    )
-                    assert client.update_item(dataset_name, len(tree_items.items()) + 100, item_name, fake_data, fake_encoding) is None, (
-                        "Should be wrong sample id"
-                    )
-                    assert client.update_item(dataset_name, sample['sample_id'], item_name + 'XX!', fake_data, fake_encoding) is None, (
-                        "Should be wrong item name"
-                    )
+
+                    with pytest.raises(SystemError):  # Update item on not found dataset
+                        client.update_item(dataset_name + impossible_tag, sample['sample_id'], item_name, fake_data, fake_encoding)
+
+                    with pytest.raises(SystemError):  # Update item on not found sample
+                        client.update_item(dataset_name, impossible_sample_id, item_name, fake_data, fake_encoding)
+
+                    with pytest.raises(SystemError):  # Update item on not found item
+                        client.update_item(dataset_name, sample['sample_id'], item_name + 'XX!', fake_data, fake_encoding)
+
                     assert item_updated is not None, "Item update should be ok!"
 
+                    # Get Item data
                     item_data_2, item_data_encoding_2 = client.get_item_data(dataset_name, sample['sample_id'], item_name)
                     assert len(item_data_2) > 0, "data bytes should be not empty!"
                     retrieved_data_2 = DataCoding.bytes_to_data(item_data_2, item_data_encoding_2)
@@ -136,11 +161,25 @@ class TestMongoDatasetService(object):
                     assert fake_image.shape == retrieved_data_2.shape, "After UpdateRetrieved data shape is not valid"
                     assert np.array_equal(fake_image, retrieved_data_2), " After Update Retrieved data content is not valid"
 
+                    with pytest.raises(SystemError):  # Update item on not found dataset
+                        client.get_item_data(dataset_name + impossible_tag, sample['sample_id'], item_name)
+
+                    with pytest.raises(SystemError):  # Update item on not found sample
+                        client.get_item_data(dataset_name, impossible_sample_id, item_name)
+
+                    with pytest.raises(SystemError):  # Update item on not found item
+                        client.get_item_data(dataset_name, sample['sample_id'], item_name + 'XX!')
+
+                # UPDATING SAMPLES
                 sample = client.update_sample(dataset_name, sample['sample_id'], metadata={'sample': 'update', 'items': [11]})
-                print("U SAMPLE", sample)
                 assert sample is not None, "Sample update should be ok!"
-                assert client.update_sample(dataset_name + 'IMPOSSIBLE!', sample['sample_id'], metadata={}) is None, "Wrong update!"
-                assert client.update_sample(dataset_name, len(tree_items.items()) + 100, metadata={}) is None, "Wrong update!"
+
+                with pytest.raises(SystemError):  # Update on Not Found dataset sample
+                    client.update_sample(dataset_name + impossible_tag, sample['sample_id'], metadata={})
+
+                with pytest.raises(SystemError):  # Update on wrong sample id
+                    assert client.update_sample(dataset_name, impossible_sample_id, metadata={}) is None, "Wrong update!"
+
                 assert 'metadata' in sample, "metadata key is missing"
                 assert sample['metadata']['sample'] == 'update', "After update 'sample' key should be 'update'"
                 assert len(sample['metadata']['items']) == 1, "After update 'items' key should be one-sized list"
@@ -151,31 +190,23 @@ class TestMongoDatasetService(object):
             assert 'samples' in dataset, "sample key is missing"
 
             samples = dataset['samples']
-            assert len(samples) > 0, "Samples number is wrong"
-
-            for sample in samples:
-                assert 'sample_id' in sample, "sample_id key is missing"
-                assert 'items' in sample, "items key is missing"
-
-                for item in sample['items']:
-                    assert 'name' in item, "name key is missing"
-                    assert len(item['data']) == 0, "item data should be empty if not fetched explicity"
-                    assert 'has_data' in item, "has_data key is missing"
-                    assert item['has_data'] is False, "has_data should be false"
+            assert len(samples) == 0, "Samples number is wrong"
 
         for dataset_idx, dataset_name in enumerate(dataset_names):
             dataset = client.get_dataset(dataset_name, fetch_data=True)
             samples = dataset['samples']
             for sample in samples:
                 for item in sample['items']:
-                    assert len(item['data']) > 0, "item data should be not empty if  fetched"
-                    assert item['has_data'] is True, "has_data should be true"
+                    assert len(item['data']) == 0, "item data should be not empty if  fetched"
+                    assert item['has_data'] is False, "has_data should be true"
 
         assert len(client.datasets_list()) == len(dataset_names), "Datasets list is wrong!"
 
         for dataset_idx, dataset_name in enumerate(dataset_names):
             assert client.delete_dataset(dataset_name) is True, "Deletion should be ok!"
-            assert client.delete_dataset(dataset_name) is False, "Double Deletion should be invalid!"
+
+            with pytest.raises(SystemError):
+                client.delete_dataset(dataset_name)  # Double deletion cannot be done
 
         assert len(client.datasets_list()) == 0, "Datasets list must be empty after armageddon!"
 
@@ -186,3 +217,7 @@ class TestMongoDatasetService(object):
         assert len(subitems) == 0, "No breadcrumbs please!"
         # for i in p.glob('**/*'):
         #     print(i.name)
+
+        # Service teardown
+        server.stop(grace=None)
+        t.join()

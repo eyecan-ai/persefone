@@ -1,12 +1,9 @@
 from persefone.data.databases.mongo.clients import MongoDatabaseClient, MongoDataset
-from persefone.data.databases.mongo.readers import MongoDatasetReader
 from persefone.data.databases.mongo.snapshots import MongoSnapshot, MongoSnapshotCFG
 from persefone.data.databases.mongo.repositories import DatasetCategoryRepository
 from persefone.data.io.drivers.safefs import SafeFilesystemDriver, SafeFilesystemDriverCFG
 import pytest
 from persefone.utils.filesystem import tree_from_underscore_notation_files
-import yaml
-from pathlib import Path
 
 
 class TestMongoDatasetSnapshots(object):

@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
 from pathlib import Path
-import os
 import stat
 
 # TODO: add docs
@@ -39,5 +37,9 @@ class AbstractFileDriver(ABC):
     def delete(self, uri: str):
         pass
 
-    def uri_from_chunks(self, realm: str,  bucket: str, obj: str, filename: str) -> str:
+    def uri_from_chunks(self, realm: str, bucket: str, obj: str, filename: str) -> str:
         return self.full_prefix_qualifier + str(Path(realm) / Path(bucket) / Path(obj) / Path(filename))
+
+    def chunks_from_uri(self, uri: str) -> str:
+        purged_uri = uri.replace(self.full_prefix_qualifier, '')
+        return purged_uri.split('/')

@@ -1,25 +1,10 @@
-import sys
-from persefone.interfaces.grpc.datasets_services_pb2 import (
-    DDatasetRequest, DDatasetResponse,
-    DSampleRequest, DSampleResponse,
-    DItemRequest, DItemResponse
-)
-from persefone.interfaces.proto.utils.dtensor import DTensorUtils
-from persefone.interfaces.grpc.clients.datasets_services import DatasetsServiceClient, DatasetsServiceClientCFG, DatasetsSimpleServiceClient
-import grpc
-from google.protobuf import json_format
-import cv2
-from io import BytesIO
-import imageio
-import pprint
-from persefone.utils.bytes import DataCoding
+from persefone.interfaces.grpc.clients.datasets_services import DatasetsSimpleServiceClient
 import logging
 import click
 from persefone.utils.cli_options import cli_base_options, cli_host_options
 from persefone.data.databases.h5 import H5SimpleDatabase
 from tqdm import tqdm
 import numpy as np
-import logging
 
 
 @click.command("Launch Datasets Services Server")

@@ -1,5 +1,4 @@
 import pytest
-import pytest
 from persefone.data.databases.mongo.clients import MongoDatabaseClient
 from pathlib import Path
 
@@ -68,6 +67,15 @@ def temp_mongo_database(mongo_configurations_folder):
     client = MongoDatabaseClient.create_from_configuration_file(filename=cfg_file)
     yield client.connect()
     client.drop_database(key0=client.DROP_KEY_0, key1=client.DROP_KEY_1)
+    client.disconnect()
+
+
+@pytest.fixture(scope='function')
+def temp_mongo_persistent_database(mongo_configurations_folder):
+    cfg_file = Path(mongo_configurations_folder) / 'mongo_test_persistent_client_cfg.yml'
+    client = MongoDatabaseClient.create_from_configuration_file(filename=cfg_file)
+    yield client.connect()
+    # client.drop_database(key0=client.DROP_KEY_0, key1=client.DROP_KEY_1)
     client.disconnect()
 
 

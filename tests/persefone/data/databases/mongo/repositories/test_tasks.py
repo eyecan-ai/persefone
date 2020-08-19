@@ -20,6 +20,7 @@ class TestTaskManagement(object):
     def test_lifecycle(self, temp_mongo_database):
         self._test_lifecycle(temp_mongo_database)
 
+    @pytest.mark.mongo_mock_server  # NOT EXECUTE IF --mongo_real_server option is passed
     def test_lifecycle_mock(self, temp_mongo_mock_database):
         self._test_lifecycle(temp_mongo_mock_database)
 

@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n)persefone/interfaces/proto/datasets.proto\x12\tpersefone\x1a\x1cgoogle/protobuf/struct.proto\"L\n\x05\x44Item\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04\x64\x61ta\x18\x02 \x01(\x0c\x12\x15\n\rdata_encoding\x18\x03 \x01(\t\x12\x10\n\x08has_data\x18\x04 \x01(\x08\"h\n\x07\x44Sample\x12\x11\n\tsample_id\x18\x01 \x01(\x05\x12)\n\x08metadata\x18\x02 \x01(\x0b\x32\x17.google.protobuf.Struct\x12\x1f\n\x05items\x18\x03 \x03(\x0b\x32\x10.persefone.DItem\"O\n\x08\x44\x44\x61taset\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x10\n\x08\x63\x61tegory\x18\x02 \x01(\t\x12#\n\x07samples\x18\x03 \x03(\x0b\x32\x12.persefone.DSampleb\x06proto3'
+  serialized_pb=b'\n)persefone/interfaces/proto/datasets.proto\x12\tpersefone\x1a\x1cgoogle/protobuf/struct.proto\"L\n\x05\x44Item\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04\x64\x61ta\x18\x02 \x01(\x0c\x12\x15\n\rdata_encoding\x18\x03 \x01(\t\x12\x10\n\x08has_data\x18\x04 \x01(\x08\"h\n\x07\x44Sample\x12\x11\n\tsample_id\x18\x01 \x01(\x05\x12)\n\x08metadata\x18\x02 \x01(\x0b\x32\x17.google.protobuf.Struct\x12\x1f\n\x05items\x18\x03 \x03(\x0b\x32\x10.persefone.DItem\"j\n\x08\x44\x44\x61taset\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x10\n\x08\x63\x61tegory\x18\x02 \x01(\t\x12#\n\x07samples\x18\x03 \x03(\x0b\x32\x12.persefone.DSample\x12\x19\n\x11number_of_samples\x18\x04 \x01(\x05\x62\x06proto3'
   ,
   dependencies=[google_dot_protobuf_dot_struct__pb2.DESCRIPTOR,])
 
@@ -155,6 +155,13 @@ _DDATASET = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='number_of_samples', full_name='persefone.DDataset.number_of_samples', index=3,
+      number=4, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
   ],
   extensions=[
   ],
@@ -168,7 +175,7 @@ _DDATASET = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=270,
-  serialized_end=349,
+  serialized_end=376,
 )
 
 _DSAMPLE.fields_by_name['metadata'].message_type = google_dot_protobuf_dot_struct__pb2._STRUCT

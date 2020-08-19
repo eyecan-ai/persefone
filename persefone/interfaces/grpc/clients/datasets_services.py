@@ -93,11 +93,11 @@ class DatasetsSimpleServiceClient(DatasetsServiceClient):
         request = DDatasetRequest()
         request.dataset_name = dataset_name
 
-        response = self.DeleteDataset(request)
+        response: DDatasetResponse = self.DeleteDataset(request)
         if response.status.code == 0:
             return True
         else:
-            return False
+            raise SystemError(response.status.message)
 
     def new_dataset(self, dataset_name: str, dataset_category: str) -> Union[dict, None]:
         """ Creates new dataset
@@ -118,7 +118,7 @@ class DatasetsSimpleServiceClient(DatasetsServiceClient):
         if len(response.datasets) > 0:
             return json_format.MessageToDict(response.datasets[0], including_default_value_fields=True, preserving_proto_field_name=True)
         else:
-            return None
+            raise SystemError(response.status.message)
 
     def get_dataset(self, dataset_name: str, fetch_data: bool = False) -> Union[dict, None]:
         """ Retrieves single dataset as JSON-like dictionary
@@ -139,7 +139,7 @@ class DatasetsSimpleServiceClient(DatasetsServiceClient):
         if len(response.datasets) > 0:
             return json_format.MessageToDict(response.datasets[0], including_default_value_fields=True, preserving_proto_field_name=True)
         else:
-            return None
+            raise SystemError(response.status.message)
 
     def new_sample(self, dataset_name: str, metadata: dict = {}) -> Union[dict, None]:
         """ Creates new sample associated with target dataset
@@ -160,7 +160,7 @@ class DatasetsSimpleServiceClient(DatasetsServiceClient):
         if len(response.samples) > 0:
             return json_format.MessageToDict(response.samples[0], including_default_value_fields=True, preserving_proto_field_name=True)
         else:
-            return None
+            raise SystemError(response.status.message)
 
     def get_sample(self, dataset_name: str, sample_id: int, fetch_data: bool = False) -> Union[dict, None]:
         """ Retrieves single sample associated with target dataset
@@ -184,7 +184,7 @@ class DatasetsSimpleServiceClient(DatasetsServiceClient):
         if len(response.samples) > 0:
             return json_format.MessageToDict(response.samples[0], including_default_value_fields=True, preserving_proto_field_name=True)
         else:
-            return None
+            raise SystemError(response.status.message)
 
     def update_sample(self, dataset_name: str, sample_id: int, metadata: dict, fetch_data: bool = False) -> Union[dict, None]:
         """ Retrieves single sample associated with target dataset
@@ -211,7 +211,7 @@ class DatasetsSimpleServiceClient(DatasetsServiceClient):
         if len(response.samples) > 0:
             return json_format.MessageToDict(response.samples[0], including_default_value_fields=True, preserving_proto_field_name=True)
         else:
-            return None
+            raise SystemError(response.status.message)
 
     def get_item(self, dataset_name: str, sample_id: int, item_name: str, fetch_data: bool = False) -> Union[dict, None]:
         """ Retrieves single item associated with target dataset/sample
@@ -238,7 +238,7 @@ class DatasetsSimpleServiceClient(DatasetsServiceClient):
         if len(response.items) > 0:
             return json_format.MessageToDict(response.items[0], including_default_value_fields=True, preserving_proto_field_name=True)
         else:
-            return None
+            raise SystemError(response.status.message)
 
     def new_item(self, dataset_name: str, sample_id: int, item_name: str, data: bytes, data_encoding: str) -> Union[dict, None]:
         """ Creates new item associated with target dataset/sample
@@ -268,7 +268,7 @@ class DatasetsSimpleServiceClient(DatasetsServiceClient):
         if len(response.items) > 0:
             return json_format.MessageToDict(response.items[0], including_default_value_fields=True, preserving_proto_field_name=True)
         else:
-            return None
+            raise SystemError(response.status.message)
 
     def update_item(self, dataset_name: str, sample_id: int, item_name: str, data: bytes, data_encoding: str) -> Union[dict, None]:
         """ Creates new item associated with target dataset/sample
@@ -298,7 +298,7 @@ class DatasetsSimpleServiceClient(DatasetsServiceClient):
         if len(response.items) > 0:
             return json_format.MessageToDict(response.items[0], including_default_value_fields=True, preserving_proto_field_name=True)
         else:
-            return None
+            raise SystemError(response.status.message)
 
     def get_item_data(self, dataset_name: str, sample_id: int, item_name: str) -> Union[Tuple[bytes, str], None]:
         """ Retrives bytes data associated with target item
@@ -323,4 +323,4 @@ class DatasetsSimpleServiceClient(DatasetsServiceClient):
         if len(response.items) > 0:
             return response.items[0].data, response.items[0].data_encoding
         else:
-            return None
+            raise SystemError(response.status.message)

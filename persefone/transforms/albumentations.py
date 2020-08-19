@@ -57,7 +57,7 @@ class AlbumentationTransformsFactory(AbstractFactory):
             'horizontal_flip': {'f': cls._build_horizontal_flip, 'targets': cls._targets_map()['spatial_full']},
             'vertical_flip': {'f': cls._build_vertical_flip, 'targets': cls._targets_map()['spatial_full']},
             'flip': {'f': cls._build_flip, 'targets': cls._targets_map()['spatial_full']},
-            'normalize': {'f': cls._build_normalize, 'targets':cls._targets_map()['spatial_full']}
+            'normalize': {'f': cls._build_normalize, 'targets': cls._targets_map()['spatial_full']}
         }
 
     @classmethod
