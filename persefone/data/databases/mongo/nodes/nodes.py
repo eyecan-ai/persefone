@@ -318,7 +318,10 @@ class MNode(Document):
         """
 
         if data is not None:
-            self.data.put(data, content_type=data_encoding)
+            if self.data:
+                self.data.replace(data, content_type=data_encoding)
+            else:
+                self.data.put(data, content_type=data_encoding)
             self.save()
 
     def get_data(self) -> Tuple[bytes, str]:
