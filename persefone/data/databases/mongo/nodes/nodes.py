@@ -1,20 +1,31 @@
 
 
-from pathlib import Path
 from persefone.utils.configurations import XConfiguration
-
 from mongoengine.errors import DoesNotExist
 from mongoengine.queryset.queryset import QuerySet
-from numpy.lib.function_base import piecewise
-from persefone.data.databases import mongo
-
 import mongoengine
 from persefone.data.databases.mongo.clients import MongoDatabaseClient, MongoDatabaseClientCFG
-import pickle
-from typing import Any, List, Sequence, Tuple, Union
+from typing import Sequence, Tuple, Union
 from mongoengine.document import Document
-from mongoengine.fields import DictField, FileField, GenericLazyReferenceField, LazyReferenceField, ListField, MapField, ReferenceField, StringField
-import logging
+from mongoengine.fields import DictField, FileField, LazyReferenceField, StringField
+
+
+class CustomPath(str):
+
+    def __init__(self, s: str):
+        self._s = s
+
+    def __repr__(self) -> str:
+        return self._s
+
+    def __str__(self) -> str:
+        return self._s
+
+    def __truediv__(self, other: 'CustomPath') -> str:
+        return CustomPath(str(self).rstrip('/') + '/' + str(other).lstrip('/'))
+
+    def __rtruediv__(self, other: 'CustomPath') -> str:
+        return CustomPath(str(self).rstrip('/') + '/' + str(other).lstrip('/'))
 
 
 class NodesPath(object):
@@ -22,14 +33,14 @@ class NodesPath(object):
     PRIVATE_NAME_FOR_NAMESPACE = '$$NAMESPACE'
     PRIVATE_NAME_FOR_CATEGORY = '$$CATEGORY'
 
-    def __init__(self, value: Union[Path, str]):
-        """ Creats a Node Path represenation checking consistency
+    def __init__(self, value: Union[CustomPath, str]):
+        """ Creats a Node CustomPath represenation checking consistency
 
         :param value: desired path name (e.g. '/one/two/three')
-        :type value: Union[Path, str]
+        :type value: Union[CustomPath, str]
         """
 
-        if isinstance(value, Path):
+        if isinstance(value, CustomPath):
             value = str(value)
 
         self._value = value
@@ -518,9 +529,9 @@ class NodesBucket(object):
         self._mongo_client.connect()
 
     @property
-    def namespace(self) -> Path:
+    def namespace(self) -> CustomPath:
         """ Path representation of namespace, used to start a chain of '/' operators """
-        return Path(self._namespace)
+        return CustomPath(self._namespace)
 
     @property
     def category(self) -> str:
