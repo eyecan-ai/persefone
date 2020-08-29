@@ -35,3 +35,4 @@ fs==2.4.11
 termcolor==1.1.0
 deepdiff==5.0.2
 progress==1.5
+Deprecated>=1.2.10
