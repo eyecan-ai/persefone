@@ -28,19 +28,19 @@ def h5_to_datasets_bucket(database_cfg, h5_file, new_dataset_name):
                     v = int(v)
                 metadata[k] = v
 
-            sample: MNode = bucket.new_sample(new_dataset_name, metadata=metadata, sample_id=samples_counter)
-            samples_counter += 1
-            sample_id = int(sample.last_name)
+            sample: MNode = bucket.new_sample(new_dataset_name, metadata=metadata, sample_id=str(samples_counter))
 
             # print(dict(item.attrs))
             for h5_item_name, h5_data in h5_sample.items():
                 bucket.new_item(
                     new_dataset_name,
-                    sample_id,
+                    str(samples_counter),
                     h5_item_name,
                     bytes(h5_data[...]),
                     h5_data.attrs['_encoding']
                 )
+
+            samples_counter += 1
 
 
 if __name__ == "__main__":

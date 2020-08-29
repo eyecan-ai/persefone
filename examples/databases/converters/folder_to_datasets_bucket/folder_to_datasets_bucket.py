@@ -55,7 +55,7 @@ def folder_to_datasets_bucket(database_cfg, folder, new_dataset_name, overwrite)
             if 'metadata' in item_data:
                 metadata = yaml.safe_load(open(item_data['metadata'], 'r'))
 
-            sample: MNode = bucket.new_sample(new_dataset_name, metadata=metadata, sample_id=int(sample_id))
+            sample: MNode = bucket.new_sample(new_dataset_name, metadata=metadata, sample_id=sample_id)
 
             for item_name, filename in item_data.items():
                 if item_name != 'metadata':

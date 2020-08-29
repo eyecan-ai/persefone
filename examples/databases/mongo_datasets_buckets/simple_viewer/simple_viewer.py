@@ -1,14 +1,7 @@
 from persefone.data.databases.mongo.clients import MongoDatabaseClientCFG
-from persefone.data.databases.mongo.nodes.nodes import MNode
-from persefone.data.databases.h5 import H5SimpleDatabase
-from persefone.data.databases.mongo.nodes.buckets.datasets import DatasetsBucket, DatasetsBucketReader, DatasetsBucketReaderCFG
-import numpy as np
+from persefone.data.databases.mongo.nodes.buckets.datasets import DatasetsBucket, DatasetsBucketReader
 import click
-from persefone.data.databases.mongo.clients import MongoDatabaseClient, MongoDataset
-from persefone.data.databases.mongo.readers import MongoDatasetReader
-from persefone.data.io.drivers.safefs import SafeFilesystemDriver
 import cv2
-import time
 
 
 @click.command("Converts H5 dataset into MongoDB Dataset")
@@ -22,6 +15,7 @@ def mongo_datasets_viewer(database_cfg, dataset_name):
     reader = DatasetsBucketReader.builds_from_configuration_file(bucket, dataset_name, 'reader_config.yml')
 
     for sample in reader:
+        print(sample.keys())
         if 'label' in sample:
             print("Label:", sample['label'])
 

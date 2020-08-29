@@ -1,21 +1,18 @@
 
 
-from os import link
-
 import logging
 from threading import Thread
-from functools import partial
 from mongoengine.queryset.queryset import QuerySet
-from tqdm import tqdm
 from persefone.data.databases.mongo.snapshots import SnapshotOperations
 from schema import Optional, Schema
 from persefone.utils.configurations import XConfiguration
 from persefone.utils.mongo.queries import MongoQueryParser
-from typing import Dict, List, Sequence
+from typing import Any, Dict, List, Sequence
 from persefone.data.databases.mongo.nodes.nodes import MLink, MNode, NodesBucket
 from mongoengine.errors import DoesNotExist
 from persefone.data.databases.mongo.clients import MongoDatabaseClientCFG
 from persefone.utils.bytes import DataCoding
+import uuid
 
 
 class DatasetsBucket(NodesBucket):
@@ -104,13 +101,13 @@ class DatasetsBucket(NodesBucket):
         """
         return len(self.get_samples(dataset_name))
 
-    def get_sample(self, dataset_name: str, sample_id: int) -> MNode:
+    def get_sample(self, dataset_name: str, sample_id: str) -> MNode:
         """  Retrives single sample node by id and target dataset
 
         :param dataset_name: target dataset name
         :type dataset_name: str
         :param sample_id: sample id
-        :type sample_id: int
+        :type sample_id: str
         :return: retrived sample node
         :rtype: MNode
         """
@@ -142,13 +139,13 @@ class DatasetsBucket(NodesBucket):
         orders_bys = MongoQueryParser.parse_orders_list(orders_by)
         return MNode.get_by_queries(query_dict, orders_bys)
 
-    def get_item(self, dataset_name: str, sample_id: int, item_name: str) -> MNode:
+    def get_item(self, dataset_name: str, sample_id: str, item_name: str) -> MNode:
         """ Retrives item node by dataset/sample/name
 
         :param dataset_name: target dataset
         :type dataset_name: str
         :param sample_id: target sample id
-        :type sample_id: int
+        :type sample_id: str
         :param item_name: target item name
         :type item_name: str
         :return: retrived MNode
@@ -156,13 +153,13 @@ class DatasetsBucket(NodesBucket):
         """
         return self.get_node_by_name(self.namespace / dataset_name / self._sample_id_name(sample_id) / item_name)
 
-    def get_items(self, dataset_name: str, sample_id: int) -> Sequence[MNode]:
+    def get_items(self, dataset_name: str, sample_id: str) -> Sequence[MNode]:
         """ Retrives a list of all item nodes of target dataset/sample
 
         :param dataset_name: target dataset name
         :type dataset_name: str
         :param sample_id: target sample id
-        :type sample_id: int
+        :type sample_id: str
         :return: list of retrived item nodes
         :rtype: Sequence[MNode]
         """
@@ -188,7 +185,9 @@ class DatasetsBucket(NodesBucket):
                 q.task_done()
 
         dataset_node = self.get_dataset(dataset_name)
+
         samples = dataset_node.outbound_nodes(link_type=self.LINK_TYPE_DATASET2SAMPLE)
+
         for sample_node in samples:
             items = sample_node.outbound_nodes(link_type=self.LINK_TYPE_SAMPLE2ITEM)
             for item_node in items:
@@ -203,18 +202,18 @@ class DatasetsBucket(NodesBucket):
 
         garbage.join()
 
-    def _sample_id_name(self, sample_id: int) -> str:
-        """ Converts a sample id (int) in a padded string
+    def _sample_id_name(self, sample_id: Any) -> str:
+        """ Converts a sample id (Any) in a string
 
         :param sample_id: input sample id
-        :type sample_id: int
-        :return: padded string representation
+        :type sample_id: Any
+        :return: string representation
         :rtype: str
         """
 
-        return str(sample_id).zfill(self.DEFAULT_SAMPLE_ID_ZERO_PADDING)
+        return str(sample_id)
 
-    def new_sample(self, dataset_name: str, metadata: dict = None, sample_id: int = -1) -> MNode:
+    def new_sample(self, dataset_name: str, metadata: dict = None, sample_id: str = None) -> MNode:
         """ Creates new sample node
 
         :param dataset_name: target dataset
@@ -222,7 +221,7 @@ class DatasetsBucket(NodesBucket):
         :param metadata: sample metadata to store, defaults to None
         :type metadata: dict, optional
         :param sample_id: new sample id, defaults to -1
-        :type sample_id: int, optional
+        :type sample_id: str, optional
         :raises NameError: raise Exception if new sample id is used
         :return: created sample node
         :rtype: MNode
@@ -230,10 +229,8 @@ class DatasetsBucket(NodesBucket):
 
         dataset_node: MNode = self.get_dataset(dataset_name)
 
-        if sample_id < 0:
-            samples = MLink.outbound_of(dataset_node, self.LINK_TYPE_DATASET2SAMPLE)
-            n_samples = len(samples)
-            sample_id = n_samples
+        if sample_id is None:
+            sample_id = str(uuid.uuid1())
 
         try:
             self.get_sample(dataset_name, self._sample_id_name(sample_id))
@@ -249,13 +246,13 @@ class DatasetsBucket(NodesBucket):
             dataset_node.link_to(sample_node, link_type=self.LINK_TYPE_DATASET2SAMPLE)
             return sample_node
 
-    def new_item(self, dataset_name: str, sample_id: int, item_name: str, blob_data: bytes = None, blob_encoding: str = None) -> MNode:
+    def new_item(self, dataset_name: str, sample_id: str, item_name: str, blob_data: bytes = None, blob_encoding: str = None) -> MNode:
         """ Creates Item from blob and encoding
 
         :param dataset_name: target dataset name
         :type dataset_name: str
         :param sample_id: target sample id
-        :type sample_id: int
+        :type sample_id: str
         :param item_name: new item name
         :type item_name: str
         :param blob_data: input blob data to store, defaults to None

@@ -53,7 +53,7 @@ class TestDatasetsBucket(object):
                     'sample_number': int(sample_str)
                 })
 
-                sample_id = int(sample.last_name)
+                sample_id = sample.last_name
                 sample_r = R.get_sample(dataset_name, sample_id)
                 assert sample_r.node_type == R.NODE_TYPE_SAMPLE, "dataset type is wrong!"
 
@@ -170,7 +170,7 @@ class TestDatasetsBucket(object):
 
             for sample in samples:
 
-                items = R.get_items(dataset.last_name, int(sample.last_name))
+                items = R.get_items(dataset.last_name, sample.last_name)
 
                 assert len(items) == n_items, "Number of items is wrong"
 
@@ -200,7 +200,7 @@ class TestDatasetsBucket(object):
                                            'even': int(sample_str) % 2 == 0,
                                        }
                                        )
-            sample_id = int(sample.last_name)
+            sample_id = sample.last_name
 
             for item_name, filename in items.items():
                 data, encoding = DataCoding.file_to_bytes(filename)

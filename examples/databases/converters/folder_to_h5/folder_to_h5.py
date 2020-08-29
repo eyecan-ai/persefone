@@ -8,7 +8,16 @@ from persefone.data.databases.h5 import H5DatabaseIO
 def h5database_from_folder(folder, output_file):
     """ Convert data folder with Underscore notation in a H5Database. """
 
-    H5DatabaseIO.generate_from_folder(output_file, folder)
+    H5DatabaseIO.generate_from_folder(
+        output_file,
+        folder,
+        root_item='/_items',
+        image_compression_tags={
+            'image': 'jpg',
+            'mask': 'png',
+            'inst': 'png'
+        }
+    )
 
 
 if __name__ == '__main__':
