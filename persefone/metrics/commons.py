@@ -130,7 +130,7 @@ class BinaryClassificationMetrics(object):
         return metrics
 
 
-@deprecated(reason="use BinaryClassificationMetrics")
+@deprecated(reason="use BinaryClassificationMetrics, mispelled class")
 class BinaryClassifcationMetrics(BinaryClassificationMetrics):
 
     def __init__(self, gt, scores):
