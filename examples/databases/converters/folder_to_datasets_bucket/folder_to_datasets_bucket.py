@@ -11,6 +11,7 @@ from tqdm import tqdm
 from mongoengine.errors import DoesNotExist
 from queue import Queue
 import time
+from progress.bar import ShadyBar
 
 
 @click.command("Converts Folder dataset into MongoDB Dataset")
@@ -47,7 +48,7 @@ def folder_to_datasets_bucket(database_cfg, folder, new_dataset_name, overwrite)
     samples_queue = Queue(maxsize=0)
     [samples_queue.put((sample_id, item_data)) for sample_id, item_data in tqdm(tree.items())]
 
-    def inserter(q: Queue):
+    def inserter(q: Queue, bar: ShadyBar):
         while not q.empty():
             sample_id, item_data = q.get()
             metadata = {}
@@ -65,11 +66,15 @@ def folder_to_datasets_bucket(database_cfg, folder, new_dataset_name, overwrite)
                         open(filename, 'rb').read(),
                         Path(filename).suffix.replace('.', '')
                     )
+            bar.next()
             q.task_done()
+
+    # Loading BAR
+    bar = ShadyBar('Inserting data', max=len(tree), suffix='%(percent).1f%% - %(remaining)ds')
 
     workers = []
     for w in range(num_workers):
-        worker = Thread(target=inserter, args=(samples_queue,), daemon=True)
+        worker = Thread(target=inserter, args=(samples_queue, bar,), daemon=True)
         worker.start()
 
     samples_queue.join()
