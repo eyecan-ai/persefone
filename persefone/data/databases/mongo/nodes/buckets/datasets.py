@@ -3,8 +3,10 @@
 from os import link
 
 import logging
-
+from threading import Thread
+from functools import partial
 from mongoengine.queryset.queryset import QuerySet
+from tqdm import tqdm
 from persefone.data.databases.mongo.snapshots import SnapshotOperations
 from schema import Optional, Schema
 from persefone.utils.configurations import XConfiguration
@@ -168,21 +170,38 @@ class DatasetsBucket(NodesBucket):
         sample_node: MNode = self.get_sample(dataset_name, sample_id)
         return sample_node.outbound_nodes(link_type=self.LINK_TYPE_SAMPLE2ITEM)
 
-    def delete_dataset(self, dataset_name: str):
+    def delete_dataset(self, dataset_name: str, num_workers: int = 10):
         """ Recursive deletion of dataset
 
         :param dataset_name: target dataset name
         :type dataset_name: str
+        :param num_workers: number of used thread
+        :type num_workers: int
         """
+
+        from queue import Queue
+        garbage = Queue(maxsize=0)
+
+        def destroyer(q: Queue):
+            while not q.empty():
+                q.get().delete()
+                q.task_done()
 
         dataset_node = self.get_dataset(dataset_name)
         samples = dataset_node.outbound_nodes(link_type=self.LINK_TYPE_DATASET2SAMPLE)
         for sample_node in samples:
             items = sample_node.outbound_nodes(link_type=self.LINK_TYPE_SAMPLE2ITEM)
             for item_node in items:
-                item_node.delete()
-            sample_node.delete()
-        dataset_node.delete()
+                garbage.put(item_node)
+                garbage.put(sample_node)
+        garbage.put(dataset_node)
+
+        workers = []
+        for w in range(num_workers):
+            worker = Thread(target=destroyer, args=(garbage,), daemon=True)
+            worker.start()
+
+        garbage.join()
 
     def _sample_id_name(self, sample_id: int) -> str:
         """ Converts a sample id (int) in a padded string
@@ -252,7 +271,7 @@ class DatasetsBucket(NodesBucket):
 
         try:
             self.get_item(dataset_name, sample_id, item_name)
-            raise NameError("Item with same name '{item_name}' found")
+            raise NameError(f"Item with same name '{item_name}' found")
         except DoesNotExist:
 
             item_node: MNode = self[self.namespace / dataset_name / self._sample_id_name(sample_id) / item_name]

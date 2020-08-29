@@ -1,8 +1,6 @@
 
 
 from pathlib import Path
-from cv2 import data
-from numpy.lib.arraysetops import isin
 import yaml
 from persefone.data.databases.mongo.nodes.nodes import MLink, MNode
 from mongoengine.errors import DoesNotExist

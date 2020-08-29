@@ -274,7 +274,7 @@ class MNode(Document):
     metadata = DictField()
     meta = {
         'indexes': [
-            '$name'  # text index
+            '$name'  # text index,
         ]
     }
 

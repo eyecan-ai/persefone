@@ -2,4 +2,4 @@ host: localhost
 port: 27017
 user: root
 pass: ""
-db: "DEMO_SERVICE_DATASET"
+db: "folder_to_datasets_buckets_demo"
