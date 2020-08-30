@@ -3,7 +3,8 @@ persefone
 =========
 
 
-
+.. image:: docs/images/logo.png
+  :width: 256
 
 
 
