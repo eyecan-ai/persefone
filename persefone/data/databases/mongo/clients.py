@@ -17,7 +17,8 @@ class MongoDatabaseClientCFG(XConfiguration):
             'user': str,
             'pass': str,
             'db': str,
-            Optional('mock'): bool
+            Optional('mock'): bool,
+            Optional('timeout'): int
         }))
 
 
@@ -75,14 +76,18 @@ class MongoDatabaseClient(object):
                     db=self._cfg.params.db,
                     alias=alias,
                     host=self._cfg.params.host,
-                    port=self._cfg.params.port
+                    port=self._cfg.params.port,
+                    serverSelectionTimeoutMS=self._cfg.params.get('timeout', 1000)
                 )
             else:
                 self._connection = connect(
                     db=self._cfg.params.db,
                     alias=alias,
                     host='mongomock://localhost',
-                    port=self._cfg.params.port
+                    port=self._cfg.params.port,
+                    maxIdleTimeMS=self._cfg.params.get('timeout', 1),
+                    socketTimeoutMS=self._cfg.params.get('timeout', 1),
+                    serverSelectionTimeoutMS=self._cfg.params.get('timeout', 1000)
                 )
         return self
 
