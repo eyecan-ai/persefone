@@ -27,11 +27,7 @@ def process_keys(database_cfg, h5_file, new_dataset_name, job_id, keys, chunk_si
                     v = int(v)
                 metadata[k] = v
 
-            sample: MNode = bucket.new_sample(new_dataset_name, metadata=metadata, sample_id=sample_id_counter)
-            sample_id = int(sample.last_name)
-            assert sample_id == sample_id_counter
-            sample_id_counter += 1
-            internal_counter += 1
+            sample: MNode = bucket.new_sample(new_dataset_name, metadata=metadata, sample_id=str(sample_id_counter))
 
             if sample_id_counter % 100 == 0:
                 print("Job", job_id, f'{(internal_counter/chunk_size)*100:.2f}%')
@@ -40,11 +36,14 @@ def process_keys(database_cfg, h5_file, new_dataset_name, job_id, keys, chunk_si
             for h5_item_name, h5_data in h5_sample.items():
                 bucket.new_item(
                     new_dataset_name,
-                    sample_id,
+                    str(sample_id_counter),
                     h5_item_name,
                     bytes(h5_data[...]),
                     h5_data.attrs['_encoding']
                 )
+
+            sample_id_counter += 1
+            internal_counter += 1
 
 
 @click.command("Converts H5 dataset into MongoDB Dataset")

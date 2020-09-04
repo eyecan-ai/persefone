@@ -1,11 +1,12 @@
 from sklearn.metrics import roc_curve, roc_auc_score, confusion_matrix, precision_recall_curve, average_precision_score
 import numpy as np
 import logging
+from deprecated import deprecated
 
 _logger = logging.getLogger(__file__)
 
 
-class BinaryClassifcationMetrics(object):
+class BinaryClassificationMetrics(object):
 
     def __init__(self, gt, scores):
         self.gt = np.array(gt)
@@ -127,3 +128,10 @@ class BinaryClassifcationMetrics(object):
         }
 
         return metrics
+
+
+@deprecated(reason="use BinaryClassificationMetrics, mispelled class")
+class BinaryClassifcationMetrics(BinaryClassificationMetrics):
+
+    def __init__(self, gt, scores):
+        super(BinaryClassifcationMetrics, self).__init__(gt, scores)

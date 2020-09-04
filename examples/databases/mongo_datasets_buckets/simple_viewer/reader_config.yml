@@ -5,8 +5,8 @@ data_mapping:
     metadata.setup_name: setup_name
     items.image: x
 queries:
-    - "metadata.#sample_id > 0"
-    - "metadata.classification_label in [0,1]"
-    - 'metadata.labeling_class in ["good","bad"]'
+    - "metadata.#sample_id > '0'"
+    # - "metadata.classification_label in [0,1]"
+    # - 'metadata.labeling_class in ["good","bad"]'
 orders:
-    - "metadata.hook_left"
+    - "metadata.#sample_id"

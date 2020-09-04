@@ -14,7 +14,7 @@ from persefone.data.databases.mongo.clients import MongoDatabaseClientCFG
 from persefone.utils.bytes import DataCoding
 
 
-class NetworksBucket(NodesBucket):
+class NetworksBucket(NodesBucket):  # TODO: doc missing
 
     NETWORKS_NAMSPACE_NAME = '$NETWORKS'
     NODE_TYPE_TRAINABLE = 'trainable_model'

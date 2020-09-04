@@ -274,7 +274,7 @@ class MNode(Document):
     metadata = DictField()
     meta = {
         'indexes': [
-            '$name'  # text index
+            '$name'  # text index,
         ]
     }
 
@@ -503,6 +503,7 @@ class MNode(Document):
 
 
 # Register MNOde - MLink reverse delete rules
+# FIXME: these deletion rules on mongonegin==0.20.0 spawn warnings due to inner deprecated .count() usage
 MNode.register_delete_rule(MLink, 'start_node', mongoengine.CASCADE)
 MNode.register_delete_rule(MLink, 'end_node', mongoengine.CASCADE)
 

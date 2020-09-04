@@ -1,0 +1,77 @@
+QPushButton {
+  background-color: #00ACC1;
+  border: 0px;
+  color: #F0F0F0;
+  border-radius: 0px;
+  padding: 3px;
+  outline: none;
+  /* Issue #194 - Special case of QPushButton inside dialogs, for better UI */
+  min-width: 80px;
+}
+
+QPushButton:disabled {
+  background-color: #32414B;
+  border: 0px;
+  color: #787878;
+  padding: 3px;
+}
+
+QPushButton:checked {
+  background-color: #32414B;
+  border: 0px;
+  padding: 3px;
+  outline: none;
+}
+
+QPushButton:checked:disabled {
+  background-color: #19232D;
+  border: 0ps;
+  color: #787878;
+  border-radius: 4px;
+  padding: 3px;
+  outline: none;
+}
+
+QPushButton:checked:selected {
+  background: #1464A0;
+  color: #32414B;
+}
+
+QPushButton::menu-indicator {
+  subcontrol-origin: padding;
+  subcontrol-position: bottom right;
+  bottom: 4px;
+}
+
+QPushButton:pressed {
+  background-color: #19232D;
+  border: 0px;
+}
+
+QPushButton:pressed:hover {
+  background: #0097A7;
+  
+}
+
+QPushButton:hover {
+  background: #26C6DA;
+}
+
+QPushButton:selected {
+  background: #1464A0;
+  color: #32414B;
+}
+
+QPushButton:hover {
+  border: 0px;
+  color: #F0F0F0;
+}
+
+QPushButton:focus {
+  border: 0px;
+}
+
+QListView{
+  selection-background-color:  #00ACC1;
+  selection-color: #fafafa;
+}
