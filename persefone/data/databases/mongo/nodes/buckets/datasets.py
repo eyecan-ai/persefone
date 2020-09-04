@@ -88,8 +88,9 @@ class DatasetsBucket(NodesBucket):
         :rtype: Sequence[MNode]
         """
 
-        dataset_node: MNode = self.get_dataset(dataset_name)
-        return dataset_node.outbound_nodes(link_type=self.LINK_TYPE_DATASET2SAMPLE)
+        return self.get_samples_by_query(dataset_name=dataset_name)
+        # dataset_node: MNode = self.get_dataset(dataset_name)
+        # return dataset_node.outbound_nodes(link_type=self.LINK_TYPE_DATASET2SAMPLE)
 
     def count_samples(self, dataset_name: str) -> int:
         """ Counts samples nodes of target dataset
