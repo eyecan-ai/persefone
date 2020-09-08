@@ -6,6 +6,9 @@ _logger = logging.getLogger()
 
 class Color(object):
 
+    COLOR_RGB = 'RGB'
+    COLOR_BRG = 'BGR'
+
     def __init__(self, c):
         """Object for Color manipulation
 

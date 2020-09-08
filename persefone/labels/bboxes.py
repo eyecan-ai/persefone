@@ -1,3 +1,6 @@
+from persefone.utils.colors.color import Color
+from persefone.utils.colors.palettes import MaterialPalette, Palette
+from PIL import ImageDraw, Image, ImageFont
 from enum import Enum, auto
 from typing import List, Union
 import numpy as np
@@ -61,7 +64,8 @@ class BoundingBox(object):
             'width': w / width,
             'height': h / height,
             'image_width': width,
-            'image_heiht': height
+            'image_height': height,
+            'normalized': width == 1 and height == 1
         }
 
     def plain_data(self, ref_image_size: List[int] = None, box_type: BoundingBoxType = BoundingBoxType.PASCAL_VOC) -> np.ndarray:
@@ -89,6 +93,23 @@ class BoundingBox(object):
             return np.array([d['x_center'], d['y_center'], d['width'], d['height']])
         else:
             raise NotImplementedError(f'Type {box_type} not implemented yet!')
+
+    @classmethod
+    def from_dict(cls, dict_data: dict) -> 'BoundingBox':
+        """ Builds bounding box from dict
+
+        :param dict_data: [description]
+        :type dict_data: dict
+        :return: built BoundingBox
+        :rtype: BoundingBox
+        """
+
+        return BoundingBox([
+            dict_data['x_min'] * dict_data['image_width'],
+            dict_data['y_min'] * dict_data['image_height'],
+            dict_data['x_max'] * dict_data['image_width'],
+            dict_data['y_max'] * dict_data['image_height']
+        ])
 
     @classmethod
     def build_from_type(cls, data: Union[np.ndarray, list], box_type: BoundingBoxType, image_size: List[int] = None):
@@ -134,3 +155,177 @@ class BoundingBox(object):
             return BoundingBox([x_min, y_min, x_max, y_max])
         else:
             raise NotImplementedError(f'Type {box_type} not implemented yet!')
+
+
+class BoundingBoxWithLabelAndScore(BoundingBox):
+
+    def __init__(self, data: Union[np.ndarray, list]):
+
+        data = np.array(data).ravel()
+        assert len(data) == 6
+
+        super(BoundingBoxWithLabelAndScore, self).__init__(data=data[:4])
+        self._label = data[5]
+        self._score = data[4]
+
+    @property
+    def label(self):
+        return int(self._label)
+
+    @property
+    def score(self):
+        return self._score
+
+    def as_dict(self, ref_image_size: List[int] = None) -> dict:
+        """ Retrieves full dict representation for current box
+
+        :param ref_image_size: reference image size [w,h] for normalized formats, defaults to None
+        :type ref_image_size: List[int], optional
+        :return: dictionay representation
+        :rtype: dict
+        """
+
+        d = super().as_dict(ref_image_size)
+        d.update({
+            'label': self.label,
+            'score': self.score
+        })
+        return d
+
+    @classmethod
+    def from_dict(cls, dict_data: dict) -> 'BoundingBox':
+        """ Builds bounding box from dict
+
+        :param dict_data: [description]
+        :type dict_data: dict
+        :return: built BoundingBox
+        :rtype: BoundingBox
+        """
+
+        return BoundingBoxWithLabelAndScore([
+            dict_data['x_min'] * dict_data['image_width'],
+            dict_data['y_min'] * dict_data['image_height'],
+            dict_data['x_max'] * dict_data['image_width'],
+            dict_data['y_max'] * dict_data['image_height'],
+            dict_data['score'],
+            dict_data['label']
+        ])
+
+    def __eq__(self, other):
+        return np.all(np.isclose(self._data[: 5], other._data[: 5])) and int(self.label) == int(other.label)
+
+    def plain_data(self, ref_image_size: List[int] = None, box_type: BoundingBoxType = BoundingBoxType.PASCAL_VOC) -> np.ndarray:
+        """ Retrieves plain array data
+
+        :param ref_image_size: reference image size [w,h], defaults to None
+        :type ref_image_size: List[int], optional
+        :param box_type: retrieved data format, defaults to BoundingBoxType.PASCAL_VOC
+        :type box_type: BoundingBoxType, optional
+        :raises NotImplementedError: data format not recognized
+        :return: plain array data
+        :rtype: np.ndarray
+        """
+
+        return np.array(super().plain_data(ref_image_size, box_type).tolist() + [self.score, self.label])
+
+    @classmethod
+    def build_from_type(cls, data: Union[np.ndarray, list], box_type: BoundingBoxType, image_size: List[int] = None):
+        """ Builds a BoundingBox object from plain data with custom type
+
+        :param data: plain array data
+        :type data: Union[np.ndarray, list]
+        :param box_type: data type
+        :type box_type: BoundingBoxType
+        :param image_size: reference image size [w,h], defaults to None
+        :type image_size: List[int], optional
+        :raises NotImplementedError: data type not recognized
+        :return: BoundingBox object
+        :rtype: BoundingBox
+        """
+
+        data = np.array(data).ravel()
+        assert len(data) == 6
+
+        score, label = data[4: 6]
+        bbox: BoundingBox = super(BoundingBoxWithLabelAndScore, cls).build_from_type(data[: 4], box_type, image_size)
+
+        plain_data = bbox.plain_data().tolist() + [score, label]
+        return BoundingBoxWithLabelAndScore(plain_data)
+
+
+class BoundingBoxDrawerLabelParameters(object):
+
+    def __init__(self):
+        self.font_size = 12
+        self.font_name = "Pillow/Tests/fonts/FreeMono.ttf"
+        self.label_size = [80, 20]
+        self.default_foreground = (0, 0, 0)
+        self.default_background = (255, 255, 255)
+
+
+class BoundingBoxDrawer(object):
+
+    def __init__(self, palette: Palette = None, labels_map: dict = None):
+
+        self._palette: Palette = palette if palette is not None else MaterialPalette()
+        self._labels_map = labels_map if labels_map is not None else {}
+
+    def draw_label(self,
+                   image: Union[np.ndarray, Image.Image],
+                   text: str,
+                   pos: List[int],
+                   background: List[int] = None,
+                   foreground: List[int] = None,
+                   label_parameters: BoundingBoxDrawerLabelParameters = BoundingBoxDrawerLabelParameters()
+                   ):
+
+        pil = True
+        if isinstance(image, np.ndarray):
+            pil = False
+            image = Image.fromarray(image)
+
+        W, H = label_parameters.label_size
+
+        draw = ImageDraw.Draw(image)
+        font = ImageFont.truetype(label_parameters.font_name, label_parameters.font_size)
+        w, h = draw.textsize(text, font=font)
+
+        draw.rectangle([pos[0], pos[1], pos[0] + W, pos[1] + H], fill=background)
+        draw.text((pos[0] + (W - w) // 2, pos[1] + (H - h) // 2), text, fill=foreground, font=font)
+
+        if not pil:
+            image = np.array(image)
+        return image
+
+    def draw_bbox(self,
+                  bbox: BoundingBoxWithLabelAndScore,
+                  image: np.ndarray,
+                  width: int = 2,
+                  label_parameters: BoundingBoxDrawerLabelParameters = BoundingBoxDrawerLabelParameters(),
+                  show_label: bool = True
+                  ):
+
+        pil = True
+        if isinstance(image, np.ndarray):
+            pil = False
+            image = Image.fromarray(image)
+
+        x_min, x_max, y_min, y_max, score, label = bbox.plain_data()
+
+        draw = ImageDraw.Draw(image)
+        color = self._palette.get_color(bbox.label).rgb
+        draw.rectangle(bbox.plain_data()[:4].tolist(), outline=color, width=width)
+
+        if show_label:
+            self.draw_label(
+                image,
+                f"{int(label)}[{score:.2f}]",
+                [x_min, y_max, x_max, y_max + 30],
+                background=color,
+                foreground=None,
+                label_parameters=label_parameters
+            )
+
+        if not pil:
+            image = np.array(image)
+        return image
