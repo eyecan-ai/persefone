@@ -92,7 +92,21 @@ class TestTransformsFactory(object):
                     'always_apply': False,
                     'p': 0.4
                 }
-            }
+            },
+            {
+                'name': 'albumentations.augmentations.transforms.CoarseDropout',
+                'params': {
+                    'max_holes': 2,
+                    'min_holes': 1,
+                    'max_width': 64,
+                    'max_height': 128,
+                    'min_width': 12,
+                    'min_height': 53,
+                    'fill_value': 10,  # TODO: fill_value is not retrivable with t.get_dict_with_id()
+                    'always_apply': True,
+                    'p': 0.8,
+                }
+            },
         ]
 
     def _compare_param(self, p1, p2):
