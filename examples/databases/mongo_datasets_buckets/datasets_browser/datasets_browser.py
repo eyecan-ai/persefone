@@ -1,3 +1,4 @@
+import click
 import uuid
 import sys
 import os
@@ -652,9 +653,11 @@ class DatasetsBrowser(QWidget):
         self.reload_dataset(self._active_dataset.last_name)
 
 
-def main():
+@click.command("Datasets Browser GUI")
+@click.option("-c", "--database_configuration", default='database.yml', help="Database configuration file")
+def datasets_browser(database_configuration):
     app = QApplication(sys.argv)
-    cfg = yaml.safe_load(open(get_absolute_path('database.yml'), 'r'))
+    cfg = yaml.safe_load(open(get_absolute_path(database_configuration), 'r'))
     client_cfg = MongoDatabaseClientCFG.from_dict(cfg)
     datasets_bucket = DatasetsBucket(client_cfg)
     w = DatasetsBrowser(datasets_bucket)
@@ -665,4 +668,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    datasets_browser()
