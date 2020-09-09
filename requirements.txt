@@ -14,7 +14,7 @@ pandas==1.0.3
 torch==1.5.0
 torchvision==0.6.0
 imageio==2.8.0
-albumentations==0.4.5
+albumentations==0.4.6
 nbstripout==0.3.7
 pre-commit==2.3.0
 h5py==2.10.0

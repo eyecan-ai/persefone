@@ -1,77 +1,87 @@
 # inputs
 inputs:
-    image: {}
-    mask: {}
-    masks: {}
-    bboxes:
-        format: coco
-        min_area: 0.0
-        min_visibility: 0.0
-        label_fields: ["category_id"]
-    keypoints:
-        format: xy
-        label_fields: ["category_id"]
-        remove_invisible: True
-        angle_in_degrees: True
+      image: {}
+      mask: {}
+      masks: {}
+      bboxes:
+            format: coco
+            min_area: 0.0
+            min_visibility: 0.0
+            label_fields: ["category_id"]
+      keypoints:
+            format: xy
+            label_fields: ["category_id"]
+            remove_invisible: True
+            angle_in_degrees: True
 # transforms
 transforms:
-    - aug.resize:
-          size: [481, 516]
-          always_apply: True
-          p: 0.1
-    - aug.rotate:
-          limit: [-23, 42]
-          always_apply: True
-          p: 0.2
-          interpolation: "linear"
-          border_mode: "replicate"
-          value: [255, 0, 200]
-          mask_value: 123
-    - aug.crop:
-          box: [10, 20, 30, 40]
-          always_apply: True
-          p: 0.3
-    - aug.random_crop:
-          size: [44, 33]
-          always_apply: True
-          p: 0.4
-    - aug.random_brightness_contrast:
-          brightness: 0.2
-          contrast: [-0.1, 0.1]
-          brighntess_by_max: True
-          always_apply: True
-          p: 0.5
-    - aug.random_grid_shuffle:
-          grid: [4, 4]
-          always_apply: True
-          p: 0.6
-    - aug.random_hsv:
-          hue_shift_limit: [0.1, 0.2]
-          sat_shift_limit: [0.3, 0.4]
-          val_shift_limit: [0.5, 0.6]
-          always_apply: True
-          p: 0.7
-    - aug.horizontal_flip:
-          always_apply: False
-          p: 0.8
-    - aug.vertical_flip:
-          always_apply: False
-          p: 0.9
-    - aug.flip:
-          always_apply: False
-          p: 0.10
-    - aug.shift_scale_rotate:
-          shift_limit: [0.1, 0.2]
-          scale_limit: [0.3, 0.4]
-          rotate_limit: 22
-          interpolation: "linear"
-          border_mode: "replicate"
-          value: [200, 100, 90]
-          mask_value: 155
-          always_apply: False
-          p: 0.10
-    - aug.normalize:
-          mean: [0.5, 0.5, 0.3]
-          std: [0.1, 0.1, 0.1]
-          always_apply: False
-          p: 0.4
+      - aug.resize:
+              size: [481, 516]
+              always_apply: True
+              p: 0.1
+      - aug.rotate:
+              limit: [-23, 42]
+              always_apply: True
+              p: 0.2
+              interpolation: "linear"
+              border_mode: "replicate"
+              value: [255, 0, 200]
+              mask_value: 123
+      - aug.crop:
+              box: [10, 20, 30, 40]
+              always_apply: True
+              p: 0.3
+      - aug.random_crop:
+              size: [44, 33]
+              always_apply: True
+              p: 0.4
+      - aug.random_brightness_contrast:
+              brightness: 0.2
+              contrast: [-0.1, 0.1]
+              brighntess_by_max: True
+              always_apply: True
+              p: 0.5
+      - aug.random_grid_shuffle:
+              grid: [4, 4]
+              always_apply: True
+              p: 0.6
+      - aug.random_hsv:
+              hue_shift_limit: [0.1, 0.2]
+              sat_shift_limit: [0.3, 0.4]
+              val_shift_limit: [0.5, 0.6]
+              always_apply: True
+              p: 0.7
+      - aug.horizontal_flip:
+              always_apply: False
+              p: 0.8
+      - aug.vertical_flip:
+              always_apply: False
+              p: 0.9
+      - aug.flip:
+              always_apply: False
+              p: 0.10
+      - aug.shift_scale_rotate:
+              shift_limit: [0.1, 0.2]
+              scale_limit: [0.3, 0.4]
+              rotate_limit: 22
+              interpolation: "linear"
+              border_mode: "replicate"
+              value: [200, 100, 90]
+              mask_value: 155
+              always_apply: False
+              p: 0.10
+      - aug.normalize:
+              mean: [0.5, 0.5, 0.3]
+              std: [0.1, 0.1, 0.1]
+              always_apply: False
+              p: 0.4
+      - aug.coarse_dropout:
+              max_holes: 2
+              min_holes: 1
+              max_width: 64
+              max_height: 128
+              min_width: 12
+              min_height: 53
+              fill_value: 10
+              always_apply: True
+              p: 0.8
