@@ -108,6 +108,23 @@ class TestTransformsFactory(object):
                     'p': 0.8,
                 }
             },
+            {
+                'name': 'persefone.transforms.custom.random_stain.RandomStain',
+                'params': {
+                    'min_holes': 4,
+                    'max_holes': 15,
+                    'min_size': 32,
+                    'max_size': 32,
+                    'min_eccentricity': 1,
+                    'max_eccentricity': 3,
+                    'min_rgb': [0.5, 0.5, 0.5],
+                    'max_rgb': [1.0, 1.0, 1.0],
+                    'n_points': 20,
+                    'perturbation_radius': 10,
+                    'always_apply': True,
+                    'p': 0.5,
+                }
+            }
         ]
 
     def _compare_param(self, p1, p2):
