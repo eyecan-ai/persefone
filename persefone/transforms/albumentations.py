@@ -57,7 +57,8 @@ class AlbumentationTransformsFactory(AbstractFactory):
             'horizontal_flip': {'f': cls._build_horizontal_flip, 'targets': cls._targets_map()['spatial_full']},
             'vertical_flip': {'f': cls._build_vertical_flip, 'targets': cls._targets_map()['spatial_full']},
             'flip': {'f': cls._build_flip, 'targets': cls._targets_map()['spatial_full']},
-            'normalize': {'f': cls._build_normalize, 'targets': cls._targets_map()['spatial_full']}
+            'normalize': {'f': cls._build_normalize, 'targets': cls._targets_map()['spatial_full']},
+            'coarse_dropout': {'f': cls._build_coarse_dropout, 'targets': cls._targets_map()['spatial_full']},
         }
 
     @classmethod
@@ -179,6 +180,20 @@ class AlbumentationTransformsFactory(AbstractFactory):
             max_pixel_value=get_arg(params, 'max_pixel_value', 255.0),
             always_apply=get_arg(params, 'always_apply', False),
             p=get_arg(params, 'p', 1.0)
+        )
+
+    @classmethod
+    def _build_coarse_dropout(cls, **params):
+        return A.CoarseDropout(
+            max_holes=get_arg(params, 'max_holes', 8),
+            max_width=get_arg(params, 'max_width', 8),
+            max_height=get_arg(params, 'max_height', 8),
+            min_holes=get_arg(params, 'min_holes', None),
+            min_width=get_arg(params, 'min_width', None),
+            min_height=get_arg(params, 'min_height', None),
+            fill_value=get_arg(params, 'fill_value', 0),
+            always_apply=get_arg(params, 'always_apply', False),
+            p=get_arg(params, 'p', 0.5)
         )
 
     @classmethod
