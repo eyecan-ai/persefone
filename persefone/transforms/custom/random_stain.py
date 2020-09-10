@@ -67,7 +67,7 @@ class RandomStain(ImageOnlyTransform):
             angle = random.random() * math.pi * 2
             points = DrawingUtils.ellipse((size_a, size_b), angle, self.n_points)
             points = DrawingUtils.random_displace(points, self.perturbation_radius)
-            points = DrawingUtils.interpolate(points)
+            points = DrawingUtils.interpolate(points, len(points) * 10)
             color = tuple(random.uniform(self.min_rgb[i], self.max_rgb[i]) for i in range(3))
             corr, corr_mask = DrawingUtils.polygon(points, color)
             pos = (random.randint(0, out.shape[0]), random.randint(0, out.shape[1]))

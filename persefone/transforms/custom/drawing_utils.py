@@ -1,6 +1,6 @@
 import math
 import random
-from typing import Tuple, Sequence
+from typing import Iterable, Tuple, Sequence
 
 import cv2
 import numpy as np
@@ -14,8 +14,8 @@ class DrawingUtils:
     def apply_patch(cls,
                     img: np.ndarray,
                     img_mask: np.ndarray,
-                    corruption: np.ndarray,
-                    corruption_mask: np.ndarray,
+                    patch: np.ndarray,
+                    patch_mask: np.ndarray,
                     pos: Tuple[int, int]) -> None:
         """Applies a patch on a target image
 
@@ -23,15 +23,15 @@ class DrawingUtils:
         :type img: np.ndarray
         :param img_mask: target image mask
         :type img_mask: np.ndarray
-        :param corruption: patch to apply
-        :type corruption: np.ndarray
-        :param corruption_mask: patch mask
-        :type corruption_mask: np.ndarray
+        :param patch: patch to apply
+        :type patch: np.ndarray
+        :param patch_mask: patch mask
+        :type patch_mask: np.ndarray
         :param pos: upper left patch corner in img coords
         :type pos: Tuple[int, int]
         """
-        size_x = max(0, min(img.shape[0], pos[0] + corruption.shape[0]) - max(0, pos[0]))
-        size_y = max(0, min(img.shape[1], pos[1] + corruption.shape[1]) - max(0, pos[1]))
+        size_x = max(0, min(img.shape[0], pos[0] + patch.shape[0]) - max(0, pos[0]))
+        size_y = max(0, min(img.shape[1], pos[1] + patch.shape[1]) - max(0, pos[1]))
 
         ra = max(0, pos[0])
         ca = max(0, pos[1])
@@ -43,12 +43,12 @@ class DrawingUtils:
         rb_p = ra_p + size_x
         cb_p = ca_p + size_y
 
-        corruption = corruption[ra_p: rb_p, ca_p: cb_p]
-        corruption_mask = corruption_mask[ra_p: rb_p, ca_p: cb_p]
-        corruption_mask_3 = np.stack([corruption_mask] * 3, axis=-1)
-        img[ra: rb, ca: cb, :] = img[ra: rb, ca: cb, :] * (1 - corruption_mask_3) + corruption * corruption_mask_3
+        patch = patch[ra_p: rb_p, ca_p: cb_p]
+        patch_mask = patch_mask[ra_p: rb_p, ca_p: cb_p]
+        corruption_mask_3 = np.stack([patch_mask] * 3, axis=-1)
+        img[ra: rb, ca: cb, :] = img[ra: rb, ca: cb, :] * (1 - corruption_mask_3) + patch * corruption_mask_3
         if img_mask is not None:
-            img_mask[ra: rb, ca: cb] = np.maximum(img_mask[ra: rb, ca: cb], corruption_mask)
+            img_mask[ra: rb, ca: cb] = np.maximum(img_mask[ra: rb, ca: cb], patch_mask)
 
     @classmethod
     def ellipse(cls, size: Tuple[int, int], angle: float = 0., max_points: int = -1) -> Sequence[Tuple[int, int]]:
@@ -65,10 +65,16 @@ class DrawingUtils:
         """
         radii = (math.floor((size[1] - 1) / 2), math.floor((size[0] - 1) / 2))
         rr, cc = ellipse_perimeter(radii[0], radii[1], radii[0], radii[1], angle)
-        points = [(r, c) for r, c in zip(rr, cc)]
+        rr = rr.tolist()
+        cc = cc.tolist()
+        if not isinstance(rr, Iterable) or not isinstance(cc, Iterable):
+            return []
+        points = [(int(r), int(c)) for r, c in zip(rr, cc)]
         points = sorted(points, key=lambda p: DrawingUtils.clockwise_angle(p, radii))
         if max_points > 0:
-            points = points[::len(points) // max_points]
+            max_points = min(max_points, len(points))
+            idx = np.round(np.linspace(0, len(points) - 1, max_points)).astype(int)
+            points = np.array(points)[idx].tolist()
         return points
 
     @classmethod
@@ -92,22 +98,24 @@ class DrawingUtils:
         mask = np.zeros(size)
         points = np.array(points, np.int32)
         cv2.drawContours(mask, [points], -1, 1.0, -1)
-        corruption = np.stack([mask * color[i] for i in range(3)], axis=-1)
-        return corruption, mask
+        poly = np.stack([mask * color[i] for i in range(3)], axis=-1)
+        return poly, mask
 
     @classmethod
-    def interpolate(cls, points: Sequence[Tuple[int, int]], overlap: int = 3) -> Sequence[Tuple[int, int]]:
+    def interpolate(cls, points: Sequence[Tuple[int, int]], samples: int, overlap: int = 3) -> Sequence[Tuple[int, int]]:
         """Performs a cubic interpolation of a sequence of points
 
         :param points: the sequence of points to interpolate
         :type points: Sequence[Tuple[int, int]]
+        :param samples: the number of samples to take from the interpolated curve
+        :type samples: int
         :param overlap: overlap, defaults to 3
         :type overlap: int, optional
         :return: a sequence of points obtained from cubic interpolation
         :rtype: Sequence[Tuple[int, int]]
         """
         indexes = np.arange(0, len(points) + 2 * overlap)
-        interp_i = np.linspace(overlap, len(points) + overlap, 10 * len(points))
+        interp_i = np.linspace(overlap, len(points) + overlap, samples)
         points = points[-overlap:] + points + points[:overlap]
         xi = interp1d(indexes, np.array(points)[:, 0], kind='cubic')(interp_i)
         yi = interp1d(indexes, np.array(points)[:, 1], kind='cubic')(interp_i)
@@ -135,7 +143,7 @@ class DrawingUtils:
 
     @classmethod
     def clockwise_angle(cls, point: Tuple[int, int], center: Tuple[int, int]) -> float:
-        """Returns the angle between a 2d point and the vector (0, 1) wrt a center point c
+        """Returns the angle between the vector (0, 1) and a 2d point wrt a center point c
 
         :param point: the point
         :type point: Tuple[int, int]
