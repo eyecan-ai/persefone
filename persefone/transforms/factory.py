@@ -3,6 +3,7 @@ from persefone.utils.pyutils import get_arg
 import albumentations as A
 from .albumentations import AlbumentationTransformsFactory
 from .pytorch import PytorchTransformationsFactory
+from .custom.custom import CustomTransformsFactory
 import logging
 
 _logger = logging.getLogger()
@@ -14,7 +15,8 @@ class TransformsFactory(object):
     def _factories_map(cls):
         return {
             'aug': AlbumentationTransformsFactory,
-            'pytorch': PytorchTransformationsFactory
+            'pytorch': PytorchTransformationsFactory,
+            'custom': CustomTransformsFactory,
         }
 
     @classmethod
