@@ -2,7 +2,7 @@ import math
 import random
 from typing import Iterable, Tuple, Sequence
 
-import cv2
+from PIL import Image, ImageDraw
 import numpy as np
 from scipy.interpolate import interp1d
 from skimage.draw import ellipse_perimeter
@@ -96,8 +96,10 @@ class DrawingUtils:
                 max(p[1] for p in points) - min_y)
         points = tuple((p[1] - min_y, p[0] - min_x) for p in points)
         mask = np.zeros(size)
-        points = np.array(points, np.int32)
-        cv2.drawContours(mask, [points], -1, 1.0, -1)
+        pil_img = Image.fromarray(mask.astype('uint8'))
+        draw = ImageDraw.Draw(pil_img)
+        draw.polygon(points, fill=1, outline=1)
+        mask = np.array(pil_img)
         poly = np.stack([mask * color[i] for i in range(3)], axis=-1)
         return poly, mask
 
