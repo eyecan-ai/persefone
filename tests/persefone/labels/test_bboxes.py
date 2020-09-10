@@ -1,6 +1,8 @@
 from persefone.labels.bboxes import BoundingBox, BoundingBoxType, BoundingBoxWithLabelAndScore
 import pytest
 
+import numpy as np
+
 
 class TestBoundingBoxes(object):
 
@@ -66,6 +68,22 @@ class TestBoundingBoxes(object):
 
                     bbox_d = BoundingBoxWithLabelAndScore.from_dict(bbox_r.as_dict(ref_image_size=ref_image_size))
                     assert bbox_d == bbox
+
+                    formats_checks = [
+                        ('bl', slice(0, 4), slice(0, 4)),
+                        ('bs', slice(0, 4), slice(0, 4)),
+                        ('bls', slice(0, 4), slice(0, 4)),
+                        ('bsl', slice(0, 4), slice(0, 4)),
+                        ('b', slice(0, 4), slice(0, 4)),
+                        ('sb', slice(1, 5), slice(0, 4)),
+                        ('lb', slice(1, 5), slice(0, 4)),
+                        ('lsb', slice(2, 6), slice(0, 4)),
+                        ('slb', slice(2, 6), slice(0, 4)),
+                    ]
+                    for check in formats_checks:
+                        print(check)
+                        exported_label = bbox.export_label(fmt=check[0], ref_image_size=ref_image_size, box_type=box_type)
+                        assert np.all(np.isclose(exported_label[check[1]], bbox.plain_data(ref_image_size=ref_image_size, box_type=box_type)[check[2]]))
 
             else:
                 with pytest.raises(Exception):

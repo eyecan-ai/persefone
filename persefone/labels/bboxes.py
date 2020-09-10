@@ -214,19 +214,48 @@ class BoundingBoxWithLabelAndScore(BoundingBox):
     def __eq__(self, other):
         return np.all(np.isclose(self._data[: 5], other._data[: 5])) and int(self.label) == int(other.label)
 
-    def plain_data(self, ref_image_size: List[int] = None, box_type: BoundingBoxType = BoundingBoxType.PASCAL_VOC) -> np.ndarray:
+    def plain_data(self, ref_image_size: List[int] = None, box_type: BoundingBoxType = BoundingBoxType.PASCAL_VOC, with_score: bool = True) -> np.ndarray:
         """ Retrieves plain array data
 
         :param ref_image_size: reference image size [w,h], defaults to None
         :type ref_image_size: List[int], optional
         :param box_type: retrieved data format, defaults to BoundingBoxType.PASCAL_VOC
         :type box_type: BoundingBoxType, optional
+        :param with_score: return score value
+        :type with_score: bool, optional
         :raises NotImplementedError: data format not recognized
         :return: plain array data
         :rtype: np.ndarray
         """
 
-        return np.array(super().plain_data(ref_image_size, box_type).tolist() + [self.score, self.label])
+        if with_score:
+            return np.array(super().plain_data(ref_image_size, box_type).tolist() + [self.score, self.label])
+        else:
+            return np.array(super().plain_data(ref_image_size, box_type).tolist() + [self.label])
+
+    def export_label(self, fmt='bl', ref_image_size: List[int] = None, box_type: BoundingBoxType = BoundingBoxType.PASCAL_VOC) -> List[int]:
+        """ Exports a plain label format
+
+        :param fmt: format chars [b|l|s] b=box, l=label, s=score, defaults to 'bl'
+        :type fmt: str, optional
+        :param ref_image_size: reference image size, defaults to None
+        :type ref_image_size: List[int], optional
+        :param box_type: box data type, defaults to BoundingBoxType.PASCAL_VOC
+        :type box_type: BoundingBoxType, optional
+        :return: plain list representingn full label
+        :rtype: List[int]
+        """
+
+        plain_data = self.plain_data(ref_image_size=ref_image_size, box_type=box_type, with_score=True)
+        data_map = {
+            'b': plain_data[:4].tolist(),
+            'l': [int(plain_data[5])],
+            's': [plain_data[4]]
+        }
+        exported_label = []
+        for c in fmt:
+            exported_label += data_map[c]
+        return exported_label
 
     @classmethod
     def build_from_type(cls, data: Union[np.ndarray, list], box_type: BoundingBoxType, image_size: List[int] = None):
