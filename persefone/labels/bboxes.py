@@ -34,6 +34,10 @@ class BoundingBox(object):
     def __eq__(self, other):
         return np.all(np.isclose(self._data, other._data))
 
+    @property
+    def valid(self):
+        return np.all(self._data >= 0)
+
     def as_dict(self, ref_image_size: List[int] = None) -> dict:
         """ Retrieves full dict representation for current box
 
