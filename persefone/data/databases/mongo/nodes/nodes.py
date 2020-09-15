@@ -1,5 +1,6 @@
 
 
+from enum import unique
 from persefone.utils.configurations import XConfiguration
 from mongoengine.errors import DoesNotExist
 from mongoengine.queryset.queryset import QuerySet
@@ -268,14 +269,17 @@ class MLink(Document):
 class MNode(Document):
     """ Node model """
 
-    name = StringField(required=True)
+    name = StringField(required=True, unique=True)
     node_type = StringField()
     data = FileField()
     metadata = DictField()
     meta = {
+        # 'indexes': [
+        #     '$name'  # text index,
+        # ]
         'indexes': [
-            '$name'  # text index,
-        ]
+            {'fields': ['name'], 'unique': True},
+        ],
     }
 
     @property
