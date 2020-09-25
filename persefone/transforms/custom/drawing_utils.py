@@ -92,15 +92,22 @@ class DrawingUtils:
         """
         min_x = min(p[0] for p in points)
         min_y = min(p[1] for p in points)
-        size = (max(p[0] for p in points) - min_x,
-                max(p[1] for p in points) - min_y)
+        size = (max(max(p[0] for p in points) - min_x, 1),
+                max(max(p[1] for p in points) - min_y, 1))
         points = tuple((p[1] - min_y, p[0] - min_x) for p in points)
         mask = np.zeros(size)
         pil_img = Image.fromarray(mask.astype('uint8'))
         draw = ImageDraw.Draw(pil_img)
         draw.polygon(points, fill=1, outline=1)
         mask = np.array(pil_img)
-        poly = np.stack([mask * color[i] for i in range(3)], axis=-1)
+        try:
+            poly = np.stack([mask * color[i] for i in range(3)], axis=-1)
+        except Exception as e:
+            print(type(mask), mask.shape, points, min_x, min_y, size)
+            import matplotlib.pyplot as plt
+            plt.imshow(mask)
+            plt.show()
+            raise ValueError from e
         return poly, mask
 
     @classmethod
