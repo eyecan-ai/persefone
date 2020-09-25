@@ -83,7 +83,11 @@ class TestBoundingBoxes(object):
                     for check in formats_checks:
                         print(check)
                         exported_label = bbox.export_label(fmt=check[0], ref_image_size=ref_image_size, box_type=box_type)
-                        assert np.all(np.isclose(exported_label[check[1]], bbox.plain_data(ref_image_size=ref_image_size, box_type=box_type)[check[2]]))
+                        assert np.all(
+                            np.isclose(
+                                exported_label[check[1]], bbox.plain_data(ref_image_size=ref_image_size, box_type=box_type)[check[2]]
+                            )
+                        )
 
             else:
                 with pytest.raises(Exception):

@@ -196,7 +196,6 @@ class DatasetsBucket(NodesBucket):
                 garbage.put(sample_node)
         garbage.put(dataset_node)
 
-        workers = []
         for w in range(num_workers):
             worker = Thread(target=destroyer, args=(garbage,), daemon=True)
             worker.start()

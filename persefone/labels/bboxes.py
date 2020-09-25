@@ -1,4 +1,3 @@
-from persefone.utils.colors.color import Color
 from persefone.utils.colors.palettes import MaterialPalette, Palette
 from PIL import ImageDraw, Image, ImageFont
 from enum import Enum, auto
@@ -218,7 +217,10 @@ class BoundingBoxWithLabelAndScore(BoundingBox):
     def __eq__(self, other):
         return np.all(np.isclose(self._data[: 5], other._data[: 5])) and int(self.label) == int(other.label)
 
-    def plain_data(self, ref_image_size: List[int] = None, box_type: BoundingBoxType = BoundingBoxType.PASCAL_VOC, with_score: bool = True) -> np.ndarray:
+    def plain_data(self,
+                   ref_image_size: List[int] = None,
+                   box_type: BoundingBoxType = BoundingBoxType.PASCAL_VOC,
+                   with_score: bool = True) -> np.ndarray:
         """ Retrieves plain array data
 
         :param ref_image_size: reference image size [w,h], defaults to None

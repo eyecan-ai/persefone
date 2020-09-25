@@ -71,7 +71,7 @@ class TestPandasDatabase(object):
 
     @classmethod
     def _check_different_database(cls, db1, db2):
-        assert db1 is not db2, f"Two databases are linked to the same instance!"
+        assert db1 is not db2, "Two databases are linked to the same instance!"
 
     @classmethod
     def _check_if_attrs_are_equal(cls, db1, db2):
@@ -163,7 +163,7 @@ class TestPandasDatabase(object):
                         TestPandasDatabase._check_if_attrs_are_equal(database, picked)
                         pick_item = picked.data.iloc[0][column]
                         source_item = TestPandasDatabase._generate_item(picks)[column]
-                        assert np.isclose(pick_item, source_item), f"Mismatch between DataFrame values and original "
+                        assert np.isclose(pick_item, source_item), "Mismatch between DataFrame values and original "
 
     def test_pandas_rows_iterator(self):
         """Checks for slices single value consistency """
@@ -220,7 +220,7 @@ class TestPandasDatabase(object):
                     for index in range(0, slice_size):
                         sum_target += slice_items.data.iloc[index][column]
                         sum_source += TestPandasDatabase._generate_item(index + r[0])[column]
-                    assert np.isclose(sum_target, sum_source), f"Mismatch between DataFrame values and original values on sliced pick."
+                    assert np.isclose(sum_target, sum_source), "Mismatch between DataFrame values and original values on sliced pick."
 
     def test_pandas_database_split_size(self):
         """Checks for split size consistency """
@@ -476,16 +476,16 @@ class TestPandasDatabase(object):
             assert database1.filter_rows_by_column_values('oddity', 0).size == half, f"evens items count must be {half}"
             TestPandasDatabase._check_different_database(database1, database1.filter_rows_by_column_values('oddity', 0))
             TestPandasDatabase._check_different_database(database1, database1.filter_rows_by_column_values('oddity', [0]))
-            assert database1.filter_rows_by_column_values('oddity', [0, 1]).size == fake_data_size, f"whole items count is wrong"
+            assert database1.filter_rows_by_column_values('oddity', [0, 1]).size == fake_data_size, "whole items count is wrong"
 
             # Counts items filtered by test column "HOWMANY_5". counting rows it 0 or 1 '5' present, or the opposite
             h5count = 6561 + 2916
             assert database1.filter_rows_by_column_values(
-                'howmany_5', [0, 1]).size == h5count, f"items with 0 or 1 '5' count is wrong!"
+                'howmany_5', [0, 1]).size == h5count, "items with 0 or 1 '5' count is wrong!"
             assert database1.filter_rows_by_column_values(
-                'howmany_5', [0, 1], negate=True).size == fake_data_size - h5count, f"items with more than 0 or 1 '5' count is wrong!"
+                'howmany_5', [0, 1], negate=True).size == fake_data_size - h5count, "items with more than 0 or 1 '5' count is wrong!"
             assert database1.filter_rows_by_column_values(
-                'howmany_5', [0, 1, 'aa', 11, -23]).size == h5count, f"items with 0 or 1 '5' count is wrong!"
+                'howmany_5', [0, 1, 'aa', 11, -23]).size == h5count, "items with 0 or 1 '5' count is wrong!"
 
             # Empty
             assert database1.filter_rows_by_column_values('howmany_5', [11]).size == 0, 'Database must be empty'

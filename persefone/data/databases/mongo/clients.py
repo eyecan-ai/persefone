@@ -27,7 +27,7 @@ class MongoDumper(object):
     @classmethod
     def dump_to_files(cls, database_name: str, output_folder: str):
         output_folder = Path(output_folder)
-        output_filename = output_folder / f'database_name.gz'
+        output_filename = output_folder / 'database_name.gz'
         cmd = f'mongodump --gzip --db={database_name} --archive={str(output_filename)}'
         subprocess.call(cmd.split(' '))
 

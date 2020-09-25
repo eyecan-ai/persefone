@@ -5,7 +5,13 @@ import yaml
 from persefone.data.databases.mongo.nodes.nodes import MLink, MNode
 from mongoengine.errors import DoesNotExist
 from persefone.data.databases.mongo.clients import MongoDatabaseClient
-from persefone.data.databases.mongo.nodes.buckets.datasets import DatasetsBucket, DatasetsBucketReader, DatasetsBucketSamplesListReader, DatasetsBucketSnapshot, DatasetsBucketSnapshotCFG
+from persefone.data.databases.mongo.nodes.buckets.datasets import (
+    DatasetsBucket,
+    DatasetsBucketReader,
+    DatasetsBucketSamplesListReader,
+    DatasetsBucketSnapshot,
+    DatasetsBucketSnapshotCFG
+)
 from persefone.utils.filesystem import tree_from_underscore_notation_files
 from persefone.utils.bytes import DataCoding
 import pytest
@@ -272,8 +278,8 @@ class TestDatasetsBucket(object):
 
         # Filtered Reader (EMPTY)
         queries = [
-            f'metadata.odd == True',
-            f'metadata.even = True',
+            'metadata.odd == True',
+            'metadata.even = True',
         ]
         reader = DatasetsBucketReader(
             datasets_bucket=bucket,
@@ -285,13 +291,13 @@ class TestDatasetsBucket(object):
 
         # Filtered Reader (1)
         queries = [
-            f'metadata.sample > 0',
-            f'metadata.sample >= 1',
-            f'metadata.sample < 5',
-            f'metadata.sample <= 4',
-            f'metadata.sample != 3',
-            f'metadata.sample in [2]',
-            f'metadata.sample not_in [22]',
+            'metadata.sample > 0',
+            'metadata.sample >= 1',
+            'metadata.sample < 5',
+            'metadata.sample <= 4',
+            'metadata.sample != 3',
+            'metadata.sample in [2]',
+            'metadata.sample not_in [22]',
         ]
         reader = DatasetsBucketReader(
             datasets_bucket=bucket,
@@ -303,7 +309,7 @@ class TestDatasetsBucket(object):
 
         # Filtered Reader (ORDERED 0 ... 10)
         queries = [
-            f'metadata.odd == True',
+            'metadata.odd == True',
         ]
         orders = ['+metadata.sample']
         reader = DatasetsBucketReader(
@@ -332,7 +338,7 @@ class TestDatasetsBucket(object):
 
         # Filtered Reader (1)
         queries = [
-            f'metadata.sample > 0',
+            'metadata.sample > 0',
         ]
         orders = ['+metadata.sample']
 
@@ -442,7 +448,6 @@ class TestDatasetsBucket(object):
         snapshot = DatasetsBucketSnapshot(bucket, cfg=cfg)
 
         outputs = snapshot.output_data
-        print("OUTPUTT"*100, outputs)
         assert 'good' not in outputs, "good key can't be there"
         assert 'bad' not in outputs, "bad key can't be there"
         assert 'x' in outputs, "x key is missing"

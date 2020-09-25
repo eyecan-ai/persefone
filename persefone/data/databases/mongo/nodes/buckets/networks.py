@@ -1,17 +1,8 @@
 
 
-from os import link
-
-import logging
-from persefone.data.databases.mongo.snapshots import SnapshotOperations
-from schema import Optional, Schema
-from persefone.utils.configurations import XConfiguration
-from persefone.utils.mongo.queries import MongoQueryParser
-from typing import List
-from persefone.data.databases.mongo.nodes.nodes import MLink, MNode, NodesBucket
+from persefone.data.databases.mongo.nodes.nodes import MNode, NodesBucket
 from mongoengine.errors import DoesNotExist
 from persefone.data.databases.mongo.clients import MongoDatabaseClientCFG
-from persefone.utils.bytes import DataCoding
 
 
 class NetworksBucket(NodesBucket):  # TODO: doc missing

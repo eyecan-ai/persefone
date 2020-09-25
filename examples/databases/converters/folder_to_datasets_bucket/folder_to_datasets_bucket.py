@@ -1,6 +1,5 @@
 from pathlib import Path
 from threading import Thread
-from typing import Tuple
 from persefone.utils.filesystem import tree_from_underscore_notation_files
 from persefone.data.databases.mongo.clients import MongoDatabaseClientCFG
 from persefone.data.databases.mongo.nodes.nodes import MNode
@@ -8,7 +7,6 @@ from persefone.data.databases.mongo.nodes.buckets.datasets import DatasetsBucket
 import click
 import yaml
 from tqdm import tqdm
-from mongoengine.errors import DoesNotExist
 from queue import Queue
 import time
 from progress.bar import ShadyBar
@@ -56,6 +54,7 @@ def folder_to_datasets_bucket(database_cfg, folder, new_dataset_name, overwrite)
                 metadata = yaml.safe_load(open(item_data['metadata'], 'r'))
 
             sample: MNode = bucket.new_sample(new_dataset_name, metadata=metadata, sample_id=sample_id)
+            assert sample is not None
 
             for item_name, filename in item_data.items():
                 if item_name != 'metadata':
@@ -72,7 +71,6 @@ def folder_to_datasets_bucket(database_cfg, folder, new_dataset_name, overwrite)
     # Loading BAR
     bar = ShadyBar('Inserting data', max=len(tree), suffix='%(percent).1f%% - %(remaining)ds')
 
-    workers = []
     for w in range(num_workers):
         worker = Thread(target=inserter, args=(samples_queue, bar,), daemon=True)
         worker.start()
