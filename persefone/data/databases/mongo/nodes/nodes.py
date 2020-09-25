@@ -268,14 +268,17 @@ class MLink(Document):
 class MNode(Document):
     """ Node model """
 
-    name = StringField(required=True)
+    name = StringField(required=True, unique=True)
     node_type = StringField()
     data = FileField()
     metadata = DictField()
     meta = {
+        # 'indexes': [
+        #     '$name'  # text index,
+        # ]
         'indexes': [
-            '$name'  # text index,
-        ]
+            {'fields': ['name'], 'unique': True},
+        ],
     }
 
     @property

@@ -15,7 +15,7 @@ def print_header(name):
 
 
 def print_footer():
-    print(f"==========================")
+    print("==========================")
 
 
 @click.group()
@@ -26,10 +26,7 @@ def cli(ctx, database_cfg):
     print(ctx.obj['bucket'])
 
 
-############## TRAINABLES #################
-###########################################
-###########################################
-###########################################
+# TRAINABLES
 
 @cli.group()
 @click.pass_context
@@ -74,11 +71,7 @@ def get_trainable(ctx, trainable_name):
     clear_context(ctx)
 
 
-############## MODELS #################
-###########################################
-###########################################
-###########################################
-
+# MODELS
 
 @cli.group()
 @click.pass_context
@@ -113,17 +106,14 @@ def new_model(ctx, trainable_name, model_name):
 
     try:
         model = bucket.new_model(trainable_name, model_name)
-        print(f"Model {trainable_name}/{model_name} created!")
+        print(f"Model {trainable_name}/{model.name} created!")
     except DoesNotExist:
         print(f"Trainable {trainable_name} not found!")
     except NameError:
         print(f"Model {trainable_name}/{model_name} exists!")
     clear_context(ctx)
 
-############## TASKS #################
-###########################################
-###########################################
-###########################################
+# TASKS
 
 
 @cli.group()
@@ -159,7 +149,7 @@ def new_task(ctx, trainable_name, task_name):
 
     try:
         task = bucket.new_task(trainable_name, task_name)
-        print(f"Task {trainable_name}/{task_name} created!")
+        print(f"Task {trainable_name}/{task.name} created!")
     except DoesNotExist:
         print(f"Trainable {trainable_name} not found!")
     except NameError:
@@ -167,10 +157,7 @@ def new_task(ctx, trainable_name, task_name):
     clear_context(ctx)
 
 
-############## UTILS #################
-###########################################
-###########################################
-###########################################
+# UTILS
 
 @cli.group()
 @click.pass_context
@@ -194,6 +181,7 @@ def draw_graph(ctx):
     base_edges = []
     trainable_nodes = []
     base = bucket.get_namespace_node()
+    print(base)
     for trainable in trainables:
         base_edges.append(('root', trainable.last_name))
         trainable_nodes.append(trainable.last_name)

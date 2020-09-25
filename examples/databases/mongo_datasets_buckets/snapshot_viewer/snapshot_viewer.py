@@ -1,5 +1,5 @@
 
-from persefone.data.databases.mongo.nodes.buckets.datasets import DatasetsBucket, DatasetsBucketReader, DatasetsBucketSnapshot, DatasetsBucketSnapshotCFG
+from persefone.data.databases.mongo.nodes.buckets.datasets import DatasetsBucket, DatasetsBucketSnapshot, DatasetsBucketSnapshotCFG
 from persefone.data.databases.mongo.clients import MongoDatabaseClientCFG
 import click
 import cv2

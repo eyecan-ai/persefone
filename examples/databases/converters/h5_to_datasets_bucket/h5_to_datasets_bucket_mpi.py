@@ -5,13 +5,13 @@ from persefone.data.databases.h5 import H5SimpleDatabase
 from persefone.data.databases.mongo.nodes.buckets.datasets import DatasetsBucket
 import numpy as np
 import click
-from tqdm import tqdm
 
 
 def process_keys(database_cfg, h5_file, new_dataset_name, job_id, keys, chunk_size):
 
     bucket = DatasetsBucket(client_cfg=MongoDatabaseClientCFG(filename=database_cfg))
     dataset = bucket.get_dataset(new_dataset_name)
+    print(dataset.name)
     db = H5SimpleDatabase(filename=h5_file)
 
     sample_id_counter = chunk_size * job_id
@@ -28,6 +28,7 @@ def process_keys(database_cfg, h5_file, new_dataset_name, job_id, keys, chunk_si
                 metadata[k] = v
 
             sample: MNode = bucket.new_sample(new_dataset_name, metadata=metadata, sample_id=str(sample_id_counter))
+            assert sample is not None
 
             if sample_id_counter % 100 == 0:
                 print("Job", job_id, f'{(internal_counter/chunk_size)*100:.2f}%')
@@ -55,6 +56,7 @@ def h5_to_datasets_bucket(database_cfg, h5_file, new_dataset_name, workers):
 
     bucket = DatasetsBucket(client_cfg=MongoDatabaseClientCFG(filename=database_cfg))
     dataset = bucket.new_dataset(new_dataset_name)
+    assert dataset is not None
     del bucket
 
     db = H5SimpleDatabase(filename=h5_file)

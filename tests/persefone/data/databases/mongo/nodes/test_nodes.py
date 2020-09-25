@@ -47,12 +47,16 @@ class TestNodesManagement(object):
             if not p.startswith(NodesPath.PATH_SEPARATOR):
                 np_with_start = NodesPath(f'{NodesPath.PATH_SEPARATOR}{p}')
             #     #print("Adding to ", p, np_with_start, np_with_start.valid, np_with_start.value)
-                assert np_with_start.valid is should_be, f"Node path {p} with added Separator should be {'valid' if should_be else 'invalid'}"
+                assert np_with_start.valid is should_be, (
+                    f"Node path {p} with added Separator should be {'valid' if should_be else 'invalid'}"
+                )
 
             if not p.endswith(NodesPath.PATH_SEPARATOR):
                 np_with_start = NodesPath(f'{p}{NodesPath.PATH_SEPARATOR}')
             #     #print("Adding to ", p, np_with_start, np_with_start.valid, np_with_start.value)
-                assert np_with_start.valid is should_be, f"Node path {p} with added Separator (end) should be {'valid' if should_be else 'invalid'}"
+                assert np_with_start.valid is should_be, (
+                    f"Node path {p} with added Separator (end) should be {'valid' if should_be else 'invalid'}"
+                )
 
             if np.valid:
                 assert not np.value.startswith(NodesPath.PATH_SEPARATOR), "No separator in front!"
@@ -91,7 +95,6 @@ class TestNodesManagement(object):
         n_nodes = 32
         nodes_even = []
         nodes_odd = []
-        node_type = 'xxx'
         for i in range(n_nodes):
             n = i * 2
 
@@ -198,7 +201,7 @@ class TestNodesManagement(object):
             node_o.link_to(node_o, link_type='self')
             nodes_odd.append(node_o)
 
-        whole_nodes = nodes_even + nodes_odd
+        # whole_nodes = nodes_even + nodes_odd
 
         for ne, no in itertools.product(nodes_even, nodes_odd):
             ne: MNode

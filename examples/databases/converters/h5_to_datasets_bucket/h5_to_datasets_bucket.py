@@ -29,6 +29,7 @@ def h5_to_datasets_bucket(database_cfg, h5_file, new_dataset_name):
                 metadata[k] = v
 
             sample: MNode = bucket.new_sample(new_dataset_name, metadata=metadata, sample_id=str(samples_counter))
+            assert sample is not None
 
             # print(dict(item.attrs))
             for h5_item_name, h5_data in h5_sample.items():
