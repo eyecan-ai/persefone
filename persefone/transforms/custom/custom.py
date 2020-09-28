@@ -27,6 +27,8 @@ class CustomTransformsFactory(AbstractFactory):
             params.get('max_rgb'),
             params.get('n_points'),
             params.get('perturbation_radius'),
+            params.get('min_pos'),
+            params.get('max_pos'),
             params.get('always_apply', False),
             params.get('p', 1)
         )
