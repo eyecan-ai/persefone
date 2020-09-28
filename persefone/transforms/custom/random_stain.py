@@ -114,25 +114,3 @@ class RandomStain(ImageOnlyTransform):
             'min_pos',
             'max_pos'
         )
-
-
-if __name__ == '__main__':
-    import torch
-    import numpy as np
-    from ae_playground.utils.tensor_utils import TensorUtils
-    import matplotlib.pyplot as plt
-
-    imgs = []
-    stain = RandomStain(
-        3, 8, 16, 64, 1, 2,
-        min_pos=(0, 20),
-        max_pos=(20, 40),
-        always_apply=True
-    )
-    for i in range(16):
-        img = stain(image=np.random.random((256, 256, 3)) + np.random.randint(0, 256, (3,)))['image']
-        imgs.append(np.transpose(img, (2, 0, 1)))
-    imgs = np.stack(imgs, axis=0)
-    imgs = torch.from_numpy(imgs)
-    plt.imshow(TensorUtils.to_numpy(TensorUtils.make_images(imgs)))
-    plt.show()
