@@ -27,7 +27,7 @@ class DrawingUtils:
         :type patch: np.ndarray
         :param patch_mask: patch mask
         :type patch_mask: np.ndarray
-        :param pos: upper left patch corner in img coords
+        :param pos: pos in img coords
         :type pos: Tuple[int, int]
         """
         size_x = max(0, min(img.shape[0], pos[0] + patch.shape[0]) - max(0, pos[0]))
