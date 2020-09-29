@@ -3,6 +3,7 @@ import math
 from math import sqrt
 import random
 from typing import Tuple
+from albumentations.augmentations.transforms import ToFloat
 
 import cv2
 import numpy as np
@@ -73,46 +74,63 @@ class RandomStain(ImageOnlyTransform):
         self.max_pos = max_pos
         self.displacement_radius = displacement_radius
 
+    # old_params: low_t = 10, high_t = 120, dilate = 5
+    def _saliency(self,
+                  image: np.ndarray,
+                  low_t: float = 15.,
+                  high_t: float = 50.,
+                  dilate: int = 5) -> np.ndarray:
+        gray = (cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) * 255).astype(np.uint8)
+        edges = cv2.Canny(gray, low_t, high_t)
+        kernel = np.ones((dilate, dilate), np.uint8)
+        edges = cv2.dilate(edges, kernel, iterations=1) / 255.
+        saliency = edges
+        return saliency
+
+    def _saliency_laplace(self,
+                          img: np.ndarray,
+                          smooth_kernel: int = 15,
+                          laplacian_kernel: int = 5,
+                          erode_kernel: int = 5):
+        img = img.copy()
+        if img.dtype != np.uint8:
+            img = (img * 255).astype(np.uint8)
+
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        gray = cv2.medianBlur(gray, ksize=smooth_kernel)
+        saliency = cv2.Laplacian(gray, cv2.CV_16S, ksize=laplacian_kernel)
+        saliency[saliency < 0.5] = 0
+        saliency = (saliency * 255.).astype(np.uint8)
+        saliency = cv2.erode(saliency, kernel=np.ones((erode_kernel, erode_kernel), np.uint8))
+        return (saliency / saliency.sum())
+
+    def _rand_pos(self, max_r: int, max_c: int, p: np.ndarray = None, disp: int = 0) -> Tuple[int, int]:
+        min_r = self.min_pos[0] if self.min_pos is not None else 0
+        max_r = self.max_pos[0] if self.max_pos is not None else max_r - 1
+        min_c = self.min_pos[1] if self.min_pos is not None else 0
+        max_c = self.max_pos[1] if self.max_pos is not None else max_c - 1
+        if p is None or p.sum() <= 0.:
+            r = random.randint(min_r, max_r)
+            c = random.randint(min_c, max_c)
+        else:
+            if p.sum() > 0.:
+                p = p / p.sum()
+            else:
+                p[::] = 1. / p.size
+            c = np.random.choice(np.arange(p.shape[1]), p=p.sum(0))
+            r = np.random.choice(np.arange(p.shape[0]), p=p[:, c] / p[:, c].sum())
+        r += random.randint(-disp // 2, disp // 2)
+        c += random.randint(-disp // 2, disp // 2)
+        r = min(max_r, r)
+        c = min(max_c, c)
+        r = max(min_r, r)
+        c = max(min_c, c)
+        return r, c
+
     def apply(self, image, **params):
-
-        def _saliency(image: np.ndarray) -> np.ndarray:
-            gray = (cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) * 255).astype(np.uint8)
-            edges = cv2.Canny(gray, 10, 120)
-            kernel = np.ones((5, 5), np.uint8)
-            edges = cv2.dilate(edges, kernel, iterations=1) / 255.
-            saliency = edges
-            # saliency = cv2.GaussianBlur(edges, (51, 51), 0)
-            if saliency.sum() > 0.:
-                saliency = saliency / saliency.sum()
-            else:
-                saliency[::] = 1. / saliency.size
-            return saliency
-
-        def _rand_pos(p: np.ndarray = None, disp: int = 0) -> Tuple[int, int]:
-            min_r = self.min_pos[0] if self.min_pos is not None else 0
-            max_r = self.max_pos[0] if self.max_pos is not None else out.shape[0] - 1
-            min_c = self.min_pos[1] if self.min_pos is not None else 0
-            max_c = self.max_pos[1] if self.max_pos is not None else out.shape[1] - 1
-            if p is None or p.sum() <= 0.:
-                r = random.randint(min_r, max_r)
-                c = random.randint(min_c, max_c)
-            else:
-                c = np.random.choice(np.arange(p.shape[1]), p=p.sum(0))
-                r = np.random.choice(np.arange(p.shape[0]), p=p[:, c] / p[:, c].sum())
-            r += random.randint(-disp // 2, disp // 2)
-            c += random.randint(-disp // 2, disp // 2)
-            r = min(max_r, r)
-            c = min(max_c, c)
-            r = max(min_r, r)
-            c = max(min_c, c)
-            return r, c
-
         out = copy.deepcopy(image)
         n_holes = random.randint(self.min_holes, self.max_holes)
-        saliency = _saliency(image)
-        # import matplotlib.pyplot as plt
-        # plt.imshow(saliency)
-        # plt.show()
+        saliency = self._saliency_laplace(image)
         for i in range(n_holes):
             size_a = random.randint(self.min_size, self.max_size)
             eccentricity = random.uniform(self.min_eccentricity, self.max_eccentricity)
@@ -140,13 +158,13 @@ class RandomStain(ImageOnlyTransform):
             if self.min_rgb is not None and self.max_rgb is not None:
                 color = tuple(random.uniform(self.min_rgb[i], self.max_rgb[i]) for i in range(3))
             else:
-                pick = _rand_pos(saliency, disp)
+                pick = self._rand_pos(out.shape[0], out.shape[1], saliency, disp)
                 color = image[pick[0], pick[1]]
                 color = tuple(color.reshape(color.size))
 
             # Create patch
             corr, corr_mask = DrawingUtils.polygon(points, color)
-            pos = _rand_pos(saliency, disp)
+            pos = self._rand_pos(out.shape[0], out.shape[1], saliency, disp)
             pos = tuple(pos[i] - corr.shape[i] // 2 for i in range(2))
 
             # Apply patch
@@ -174,17 +192,44 @@ class RandomStain(ImageOnlyTransform):
         import torch
         from PIL import Image
         from ae_playground.utils.tensor_utils import TensorUtils
+        from albumentations import Resize
         import matplotlib.pyplot as plt
 
         imgs = []
-        for i in range(16):
-            img = Image.open('/home/luca/ae_playground_data/mvtec/wood/train/good/006.png')
-            img = np.array(img).astype('uint8')
-            if len(img.shape) == 2:
-                img = np.stack([img] * 3, axis=2)
-            img = self(image=img)['image']
-            imgs.append(np.transpose(img, (2, 0, 1)))
+        categories = [
+            'bottle',
+            'cable',
+            'capsule',
+            # 'carpet',
+            'grid',
+            'hazelnut',
+            # 'leather',
+            'metal_nut',
+            'pill',
+            'screw',
+            # 'tile',
+            'toothbrush',
+            'transistor',
+            # 'wood',
+            'zipper'
+        ]
+        for i in range(0, 10):
+            for cat in categories:
+                img = Image.open(f'/home/luca/ae_playground_data/mvtec/{cat}/train/good/00{i}.png')
+                img = np.array(img).astype('uint8')
+                if len(img.shape) == 2:
+                    img = np.stack([img] * 3, axis=2)
+                img = self(image=img)['image']
+                # img = self._saliency_laplace(img).astype('float32')
+                img = img / img.max()
+                img = Resize(1024, 1024)(image=img)['image']
+                if img.dtype == 'uint8':
+                    img = ToFloat()(image=img)['image']
+                if len(img.shape) == 2:
+                    img = np.stack([img] * 3, axis=2)
+                img = np.transpose(img, (2, 0, 1))
+                imgs.append(img)
         imgs = np.stack(imgs, axis=0)
-        imgs = torch.from_numpy(imgs.astype('float32') / 255.)
+        imgs = torch.from_numpy(imgs)
         plt.imshow(TensorUtils.to_numpy(TensorUtils.make_images(imgs)))
         plt.show()
