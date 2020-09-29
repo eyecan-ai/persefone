@@ -8,7 +8,7 @@ import numpy as np
 class BoundingBoxType(Enum):
     """ FOrmats
 
-    PASCAL_VOC          ->      [x_min, y_min, x_max, y_max]
+    PASCAL_VOC          ->      [x_min, y_min, x_max, y_max] *** DEFAULT STORED FORMAT ***
     ALBUMENTATIONS      ->      [x_min, y_min, x_max, y_max](normalized)
     COCO                ->      [x_min, y_min, width, height]
     YOLO                ->      [x_center, y_center, width, height](normalized)
@@ -36,6 +36,19 @@ class BoundingBox(object):
     @property
     def valid(self):
         return np.all(self._data >= 0)
+
+    def in_bound(self, ref_image_size: List[int]) -> bool:
+        """ Checks for coordinates inside reference image
+
+        :param ref_image_size: reference image size [w,h]
+        :type ref_image_size: List[int]
+        :return: TRUE if bbox is in bounds
+        :rtype: bool
+        """
+
+        if self.valid:
+            return self._data[2] < ref_image_size[0] and self._data[3] < ref_image_size[1]
+        return False
 
     def as_dict(self, ref_image_size: List[int] = None) -> dict:
         """ Retrieves full dict representation for current box

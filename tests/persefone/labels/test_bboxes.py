@@ -14,8 +14,10 @@ class TestBoundingBoxes(object):
             [True, 100, 100, 200, 200],
             [True, -100, -100, -50, -50],
             [True, -100, -100, 300, 300],
+            [True, 100, 100, 3000, 300],
+            [True, 100, 100, 300, 3000],
             [False, -100, -100, 300],
-            [False, -100, -100, 300, 2, 3, 4]
+            [False, -100, -100, 300, 2, 3, 4],
         ]
 
     @pytest.fixture
@@ -47,6 +49,9 @@ class TestBoundingBoxes(object):
                     bbox_d = BoundingBox.from_dict(bbox_r.as_dict(ref_image_size=ref_image_size))
                     assert bbox_d == bbox
 
+                if bbox.plain_data()[2] > ref_image_size[0] or bbox.plain_data()[3] > ref_image_size[1]:
+                    assert not bbox.in_bound(ref_image_size=ref_image_size)
+
             else:
                 with pytest.raises(Exception):
                     bbox = BoundingBox(data)
@@ -58,7 +63,7 @@ class TestBoundingBoxes(object):
 
             valid, data = sample[0], sample[1:]
             if valid:
-                print("DATA", data)
+                # print("DATA", data)
                 bbox = BoundingBoxWithLabelAndScore(data)
 
                 for box_type in BoundingBoxType:
