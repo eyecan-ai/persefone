@@ -102,7 +102,7 @@ class RandomStain(ImageOnlyTransform):
         saliency[saliency < 0.5] = 0
         saliency = (saliency * 255.).astype(np.uint8)
         saliency = cv2.erode(saliency, kernel=np.ones((erode_kernel, erode_kernel), np.uint8))
-        return (saliency / saliency.sum())
+        return saliency / 255.
 
     def _rand_pos(self, max_r: int, max_c: int, p: np.ndarray = None, disp: int = 0) -> Tuple[int, int]:
         min_r = self.min_pos[0] if self.min_pos is not None else 0
