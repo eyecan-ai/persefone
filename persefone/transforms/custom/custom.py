@@ -29,6 +29,7 @@ class CustomTransformsFactory(AbstractFactory):
             params.get('perturbation_radius'),
             params.get('min_pos'),
             params.get('max_pos'),
+            params.get('displacement_radius'),
             params.get('always_apply', False),
             params.get('p', 1)
         )

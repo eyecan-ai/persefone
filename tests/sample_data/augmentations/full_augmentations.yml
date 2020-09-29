@@ -96,5 +96,6 @@ transforms:
                   max_rgb: [1.0, 1.0, 1.0]
                   n_points: 20
                   perturbation_radius: 10
+                  displacement_radius: -10
                   always_apply: true
                   p: 0.5
