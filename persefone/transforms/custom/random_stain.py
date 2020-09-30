@@ -1,14 +1,13 @@
 import copy
 import math
-from math import sqrt
 import random
+from math import sqrt
 from typing import Tuple, Union
-from albumentations.augmentations.transforms import Rotate
 
 import cv2
 import numpy as np
 from albumentations.core.transforms_interface import ImageOnlyTransform
-from albumentations import GaussNoise, ToFloat
+from albumentations import GaussNoise, ToFloat, Rotate
 
 from persefone.transforms.custom.drawing_utils import DrawingUtils
 
@@ -180,7 +179,7 @@ class RandomStain(ImageOnlyTransform):
             max_c = self.max_pos[1] if self.max_pos is not None else out.shape[1] - 1
 
             # Compute RGB
-            if self.fill_mode == 'fill':
+            if self.fill_mode == 'solid':
                 colors = _pick_a_color()
             elif self.fill_mode == 'gradient':
                 if self.min_rgb is not None and self.max_rgb is not None:
@@ -196,14 +195,14 @@ class RandomStain(ImageOnlyTransform):
                 colors = image_copy[ul[0]: lr[0], ul[1]: lr[1], :]
                 colors = Rotate(limit=360, p=1)(image=colors)['image']
             else:
-                colors = np.zeros(16, 16, 3)
+                colors = np.zeros((16, 16, 3))
 
             # Create patch
             corr, corr_mask = DrawingUtils.polygon(points, colors)
             pos = self._rand_pos(min_r, max_r, min_c, max_c, saliency, disp)
             pos = tuple(pos[i] - corr.shape[i] // 2 for i in range(2))
 
-            # Add noise to gradient
+            # Add noise to patch
             corr = GaussNoise(var_limit=(4, 6), p=1.)(image=corr)['image']
 
             # Apply patch
