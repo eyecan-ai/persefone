@@ -3,6 +3,7 @@ import random
 from typing import Iterable, Tuple, Sequence, Union
 
 from PIL import Image, ImageDraw
+from albumentations.augmentations.transforms import Resize
 import numpy as np
 from scipy.interpolate import interp1d
 from skimage.draw import ellipse_perimeter
@@ -80,7 +81,7 @@ class DrawingUtils:
     @classmethod
     def polygon(cls,
                 points: Sequence[Tuple[int, int]],
-                color: Union[Tuple[int, int, int], Tuple[Tuple[int, int, int]]]
+                color: Union[Tuple[int, int, int], Tuple[Tuple[int, int, int]], np.ndarray]
                 ) -> Tuple[np.ndarray, np.ndarray]:
         """Draws a filled polygon on a numpy array
 
@@ -102,7 +103,12 @@ class DrawingUtils:
         draw.polygon(points, fill=1, outline=1)
         mask = np.array(pil_img)
 
-        if isinstance(color[0], Sequence) and len(color) == 4:
+        if isinstance(color, np.ndarray):
+            if len(color.shape) == 2:
+                color = np.stack([color] * 3, axis=-1)
+            color = Resize(*mask.shape)(image=color)['image']
+            poly = mask.reshape(*mask.shape, 1) * color
+        elif isinstance(color[0], Sequence) and len(color) == 4:
             color = cls.gradient(mask.shape, *color)
             poly = mask.reshape(*mask.shape, 1) * color
         else:

@@ -2,7 +2,8 @@ import copy
 import math
 from math import sqrt
 import random
-from typing import Tuple
+from typing import Tuple, Union
+from albumentations.augmentations.transforms import Rotate
 
 import cv2
 import numpy as np
@@ -27,9 +28,11 @@ class RandomStain(ImageOnlyTransform):
     :type min_eccentricity: float
     :param max_eccentricity: maximum eccentricity
     :type max_eccentricity: float
-    :param min_rgb: minimum rgb value, default None
+    :param fill_mode: 'solid', 'gradient', 'crop'
+    :type fill_mode: str
+    :param min_rgb: minimum rgb value, ignored if fill_mode is 'crop', default None
     :type min_rgb: Tuple[int, int, int]
-    :param max_rgb: maximum rgb value, default None
+    :param max_rgb: maximum rgb value, ignored if fill_mode is 'crop', default None
     :type max_rgb: Tuple[int, int, int]
     :param n_points: number of points per stain, default 20
     :type n_points: int
@@ -42,6 +45,8 @@ class RandomStain(ImageOnlyTransform):
     :param displacement_radius: maximum stain displacement radius,
     if negative, the radius is computed as sqrt(image_size) / -displacement_radius, default -10
     :type max_pos: Tuple[int, int]
+    :param noise: max gaussian noise sigma if single float, min and max sigma if tuple of two floats
+    :type noise: Union[float, Tuple[float, float]]
     """
 
     def __init__(self,
@@ -51,6 +56,7 @@ class RandomStain(ImageOnlyTransform):
                  max_size: int,
                  min_eccentricity: float,
                  max_eccentricity: float,
+                 fill_mode: str = 'gradient',
                  min_rgb: Tuple[int, int, int] = None,
                  max_rgb: Tuple[int, int, int] = None,
                  n_points: int = 20,
@@ -58,6 +64,7 @@ class RandomStain(ImageOnlyTransform):
                  min_pos: Tuple[int, int] = None,
                  max_pos: Tuple[int, int] = None,
                  displacement_radius: int = -10,
+                 noise: Union[float, Tuple[float, float]] = (4, 6),
                  always_apply=False, p=1.0) -> None:
         super(RandomStain, self).__init__(always_apply, p)
         self.min_holes = min_holes
@@ -66,6 +73,7 @@ class RandomStain(ImageOnlyTransform):
         self.max_size = max_size
         self.min_eccentricity = min_eccentricity
         self.max_eccentricity = max_eccentricity
+        self.fill_mode = fill_mode
         self.min_rgb = min_rgb
         self.max_rgb = max_rgb
         self.n_points = n_points
@@ -73,6 +81,7 @@ class RandomStain(ImageOnlyTransform):
         self.min_pos = min_pos
         self.max_pos = max_pos
         self.displacement_radius = displacement_radius
+        self.noise = noise
 
     # old_params: low_t = 10, high_t = 120, dilate = 5
     def _saliency(self,
@@ -127,9 +136,20 @@ class RandomStain(ImageOnlyTransform):
         return r, c
 
     def apply(self, image, **params):
+
         out = copy.deepcopy(image)
         n_holes = random.randint(self.min_holes, self.max_holes)
         saliency = self._saliency_laplace(image)
+        image_copy = np.copy(image)
+
+        def _pick_a_color():
+            if self.min_rgb is not None and self.max_rgb is not None:
+                color = tuple(random.uniform(self.min_rgb[i], self.max_rgb[i]) for i in range(3))
+            else:
+                pos = self._rand_pos(min_r, max_r, min_c, max_c, saliency, disp)
+                color = tuple(image[pos[0], pos[1]].reshape(3,))
+            return color
+
         for i in range(n_holes):
             size_a = random.randint(self.min_size, self.max_size)
             eccentricity = random.uniform(self.min_eccentricity, self.max_eccentricity)
@@ -160,16 +180,23 @@ class RandomStain(ImageOnlyTransform):
             max_c = self.max_pos[1] if self.max_pos is not None else out.shape[1] - 1
 
             # Compute RGB
-            if self.min_rgb is not None and self.max_rgb is not None:
-                colors = tuple(random.uniform(self.min_rgb[i], self.max_rgb[i]) for i in range(3))
+            if self.fill_mode == 'fill':
+                colors = _pick_a_color()
+            elif self.fill_mode == 'gradient':
+                if self.min_rgb is not None and self.max_rgb is not None:
+                    colors = tuple(random)
+                else:
+                    colors = tuple(_pick_a_color() for _ in range(4))
+            elif self.fill_mode == 'crop':
+                crop_r = random.randint(self.min_size, self.max_size) // 2
+                crop_c = random.randint(self.min_size, self.max_size) // 2
+                pos = self._rand_pos(min_r, max_r, min_c, max_c, saliency, disp)
+                ul = (max(min_r, pos[0] - crop_r), max(min_c, pos[1] - crop_c))
+                lr = (min(max_r, pos[0] + crop_r), min(max_c, pos[1] + crop_c))
+                colors = image_copy[ul[0]: lr[0], ul[1]: lr[1], :]
+                colors = Rotate(limit=360, p=1)(image=colors)['image']
             else:
-                # center_pos = self._rand_pos(min_r, max_r, min_c, max_c, saliency, disp)
-                # p = np.zeros_like(saliency)
-                # r = int(disp) // 2
-                # p[center_pos[0] - r: center_pos[0] + r, center_pos[1] - r: center_pos[1] + r] = 1.
-                pos_list = [self._rand_pos(min_r, max_r, min_c, max_c, saliency, disp) for _ in range(4)]
-                colors = tuple(image[pos[0], pos[1]] for pos in pos_list)
-                colors = tuple(tuple(color.reshape(color.size)) for color in colors)
+                colors = np.zeros(16, 16, 3)
 
             # Create patch
             corr, corr_mask = DrawingUtils.polygon(points, colors)
@@ -191,13 +218,15 @@ class RandomStain(ImageOnlyTransform):
             'max_size',
             'min_eccentricity',
             'max_eccentricity',
+            'fill_mode',
             'min_rgb',
             'max_rgb',
             'n_points',
             'perturbation_radius',
             'min_pos',
             'max_pos',
-            'displacement_radius'
+            'displacement_radius',
+            'noise'
         )
 
     def debug(self):
