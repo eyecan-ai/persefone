@@ -92,9 +92,12 @@ transforms:
                   max_size: 32
                   min_eccentricity: 1
                   max_eccentricity: 3
+                  fill_mode: solid
                   min_rgb: [0.5, 0.5, 0.5]
                   max_rgb: [1.0, 1.0, 1.0]
                   n_points: 20
                   perturbation_radius: 10
+                  displacement_radius: -10
+                  noise: 10
                   always_apply: true
                   p: 0.5
