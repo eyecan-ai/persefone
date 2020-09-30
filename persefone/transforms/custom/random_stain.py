@@ -3,11 +3,11 @@ import math
 from math import sqrt
 import random
 from typing import Tuple
-from albumentations.augmentations.transforms import ToFloat
 
 import cv2
 import numpy as np
 from albumentations.core.transforms_interface import ImageOnlyTransform
+from albumentations import GaussNoise, ToFloat
 
 from persefone.transforms.custom.drawing_utils import DrawingUtils
 
@@ -104,11 +104,10 @@ class RandomStain(ImageOnlyTransform):
         saliency = cv2.erode(saliency, kernel=np.ones((erode_kernel, erode_kernel), np.uint8))
         return saliency / 255.
 
-    def _rand_pos(self, max_r: int, max_c: int, p: np.ndarray = None, disp: int = 0) -> Tuple[int, int]:
-        min_r = self.min_pos[0] if self.min_pos is not None else 0
-        max_r = self.max_pos[0] if self.max_pos is not None else max_r - 1
-        min_c = self.min_pos[1] if self.min_pos is not None else 0
-        max_c = self.max_pos[1] if self.max_pos is not None else max_c - 1
+    def _rand_pos(self,
+                  min_r: int, max_r: int, min_c: int, max_c: int,
+                  p: np.ndarray = None,
+                  disp: int = 0) -> Tuple[int, int]:
         if p is None or p.sum() <= 0.:
             r = random.randint(min_r, max_r)
             c = random.randint(min_c, max_c)
@@ -154,18 +153,31 @@ class RandomStain(ImageOnlyTransform):
                 size = image.shape[0] * image.shape[1]
                 disp = sqrt(size) / -self.displacement_radius
 
+            # Position bounds
+            min_r = self.min_pos[0] if self.min_pos is not None else 0
+            max_r = self.max_pos[0] if self.max_pos is not None else out.shape[0] - 1
+            min_c = self.min_pos[1] if self.min_pos is not None else 0
+            max_c = self.max_pos[1] if self.max_pos is not None else out.shape[1] - 1
+
             # Compute RGB
             if self.min_rgb is not None and self.max_rgb is not None:
-                color = tuple(random.uniform(self.min_rgb[i], self.max_rgb[i]) for i in range(3))
+                colors = tuple(random.uniform(self.min_rgb[i], self.max_rgb[i]) for i in range(3))
             else:
-                pick = self._rand_pos(out.shape[0], out.shape[1], saliency, disp)
-                color = image[pick[0], pick[1]]
-                color = tuple(color.reshape(color.size))
+                # center_pos = self._rand_pos(min_r, max_r, min_c, max_c, saliency, disp)
+                # p = np.zeros_like(saliency)
+                # r = int(disp) // 2
+                # p[center_pos[0] - r: center_pos[0] + r, center_pos[1] - r: center_pos[1] + r] = 1.
+                pos_list = [self._rand_pos(min_r, max_r, min_c, max_c, saliency, disp) for _ in range(4)]
+                colors = tuple(image[pos[0], pos[1]] for pos in pos_list)
+                colors = tuple(tuple(color.reshape(color.size)) for color in colors)
 
             # Create patch
-            corr, corr_mask = DrawingUtils.polygon(points, color)
-            pos = self._rand_pos(out.shape[0], out.shape[1], saliency, disp)
+            corr, corr_mask = DrawingUtils.polygon(points, colors)
+            pos = self._rand_pos(min_r, max_r, min_c, max_c, saliency, disp)
             pos = tuple(pos[i] - corr.shape[i] // 2 for i in range(2))
+
+            # Add noise to gradient
+            corr = GaussNoise(var_limit=(4, 6), p=1.)(image=corr)['image']
 
             # Apply patch
             DrawingUtils.apply_patch(out, None, corr, corr_mask, pos)
@@ -213,7 +225,7 @@ class RandomStain(ImageOnlyTransform):
             # 'wood',
             'zipper'
         ]
-        for i in range(0, 10):
+        for i in range(0, 1):
             for cat in categories:
                 img = Image.open(f'/home/luca/ae_playground_data/mvtec/{cat}/train/good/00{i}.png')
                 img = np.array(img).astype('uint8')

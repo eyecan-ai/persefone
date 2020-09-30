@@ -1,6 +1,6 @@
 import math
 import random
-from typing import Iterable, Tuple, Sequence
+from typing import Iterable, Tuple, Sequence, Union
 
 from PIL import Image, ImageDraw
 import numpy as np
@@ -80,13 +80,14 @@ class DrawingUtils:
     @classmethod
     def polygon(cls,
                 points: Sequence[Tuple[int, int]],
-                color: Tuple[int, int, int]) -> Tuple[np.ndarray, np.ndarray]:
+                color: Union[Tuple[int, int, int], Tuple[Tuple[int, int, int]]]
+                ) -> Tuple[np.ndarray, np.ndarray]:
         """Draws a filled polygon on a numpy array
 
         :param points: vertex sequence
         :type points: Sequence[Tuple[int, int]]
-        :param color: fill color
-        :type color: Tuple[int, int, int]
+        :param color: fill color, if tuple of 4 colors, a gradient is computed
+        :type color: Union[Tuple[int, int, int], Tuple[Tuple[int, int, int]]]
         :return: image tensor and mask
         :rtype: Tuple[np.ndarray, np.ndarray]
         """
@@ -100,15 +101,49 @@ class DrawingUtils:
         draw = ImageDraw.Draw(pil_img)
         draw.polygon(points, fill=1, outline=1)
         mask = np.array(pil_img)
-        try:
+
+        if isinstance(color[0], Sequence) and len(color) == 4:
+            color = cls.gradient(mask.shape, *color)
+            poly = mask.reshape(*mask.shape, 1) * color
+        else:
+            if isinstance(color[0], Sequence):
+                color = color[0]
             poly = np.stack([mask * color[i] for i in range(3)], axis=-1)
-        except Exception as e:
-            print(type(mask), mask.shape, points, min_x, min_y, size)
-            import matplotlib.pyplot as plt
-            plt.imshow(mask)
-            plt.show()
-            raise ValueError from e
+
         return poly, mask
+
+    @classmethod
+    def gradient(cls,
+                 size: Tuple[int, int],
+                 ul: Tuple[int, int, int],
+                 ur: Tuple[int, int, int],
+                 ll: Tuple[int, int, int],
+                 lr: Tuple[int, int, int]) -> np.ndarray:
+        """Makes a rectangular color gradient from 4 vertex colors
+
+        :param size: output rows, columns
+        :type size: Tuple[int, int]
+        :param ul: upper left color
+        :type ul: Tuple[int, int, int]
+        :param ur: upper right color
+        :type ur: Tuple[int, int, int]
+        :param ll: lower left color
+        :type ll: Tuple[int, int, int]
+        :param lr: lower right color
+        :type lr: Tuple[int, int, int]
+        :return: gradient image, (H, W, C)
+        :rtype: np.ndarray
+        """
+        alpha = np.linspace(0., 1., size[1])
+        U = np.outer(1. - alpha, ul) + np.outer(alpha, ur)
+        L = np.outer(1. - alpha, ll) + np.outer(alpha, lr)
+        alpha = np.linspace(0., 1., size[0])
+        alpha = np.outer(alpha, np.ones((size[1],)))
+        alpha = np.stack([alpha] * 3, axis=2)
+        U = U.reshape(1, *U.shape)
+        L = L.reshape(1, *L.shape)
+        grad = U * (1. - alpha) + L * alpha
+        return grad.astype('uint8')
 
     @classmethod
     def interpolate(cls, points: Sequence[Tuple[int, int]], samples: int, overlap: int = 3) -> Sequence[Tuple[int, int]]:
