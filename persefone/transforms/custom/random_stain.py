@@ -203,7 +203,7 @@ class RandomStain(ImageOnlyTransform):
             pos = tuple(pos[i] - corr.shape[i] // 2 for i in range(2))
 
             # Add noise to patch
-            corr = GaussNoise(var_limit=(4, 6), p=1.)(image=corr)['image']
+            corr = GaussNoise(var_limit=self.noise, p=1.)(image=corr)['image']
 
             # Apply patch
             DrawingUtils.apply_patch(out, None, corr, corr_mask, pos)
