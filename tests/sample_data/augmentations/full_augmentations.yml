@@ -85,6 +85,14 @@ transforms:
                   fill_value: 10
                   always_apply: True
                   p: 0.8
+        - aug.pad_if_needed:
+                  min_height: 1000
+                  min_widht: 1000
+                  border_mode: "replicate"
+                  value: [0, 0, 0]
+                  mask_value: 0
+                  always_apply: True
+                  p: 0.8
         - custom.random_stain:
                   min_holes: 4
                   max_holes: 15

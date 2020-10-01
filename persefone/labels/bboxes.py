@@ -47,7 +47,7 @@ class BoundingBox(object):
         """
 
         if self.valid:
-            return self._data[2] < ref_image_size[0] and self._data[3] < ref_image_size[1]
+            return self._data[2] < ref_image_size[0] - 1 and self._data[3] < ref_image_size[1] - 1
         return False
 
     def as_dict(self, ref_image_size: List[int] = None) -> dict:
