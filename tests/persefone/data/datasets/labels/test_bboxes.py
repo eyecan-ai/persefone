@@ -29,7 +29,7 @@ class TestGeometricLabels(object):
             },
             {
                 'fmt': 'c' + FieldsOptions.get_format(FieldsOptions.FORMAT_YOLO),
-                'data': [3, 0.34, 0.45, 0.23, 0.24]
+                'data': [3, 0.34, 0.15, 0.23, 0.14]
             },
             {
                 'fmt': 'c' + FieldsOptions.get_format(FieldsOptions.FORMAT_ALBUMENTATIONS),
@@ -37,19 +37,32 @@ class TestGeometricLabels(object):
             }
         ]
 
-    def test_bboxes(self, sample_data, sample_formats):
+    @pytest.fixture
+    def sample_sizes(self):
+        return [
+            [1000, 1000],
+            [100, 100],
+            [345, 212],
+            [111, 500],
+        ]
 
-        ref_image_size = [1000, 1000]
+    def test_bboxes(self, sample_data, sample_formats, sample_sizes):
 
-        for sample in sample_data:
+        for ref_image_size in sample_sizes:
 
-            label = BoundingBoxLabel(data=sample['data'], fmt=sample['fmt'], image_size=ref_image_size)
-            original_athoms = label.athoms()
+            for sample in sample_data:
 
-            for fmt in sample_formats:
-                print(sample['fmt'], fmt, sample['data'])
-                relabel = BoundingBoxLabel(data=label.plain_data(fmt), fmt=fmt, image_size=ref_image_size)
-                reathoms = relabel.athoms()
+                label = BoundingBoxLabel(data=sample['data'], fmt=sample['fmt'], image_size=ref_image_size)
+                print("#"*20, sample['fmt'])
+                print(sample['data'])
+                print(label.plain_data(fmt=sample['fmt']))
+                assert np.all(np.isclose(sample['data'], label.plain_data(fmt=sample['fmt']), rtol=0.01))
+                original_athoms = label.athoms()
 
-                for f, v in original_athoms.items():
-                    assert np.isclose(original_athoms[f], reathoms[f]), f
+                for fmt in sample_formats:
+                    print(sample['fmt'], fmt, sample['data'])
+                    relabel = BoundingBoxLabel(data=label.plain_data(fmt), fmt=fmt, image_size=ref_image_size)
+                    reathoms = relabel.athoms()
+
+                    for f, v in original_athoms.items():
+                        assert np.isclose(original_athoms[f], reathoms[f], rtol=0.01), f

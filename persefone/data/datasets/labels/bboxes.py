@@ -120,6 +120,18 @@ class BoundingBoxLabel(object):
         self._fmt = fmt
         self._data = data
 
+    def in_bound(self) -> bool:
+        """ Checks for coordinates inside reference image
+
+        :return: TRUE if bbox is in bounds
+        :rtype: bool
+        """
+
+        athoms = self.athoms()
+        if athoms['L'] > 0 and athoms['T'] > 0:
+            return athoms['R'] < self._image_size[0] - 1 and athoms['B'] < self._image_size[1] - 1
+        return False
+
     def athoms(self) -> dict:
         """ Outputs whole fields representation as dict
 
@@ -165,7 +177,7 @@ class BoundingBoxLabel(object):
         # [x_center, y_center, width, height](normalized)
         elif self._scheleton.contains_format(FieldsOptions.FORMAT_YOLO):
             x_center = self._scheleton.get('u') * width
-            y_center = self._scheleton.get('v') * width
+            y_center = self._scheleton.get('v') * height
             w = self._scheleton.get('w') * width
             h = self._scheleton.get('h') * height
             x_min = x_center - w // 2
