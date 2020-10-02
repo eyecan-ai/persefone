@@ -1,7 +1,9 @@
 
 
-from typing import Any, List
+from persefone.utils.colors.palettes import MaterialPalette, Palette
+from typing import Any, List, Union
 import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 
 
 class FieldsOptions(object):
@@ -32,6 +34,7 @@ class FieldsOptions(object):
 
     FORMAT_PASCAL_VOC = 'PASCAL_VOC'
     FORMAT_YOLO = 'YOLO'
+    FORMAT_YOLO_PX = 'YOLO_PX'
     FORMAT_COCO = 'COCO'
     FORMAT_ALBUMENTATIONS = 'ALBUMENTATIONS'
 
@@ -39,6 +42,7 @@ class FieldsOptions(object):
         FORMAT_PASCAL_VOC: 'LTRB',  # [x_min, y_min, x_max, y_max]
         FORMAT_COCO: 'LTWH',  # [x_min, y_min, width, height]
         FORMAT_YOLO: 'uvwh',  # x_center, y_center, width, height](normalized)
+        FORMAT_YOLO_PX: 'UVWH',  # x_center, y_center, width, height]
         FORMAT_ALBUMENTATIONS: 'ltrb'  # [x_min, y_min, x_max, y_max](normalized)
     }
 
@@ -120,6 +124,14 @@ class BoundingBoxLabel(object):
         self._fmt = fmt
         self._data = data
 
+    @property
+    def label(self):
+        return int(self._label)
+
+    @property
+    def score(self):
+        return self._score
+
     def in_bound(self) -> bool:
         """ Checks for coordinates inside reference image
 
@@ -185,6 +197,17 @@ class BoundingBoxLabel(object):
             x_max = x_min + w
             y_max = y_min + h
 
+        # [x_center, y_center, width, height](normalized)
+        elif self._scheleton.contains_format(FieldsOptions.FORMAT_YOLO_PX):
+            x_center = self._scheleton.get('U')
+            y_center = self._scheleton.get('V')
+            w = self._scheleton.get('W')
+            h = self._scheleton.get('H')
+            x_min = x_center - w // 2
+            y_min = y_center - h // 2
+            x_max = x_min + w
+            y_max = y_min + h
+
         return {
             'l': x_min / width,
             'L': x_min,
@@ -219,4 +242,127 @@ class BoundingBoxLabel(object):
             fmt = 'c' + FieldsOptions.get_format(FieldsOptions.FORMAT_PASCAL_VOC)
 
         athoms = self.athoms()
-        return [athoms[x] for x in fmt]
+        return np.array([athoms[x] for x in fmt])
+
+
+class BoundingBoxLabelDrawerParameters(object):
+    """ BOunding box drawer common parameters
+    """
+
+    def __init__(self):
+        self.font_size = 12
+        self.font_name = "Pillow/Tests/fonts/FreeMono.ttf"
+        self.label_size = [80, 20]
+        self.default_foreground = (0, 0, 0)
+        self.default_background = (255, 255, 255)
+
+
+class BoundingBoxLabelDrawer(object):
+
+    def __init__(self, palette: Palette = None, labels_map: dict = None):
+        """ Creates a Bounding Box drawer
+
+        :param palette: color palette, defaults to None
+        :type palette: Palette, optional
+        :param labels_map: labels map used for label2name conversion, defaults to None
+        :type labels_map: dict, optional
+        """
+
+        self._palette: Palette = palette if palette is not None else MaterialPalette()
+        self._labels_map = labels_map if labels_map is not None else {}
+
+    def draw_label(self,
+                   image: Union[np.ndarray, Image.Image],
+                   text: str,
+                   pos: List[int],
+                   background: List[int] = None,
+                   foreground: List[int] = None,
+                   label_parameters: BoundingBoxLabelDrawerParameters = BoundingBoxLabelDrawerParameters()
+                   ) -> Union[np.ndarray, Image.Image]:
+        """ Draw label box on copy of input image
+
+        :param image: input image, either a numpy array or PIL Image
+        :type image: Union[np.ndarray, Image.Image]
+        :param text: text to show
+        :type text: str
+        :param pos: lable position
+        :type pos: List[int]
+        :param background: label box background coolor, defaults to None
+        :type background: List[int], optional
+        :param foreground: label box foreground coolor, defaults to None
+        :type foreground: List[int], optional
+        :param label_parameters: label text parameters, defaults to BoundingBoxLabelDrawerParameters()
+        :type label_parameters: BoundingBoxLabelDrawerParameters, optional
+        :return: modified image
+        :rtype: Union[np.ndarray, Image.Image]
+        """
+
+        image = image.copy()
+
+        pil = True
+        if isinstance(image, np.ndarray):
+            pil = False
+            image = Image.fromarray(image)
+
+        W, H = label_parameters.label_size
+
+        draw = ImageDraw.Draw(image)
+        font = ImageFont.truetype(label_parameters.font_name, label_parameters.font_size)
+        w, h = draw.textsize(text, font=font)
+
+        draw.rectangle([pos[0], pos[1], pos[0] + W, pos[1] + H], fill=background)
+        draw.text((pos[0] + (W - w) // 2, pos[1] + (H - h) // 2), text, fill=foreground, font=font)
+
+        if not pil:
+            image = np.array(image)
+        return image
+
+    def draw_bbox(self,
+                  bbox: BoundingBoxLabel,
+                  image: Union[np.ndarray, Image.Image],
+                  width: int = 2,
+                  label_parameters: BoundingBoxLabelDrawerParameters = BoundingBoxLabelDrawerParameters(),
+                  show_label: bool = True
+                  ) -> Union[np.ndarray, Image.Image]:
+        """ Draw bounding box, with labels, on copy of input image
+
+        :param bbox: bounding box to draw
+        :type bbox: BoundingBoxLabel
+        :param image: input image, either a numpy array or PIL Image
+        :type image: Union[np.ndarray, Image.Image]
+        :param width: box line width, defaults to 2
+        :type width: int, optional
+        :param label_parameters: label text parameters, defaults to BoundingBoxLabelDrawerParameters()
+        :type label_parameters: BoundingBoxLabelDrawerParameters, optional
+        :param show_label: show or not textual informations, defaults to True
+        :type show_label: bool, optional
+        :return: modified image
+        :rtype: Union[np.ndarray, Image.Image]
+        """
+
+        image = image.copy()
+
+        pil = True
+        if isinstance(image, np.ndarray):
+            pil = False
+            image = Image.fromarray(image)
+
+        x_min, x_max, y_min, y_max, score, label = bbox.plain_data(fmt='LRTBsc')
+
+        draw = ImageDraw.Draw(image)
+        color = self._palette.get_color(bbox.label).rgb
+        draw.rectangle((x_min, y_min, x_max, y_max), outline=color, width=width)
+
+        if show_label:
+            image = self.draw_label(
+                image,
+                f"{int(label)}[{score:.2f}]",
+                [x_min, y_max, x_max, y_max + 30],
+                background=color,
+                foreground=None,
+                label_parameters=label_parameters
+            )
+
+        if not pil:
+            image = np.array(image)
+        return image

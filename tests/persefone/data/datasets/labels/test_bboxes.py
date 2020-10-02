@@ -32,6 +32,10 @@ class TestGeometricLabels(object):
                 'data': [3, 0.34, 0.15, 0.23, 0.14]
             },
             {
+                'fmt': 'c' + FieldsOptions.get_format(FieldsOptions.FORMAT_YOLO_PX),
+                'data': [3, 50, 12, 36, 63]
+            },
+            {
                 'fmt': 'c' + FieldsOptions.get_format(FieldsOptions.FORMAT_ALBUMENTATIONS),
                 'data': [3, 0.34, 0.45, 0.44, 0.64]
             }
