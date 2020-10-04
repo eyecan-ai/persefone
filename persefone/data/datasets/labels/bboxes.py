@@ -4,6 +4,7 @@ from persefone.utils.colors.palettes import MaterialPalette, Palette
 from typing import Any, List, Union
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+import os
 
 
 class FieldsOptions(object):
@@ -251,7 +252,12 @@ class BoundingBoxLabelDrawerParameters(object):
 
     def __init__(self):
         self.font_size = 12
-        self.font_name = "Pillow/Tests/fonts/FreeMono.ttf"
+
+        if 'posix' in os.name:
+            self.font_name = "Arial.ttf"
+        else:
+            self.font_name = "Pillow/Tests/fonts/FreeMono.ttf"
+
         self.label_size = [80, 20]
         self.default_foreground = (0, 0, 0)
         self.default_background = (255, 255, 255)
