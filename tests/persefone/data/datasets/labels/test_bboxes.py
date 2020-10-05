@@ -1,6 +1,6 @@
-from persefone.data.datasets.labels.bboxes import FieldsOptions, BoundingBoxLabel
+from persefone.data.datasets.labels.bboxes import BoundingBoxLabelDrawer, BoundingBoxLabelDrawerParameters, FieldsOptions, BoundingBoxLabel
 import pytest
-
+from PIL import Image
 import numpy as np
 
 
@@ -63,6 +63,8 @@ class TestGeometricLabels(object):
                 assert np.all(np.isclose(sample['data'], label.plain_data(fmt=sample['fmt']), rtol=0.01))
                 original_athoms = label.athoms()
 
+                assert type(label.in_bound()) == bool or type(label.in_bound()) == np.bool_
+
                 for fmt in sample_formats:
                     print(sample['fmt'], fmt, sample['data'])
                     relabel = BoundingBoxLabel(data=label.plain_data(fmt), fmt=fmt, image_size=ref_image_size)
@@ -70,3 +72,28 @@ class TestGeometricLabels(object):
 
                     for f, v in original_athoms.items():
                         assert np.isclose(original_athoms[f], reathoms[f], rtol=0.01), f
+
+    def test_drawer(self, sample_data, sample_formats, sample_sizes):
+
+        for ref_image_size in sample_sizes:
+
+            parameters = BoundingBoxLabelDrawerParameters()
+            drawer = BoundingBoxLabelDrawer()
+
+            for sample in sample_data:
+
+                print("Drawing label of format", sample['fmt'])
+
+                label = BoundingBoxLabel(data=sample['data'], fmt=sample['fmt'], image_size=ref_image_size)
+                image = np.zeros((ref_image_size[1], ref_image_size[0], 3)).astype(np.uint8)
+                output_image = drawer.draw_bbox(label, image, label_parameters=parameters)
+
+                assert type(image) == type(output_image)
+
+                pil_image = Image.fromarray(image)
+                pil_output_image = drawer.draw_bbox(label, pil_image, label_parameters=parameters)
+
+                assert type(pil_image) == type(pil_output_image)
+
+                assert np.all(np.isclose(output_image, np.array(pil_output_image)))
+                assert not np.all(np.isclose(image, np.array(pil_output_image)))
