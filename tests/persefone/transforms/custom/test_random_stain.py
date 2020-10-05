@@ -1,6 +1,7 @@
 
 import numpy as np
 from persefone.transforms.custom.random_stain import RandomStain
+from albumentations import ToFloat
 
 
 class TestRandomStain:
@@ -13,3 +14,50 @@ class TestRandomStain:
         random_stain = RandomStain(0, 0, 16, 128, 1, 3, 'fill', (0, 0, 0), (255, 255, 255), 20, 5, always_apply=True)
         stained = random_stain(image=img)['image']
         assert np.allclose(img, stained)
+
+    def debug(self):
+        import torch
+        from PIL import Image
+        from ae_playground.utils.tensor_utils import TensorUtils
+        from albumentations import Resize
+        import matplotlib.pyplot as plt
+
+        imgs = []
+        categories = [
+            'bottle',
+            'cable',
+            'capsule',
+            # 'carpet',
+            'grid',
+            'hazelnut',
+            # 'leather',
+            'metal_nut',
+            'pill',
+            'screw',
+            # 'tile',
+            'toothbrush',
+            'transistor',
+            # 'wood',
+            'zipper'
+        ]
+        for i in range(0, 1):
+            stain = RandomStain(50, 100, 16, 64, 1, 3, fill_mode='crop')
+            for cat in categories:
+                img = Image.open(f'/home/luca/ae_playground_data/mvtec/{cat}/train/good/00{i}.png')
+                img = np.array(img).astype('uint8')
+                if len(img.shape) == 2:
+                    img = np.stack([img] * 3, axis=2)
+                img = stain(image=img)['image']
+                # img = self._saliency_laplace(img).astype('float32')
+                img = img / img.max()
+                img = Resize(1024, 1024)(image=img)['image']
+                if img.dtype == 'uint8':
+                    img = ToFloat()(image=img)['image']
+                if len(img.shape) == 2:
+                    img = np.stack([img] * 3, axis=2)
+                img = np.transpose(img, (2, 0, 1))
+                imgs.append(img)
+        imgs = np.stack(imgs, axis=0)
+        imgs = torch.from_numpy(imgs)
+        plt.imshow(TensorUtils.to_numpy(TensorUtils.make_images(imgs)))
+        plt.show()

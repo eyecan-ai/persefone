@@ -7,7 +7,7 @@ from typing import Tuple, Union
 import cv2
 import numpy as np
 from albumentations.core.transforms_interface import ImageOnlyTransform
-from albumentations import GaussNoise, ToFloat, Rotate
+from albumentations import GaussNoise, Rotate
 
 from persefone.transforms.custom.drawing_utils import DrawingUtils
 
@@ -227,49 +227,3 @@ class RandomStain(ImageOnlyTransform):
             'displacement_radius',
             'noise'
         )
-
-    def debug(self):
-        import torch
-        from PIL import Image
-        from ae_playground.utils.tensor_utils import TensorUtils
-        from albumentations import Resize
-        import matplotlib.pyplot as plt
-
-        imgs = []
-        categories = [
-            'bottle',
-            'cable',
-            'capsule',
-            # 'carpet',
-            'grid',
-            'hazelnut',
-            # 'leather',
-            'metal_nut',
-            'pill',
-            'screw',
-            # 'tile',
-            'toothbrush',
-            'transistor',
-            # 'wood',
-            'zipper'
-        ]
-        for i in range(0, 1):
-            for cat in categories:
-                img = Image.open(f'/home/luca/ae_playground_data/mvtec/{cat}/train/good/00{i}.png')
-                img = np.array(img).astype('uint8')
-                if len(img.shape) == 2:
-                    img = np.stack([img] * 3, axis=2)
-                img = self(image=img)['image']
-                # img = self._saliency_laplace(img).astype('float32')
-                img = img / img.max()
-                img = Resize(1024, 1024)(image=img)['image']
-                if img.dtype == 'uint8':
-                    img = ToFloat()(image=img)['image']
-                if len(img.shape) == 2:
-                    img = np.stack([img] * 3, axis=2)
-                img = np.transpose(img, (2, 0, 1))
-                imgs.append(img)
-        imgs = np.stack(imgs, axis=0)
-        imgs = torch.from_numpy(imgs)
-        plt.imshow(TensorUtils.to_numpy(TensorUtils.make_images(imgs)))
-        plt.show()
