@@ -132,3 +132,27 @@ class TestDrawingUtils:
         assert np.allclose(img, expected)
         if img_mask is not None:
             assert np.allclose(img_mask, expected_mask)
+
+    @pytest.mark.parametrize(('size', 'ul', 'ur', 'll', 'lr', 'expected'), (
+        (
+            (3, 5),
+            (100, 100, 100),
+            (60, 60, 100),
+            (0, 0, 0),
+            (40, 40, 40),
+            np.transpose(np.array([
+                [[100, 90, 80, 70, 60],
+                 [50, 50, 50, 50, 50],
+                 [0, 10, 20, 30, 40]],
+                [[100, 90, 80, 70, 60],
+                 [50, 50, 50, 50, 50],
+                 [0, 10, 20, 30, 40]],
+                [[100, 100, 100, 100, 100],
+                 [50, 55, 60, 65, 70],
+                 [0, 10, 20, 30, 40]],
+            ]), (1, 2, 0)).astype('float')
+        ),
+    ))
+    def test_gradient(self, size, ul, ur, ll, lr, expected):
+        res = DrawingUtils.gradient(size, ul, ur, ll, lr)
+        assert np.allclose(res, expected)

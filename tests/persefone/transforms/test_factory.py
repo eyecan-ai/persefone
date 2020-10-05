@@ -109,6 +109,18 @@ class TestTransformsFactory(object):
                 }
             },
             {
+                'name': 'albumentations.augmentations.transforms.PadIfNeeded',
+                'params': {
+                    'min_height': 1000,
+                    'min_width': 1000,
+                    'border_mode': AlbumentationTransformsFactory.BORDERS['replicate'],
+                    'value': [0, 0, 0],
+                    'mask_value': 0,
+                    'always_apply': True,
+                    'p': 0.8,
+                }
+            },
+            {
                 'name': 'persefone.transforms.custom.random_stain.RandomStain',
                 'params': {
                     'min_holes': 4,
@@ -117,10 +129,12 @@ class TestTransformsFactory(object):
                     'max_size': 32,
                     'min_eccentricity': 1,
                     'max_eccentricity': 3,
+                    'fill_mode': 'solid',
                     'min_rgb': [0.5, 0.5, 0.5],
                     'max_rgb': [1.0, 1.0, 1.0],
                     'n_points': 20,
                     'perturbation_radius': 10,
+                    'noise': 10,
                     'always_apply': True,
                     'p': 0.5,
                 }
