@@ -1,5 +1,7 @@
 import logging
+from persefone.transforms.albumentations import AlbumentationTransformsFactory
 
+from persefone.transforms.custom.pad_if_needed_v2 import PadIfNeededV2
 from persefone.transforms.base import AbstractFactory
 from persefone.transforms.custom.random_stain import RandomStain
 
@@ -12,6 +14,7 @@ class CustomTransformsFactory(AbstractFactory):
     def _functions_map(cls):
         return {
             'random_stain': {'f': cls._build_random_stain, 'targets': cls._targets_map()['spatial_full']},
+            'pad_if_needed_v2': {'f': cls._build_pad_if_needed_v2, 'targets': cls._targets_map()['spatial_full']}
         }
 
     @classmethod
@@ -32,6 +35,20 @@ class CustomTransformsFactory(AbstractFactory):
             params.get('max_pos'),
             params.get('displacement_radius'),
             params.get('noise'),
+            params.get('always_apply', False),
+            params.get('p', 1)
+        )
+
+    @classmethod
+    def _build_pad_if_needed_v2(cls, **params):
+        return PadIfNeededV2(
+            params.get('min_height', 1024),
+            params.get('min_width', 1024),
+            AlbumentationTransformsFactory.BORDERS.get(params.get('border_mode', 'default')),
+            params.get('value'),
+            params.get('mask_value'),
+            params.get('row_align'),
+            params.get('col_align'),
             params.get('always_apply', False),
             params.get('p', 1)
         )
