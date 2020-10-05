@@ -251,12 +251,11 @@ class BoundingBoxLabelDrawerParameters(object):
     """
 
     def __init__(self):
-        self.font_size = 12
 
-        if 'posix' in os.name:
-            self.font_name = "Arial.ttf"
-        else:
-            self.font_name = "Pillow/Tests/fonts/FreeMono.ttf"
+        try:
+            self.font = ImageFont.truetype('Pillow/Tests/fonts/FreeMono.ttf', 12)
+        except Exception:
+            self.font = ImageFont.truetype('Arial.ttf', 12)
 
         self.label_size = [80, 20]
         self.default_foreground = (0, 0, 0)
@@ -308,7 +307,7 @@ class BoundingBoxLabelDrawer(object):
         W, H = label_parameters.label_size
 
         draw = ImageDraw.Draw(image)
-        font = ImageFont.truetype(label_parameters.font_name, label_parameters.font_size)
+        font = label_parameters.font
         w, h = draw.textsize(text, font=font)
 
         draw.rectangle([pos[0], pos[1], pos[0] + W, pos[1] + H], fill=background)
