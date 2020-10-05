@@ -278,16 +278,16 @@ class BoundingBoxLabelDrawer(object):
         self._labels_map = labels_map if labels_map is not None else {}
 
     def draw_label(self,
-                   image: Union[np.ndarray, Image.Image],
+                   image: Image.Image,
                    text: str,
                    pos: List[int],
                    background: List[int] = None,
                    foreground: List[int] = None,
                    label_parameters: BoundingBoxLabelDrawerParameters = BoundingBoxLabelDrawerParameters()
-                   ) -> Union[np.ndarray, Image.Image]:
+                   ) -> Image.Image:
         """ Draw label box on copy of input image
 
-        :param image: input image, either a numpy array or PIL Image
+        :param image: input image, either a numpy array (np.uint8, [0,255]) or PIL Image
         :type image: Union[np.ndarray, Image.Image]
         :param text: text to show
         :type text: str
@@ -300,15 +300,10 @@ class BoundingBoxLabelDrawer(object):
         :param label_parameters: label text parameters, defaults to BoundingBoxLabelDrawerParameters()
         :type label_parameters: BoundingBoxLabelDrawerParameters, optional
         :return: modified image
-        :rtype: Union[np.ndarray, Image.Image]
+        :rtype: Image.Image
         """
 
         image = image.copy()
-
-        pil = True
-        if isinstance(image, np.ndarray):
-            pil = False
-            image = Image.fromarray(image)
 
         W, H = label_parameters.label_size
 
@@ -319,8 +314,6 @@ class BoundingBoxLabelDrawer(object):
         draw.rectangle([pos[0], pos[1], pos[0] + W, pos[1] + H], fill=background)
         draw.text((pos[0] + (W - w) // 2, pos[1] + (H - h) // 2), text, fill=foreground, font=font)
 
-        if not pil:
-            image = np.array(image)
         return image
 
     def draw_bbox(self,
@@ -334,7 +327,7 @@ class BoundingBoxLabelDrawer(object):
 
         :param bbox: bounding box to draw
         :type bbox: BoundingBoxLabel
-        :param image: input image, either a numpy array or PIL Image
+        :param image: input image, either a numpy array (np.uint8, [0,255]) or PIL Image
         :type image: Union[np.ndarray, Image.Image]
         :param width: box line width, defaults to 2
         :type width: int, optional
