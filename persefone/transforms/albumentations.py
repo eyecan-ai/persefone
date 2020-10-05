@@ -59,6 +59,7 @@ class AlbumentationTransformsFactory(AbstractFactory):
             'flip': {'f': cls._build_flip, 'targets': cls._targets_map()['spatial_full']},
             'normalize': {'f': cls._build_normalize, 'targets': cls._targets_map()['spatial_full']},
             'coarse_dropout': {'f': cls._build_coarse_dropout, 'targets': cls._targets_map()['spatial_full']},
+            'pad_if_needed': {'f': cls._build_pad_if_needed, 'targets': cls._targets_map()['spatial_full']},
         }
 
     @classmethod
@@ -192,6 +193,18 @@ class AlbumentationTransformsFactory(AbstractFactory):
             min_width=get_arg(params, 'min_width', None),
             min_height=get_arg(params, 'min_height', None),
             fill_value=get_arg(params, 'fill_value', 0),
+            always_apply=get_arg(params, 'always_apply', False),
+            p=get_arg(params, 'p', 0.5)
+        )
+
+    @classmethod
+    def _build_pad_if_needed(cls, **params):
+        return A.PadIfNeeded(
+            min_height=get_arg(params, 'min_height', 1000),
+            min_width=get_arg(params, 'min_width', 1000),
+            border_mode=cls._get_borders_value(get_arg(params, 'border_mode', 'constant')),
+            value=get_arg(params, 'value', 0),
+            mask_value=get_arg(params, 'value', 0),
             always_apply=get_arg(params, 'always_apply', False),
             p=get_arg(params, 'p', 0.5)
         )

@@ -109,6 +109,18 @@ class TestTransformsFactory(object):
                 }
             },
             {
+                'name': 'albumentations.augmentations.transforms.PadIfNeeded',
+                'params': {
+                    'min_height': 1000,
+                    'min_width': 1000,
+                    'border_mode': AlbumentationTransformsFactory.BORDERS['replicate'],
+                    'value': [0, 0, 0],
+                    'mask_value': 0,
+                    'always_apply': True,
+                    'p': 0.8,
+                }
+            },
+            {
                 'name': 'persefone.transforms.custom.random_stain.RandomStain',
                 'params': {
                     'min_holes': 4,
