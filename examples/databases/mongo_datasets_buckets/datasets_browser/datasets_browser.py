@@ -1,3 +1,5 @@
+import numpy as np
+from PIL import Image
 import click
 import uuid
 import sys
@@ -8,7 +10,6 @@ from collections import OrderedDict, defaultdict
 from pathlib import Path
 
 import yaml
-import cv2
 from PyQt5 import uic
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QSize, QThread
@@ -212,7 +213,7 @@ class UploadSamplesThread(QThread):
                 f = Path(filename)
                 for encoding in ['jpg', 'png']:
                     if encoding in f.suffix:
-                        image = cv2.imread(str(f))
+                        image = np.array(Image.open(str(f)))
                         blob = DataCoding.numpy_image_to_bytes(image, encoding)
                         sample_node.metadata[f'item_{tag}_shape'] = list(image.shape)
                         sample_node.metadata[f'item_{tag}_blobsize'] = len(blob)
