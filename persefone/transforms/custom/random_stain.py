@@ -206,7 +206,7 @@ class RandomStain(ImageOnlyTransform):
             corr = GaussNoise(var_limit=self.noise, p=1.)(image=corr)['image']
 
             # Apply patch
-            DrawingUtils.apply_patch(out, None, corr, corr_mask, pos)
+            DrawingUtils.apply_patch(out, None, corr, corr_mask, pos, blend_radius=5)
         return out
 
     def get_transform_init_args_names(self):

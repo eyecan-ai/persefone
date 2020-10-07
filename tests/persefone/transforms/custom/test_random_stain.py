@@ -41,7 +41,7 @@ class TestRandomStain:
             'zipper'
         ]
         for i in range(0, 1):
-            stain = RandomStain(50, 100, 16, 64, 1, 3, fill_mode='crop')
+            stain = RandomStain(50, 100, 64, 256, 1, 3, fill_mode='crop')
             for cat in categories:
                 img = Image.open(f'/home/luca/ae_playground_data/mvtec/{cat}/train/good/00{i}.png')
                 img = np.array(img).astype('uint8')
