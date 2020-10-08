@@ -130,6 +130,19 @@ class TransformsFactory(object):
         return composition
 
     @classmethod
-    def parse_file(cls, filename, raise_not_found_error=False):
+    def parse_file(cls, filename: str, raise_not_found_error: bool = False, ignore_params: bool = False) -> A.Compose:
+        """ Parse configuration file into Transforms Compositions
+
+        :param filename: configuration filename
+        :type filename: str
+        :param raise_not_found_error: TRUE to raise exception for factory miss detection, defaults to False
+        :type raise_not_found_error: bool, optional
+        :param ignore_params: TRUE to ignore stored params infor for Bboxes or Keypoints, defaults to False
+        :type ignore_params: bool, optional
+        :raises ModuleNotFoundError: raise exception if transform item is not recognized
+        :return: Transforms composition
+        :rtype: A.Compose
+        """
+
         cfg = yaml.safe_load(open(filename))
         return cls.parse_dict(cfg, raise_not_found_error=raise_not_found_error)
