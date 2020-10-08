@@ -115,15 +115,24 @@ def random_scratch(image, **kwargs):
                        border_mode=cv2.BORDER_CONSTANT)(image=corr)['image']
     corr = Rotate(360, border_mode=cv2.BORDER_CONSTANT)(image=corr)['image']
 
-    r = random.randint(0, image.shape[0] - corr.shape[0] - 1)
-    c = random.randint(0, image.shape[1] - corr.shape[1] - 1)
+    r = random.randint(0, image.shape[0] - 1)
+    c = random.randint(0, image.shape[1] - 1)
 
-    npad = ((r, image.shape[0] - r - corr.shape[0]),
-            (c, image.shape[1] - c - corr.shape[1]),
+    npad = ((r, image.shape[0] - r),
+            (c, image.shape[1] - c),
             (0, 0))
     corr = np.pad(corr, npad)
     image = ToFloat()(image=image)['image']
+    padr = (corr.shape[0] - image.shape[0]) // 2
+    padc = (corr.shape[1] - image.shape[1]) // 2
+    padr_end = corr.shape[0] - image.shape[0] - padr
+    padc_end = corr.shape[1] - image.shape[1] - padc
+    npad = ((padr, padr_end),
+            (padc, padc_end),
+            (0, 0))
+    image = np.pad(image, npad)
     image = image * (1 - corr) + np.ones_like(image) * corr
+    image = image[padr:-padr_end, padc:-padc_end, :]
     image = (image * 255).astype('uint8')
     return image
 
