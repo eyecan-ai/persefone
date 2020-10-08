@@ -82,7 +82,19 @@ class TransformsFactory(object):
         return inputs
 
     @classmethod
-    def parse_dict(cls, cfg, raise_not_found_error=False):
+    def parse_dict(cls, cfg: dict, raise_not_found_error: bool = False, ignore_params=False) -> A.Compose:
+        """ Parse dictionay into Transforms Compositions
+
+        :param cfg: input configuration dictionary
+        :type cfg: dict
+        :param raise_not_found_error: TRUE to raise exception for factory miss detection, defaults to False
+        :type raise_not_found_error: bool, optional
+        :param ignore_params: TRUE to ignore stored params infor for Bboxes or Keypoints, defaults to False
+        :type ignore_params: bool, optional
+        :raises ModuleNotFoundError: raise exception if transform item is not recognized
+        :return: Transforms composition
+        :rtype: A.Compose
+        """
 
         inputs = cls._parse_inputs(cfg)
         inputs_set = set(inputs.keys())
@@ -102,11 +114,12 @@ class TransformsFactory(object):
         bboxes_params = None
         keypoints_params = None
 
-        if 'bboxes' in inputs:
-            bboxes_params = cls._build_bboxes_configuration(**inputs['bboxes'])
+        if not ignore_params:
+            if 'bboxes' in inputs:
+                bboxes_params = cls._build_bboxes_configuration(**inputs['bboxes'])
 
-        if 'keypoints' in inputs:
-            keypoints_params = cls._build_keypoints_configuration(**inputs['keypoints'])
+            if 'keypoints' in inputs:
+                keypoints_params = cls._build_keypoints_configuration(**inputs['keypoints'])
 
         composition = A.Compose(
             transforms=transforms,
