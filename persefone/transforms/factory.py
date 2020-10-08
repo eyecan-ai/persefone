@@ -145,4 +145,4 @@ class TransformsFactory(object):
         """
 
         cfg = yaml.safe_load(open(filename))
-        return cls.parse_dict(cfg, raise_not_found_error=raise_not_found_error)
+        return cls.parse_dict(cfg, raise_not_found_error=raise_not_found_error, ignore_params=ignore_params)
