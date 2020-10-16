@@ -1,7 +1,6 @@
 
-from os.path import isfile
 from pathlib import Path
-from typing import Dict, Sequence, Union
+from typing import Dict, Union
 from persefone.utils.filesystem import tree_from_underscore_notation_files, is_file_image, get_file_extension, is_file_numpy_array, is_metadata_file
 import imageio
 import numpy as np
