@@ -113,6 +113,7 @@ class MongoDatabaseClient(object):
         """
 
         disconnect(alias=alias)
+        self._connection = None
 
     @classmethod
     def create_from_configuration_file(cls, filename: str):
