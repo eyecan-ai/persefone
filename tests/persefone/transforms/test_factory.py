@@ -138,6 +138,20 @@ class TestTransformsFactory(object):
                     'always_apply': True,
                     'p': 0.5,
                 }
+            },
+            {
+                'name': 'persefone.transforms.custom.pad_if_needed_v2.PadIfNeededV2',
+                'params': {
+                    'min_height': 1024,
+                    'min_width': 512,
+                    'border_mode': AlbumentationTransformsFactory.BORDERS['replicate'],
+                    'value': 10,
+                    'mask_value': 0,
+                    'row_align': "bottom",
+                    'col_align': "left",
+                    'always_apply': True,
+                    'p': 0.8
+                }
             }
         ]
 

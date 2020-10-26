@@ -1,3 +1,5 @@
+import numpy as np
+from PIL import Image
 import click
 import uuid
 import sys
@@ -8,7 +10,6 @@ from collections import OrderedDict, defaultdict
 from pathlib import Path
 
 import yaml
-import cv2
 from PyQt5 import uic
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QSize, QThread
@@ -212,7 +213,7 @@ class UploadSamplesThread(QThread):
                 f = Path(filename)
                 for encoding in ['jpg', 'png']:
                     if encoding in f.suffix:
-                        image = cv2.imread(str(f))
+                        image = np.array(Image.open(str(f)))
                         blob = DataCoding.numpy_image_to_bytes(image, encoding)
                         sample_node.metadata[f'item_{tag}_shape'] = list(image.shape)
                         sample_node.metadata[f'item_{tag}_blobsize'] = len(blob)
@@ -366,7 +367,7 @@ class DatasetsBrowser(QWidget):
                         self.set_loading_status(False)
 
                     EventLoop.defer_call(
-                        functools.partial(self._datasets_bucket.delete_dataset, self._active_dataset.last_name),
+                        functools.partial(self._datasets_bucket.delete_dataset_fast, self._active_dataset.last_name),
                         _deferred_delete_dataset,
                         fallback=self.show_error_dialog
                     )

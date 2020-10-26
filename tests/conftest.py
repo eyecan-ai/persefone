@@ -10,6 +10,12 @@ def minimnist_folder():
 
 
 @pytest.fixture()
+def underfolder_folder():
+    import pathlib
+    return pathlib.Path(__file__).parent / 'sample_data/datasets/underfolder'
+
+
+@pytest.fixture()
 def configurations_folder():
     import pathlib
     return pathlib.Path(__file__).parent / 'sample_data/configurations/'

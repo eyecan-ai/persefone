@@ -109,3 +109,13 @@ transforms:
                   noise: 10
                   always_apply: true
                   p: 0.5
+        - custom.pad_if_needed_v2:
+                  min_height: 1024
+                  min_width: 512
+                  border_mode: "replicate"
+                  value: 10
+                  mask_value: 0
+                  row_align: "bottom"
+                  col_align: "left"
+                  always_apply: true
+                  p: 0.8

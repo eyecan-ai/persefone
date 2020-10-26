@@ -51,6 +51,11 @@ def get_file_extension(filename, with_dot=False):
     return ext
 
 
+def is_metadata_file(filename):
+    ext = get_file_extension(filename)
+    return ext in ['yml', 'json']
+
+
 def is_file_image(filename):
     return imghdr.what(filename) is not None
 
