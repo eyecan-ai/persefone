@@ -30,6 +30,7 @@ setup(
             'persefone=persefone.cli:main',
             'persefone_database_f2d=persefone.cli.tools.converters.folder_to_mongo:folder_to_mongo',
             'persefone_database_d2f=persefone.cli.tools.converters.mongo_to_folder:mongo_to_folder',
+            'persefone_gui_dataset_browser=persefone.cli.tools.gui.dataset_browser.dataset_browser:dataset_browser',
         ],
     },
     install_requires=requirements,

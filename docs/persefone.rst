@@ -6,32 +6,28 @@ Subpackages
 
 .. toctree::
 
-   persefone.data
+    persefone.cli
+    persefone.data
+    persefone.metrics
+    persefone.transforms
+    persefone.utils
 
 Submodules
 ----------
-
-persefone.cli module
---------------------
-
-.. automodule:: persefone.cli
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 persefone.persefone module
 --------------------------
 
 .. automodule:: persefone.persefone
-   :members:
-   :undoc-members:
-   :show-inheritance:
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 
 Module contents
 ---------------
 
 .. automodule:: persefone
-   :members:
-   :undoc-members:
-   :show-inheritance:
+    :members:
+    :undoc-members:
+    :show-inheritance:
