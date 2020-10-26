@@ -367,7 +367,7 @@ class DatasetsBrowser(QWidget):
                         self.set_loading_status(False)
 
                     EventLoop.defer_call(
-                        functools.partial(self._datasets_bucket.delete_dataset_fast, self._active_dataset.last_name),
+                        functools.partial(self._datasets_bucket.delete_dataset, self._active_dataset.last_name),
                         _deferred_delete_dataset,
                         fallback=self.show_error_dialog
                     )
