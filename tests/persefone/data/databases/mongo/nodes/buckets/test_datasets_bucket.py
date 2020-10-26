@@ -49,6 +49,8 @@ class TestDatasetsBucket(object):
 
             assert dataset == dataset_r, "Retrieved dataset is wrong"
 
+            created_items = 0
+
             for sample_str, items in tree.items():
                 n_items = len(items.items())
 
@@ -78,6 +80,7 @@ class TestDatasetsBucket(object):
                     blob, encoding = DataCoding.file_to_bytes(filename)
 
                     item: MNode = R.new_item(dataset_name, sample_id, item_name, blob_data=blob, blob_encoding=encoding)
+                    created_items += 1
 
                     with pytest.raises(NameError):
                         R.new_item(dataset_name, sample_id, item_name, blob_data=blob, blob_encoding=encoding)
@@ -113,6 +116,8 @@ class TestDatasetsBucket(object):
                     # assert item is not None, "Item should be not None!"
                     # item_r = dataset.get_item(sample_idx, item_name)
                     # assert item_r is not None, "Retrieved Item should be not None!"
+
+            assert len(R.get_items_by_query(dataset_name)) == created_items, "Number of items is wrong"
 
             assert len(R.get_samples(dataset_name)) == n_samples, "Number of samples is wrong"
             assert len(R.get_samples_by_query(dataset_name)) == n_samples, "Number of  queryed samples is wrong"

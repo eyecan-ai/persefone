@@ -1,3 +1,4 @@
+import multiprocessing
 from pathlib import Path
 from threading import Thread
 from persefone.utils.filesystem import tree_from_underscore_notation_files
@@ -7,9 +8,8 @@ from persefone.data.databases.mongo.nodes.buckets.datasets import DatasetsBucket
 import click
 import yaml
 from tqdm import tqdm
-from queue import Queue
 import time
-from progress.bar import ShadyBar
+import multiprocessing as mp
 
 
 @click.command("Converts Folder dataset into MongoDB Dataset")
@@ -43,36 +43,37 @@ def folder_to_datasets_bucket(database_cfg, folder, new_dataset_name, overwrite)
     dataset = bucket.new_dataset(new_dataset_name)
     assert dataset is not None
 
-    samples_queue = Queue(maxsize=0)
-    [samples_queue.put((sample_id, item_data)) for sample_id, item_data in tqdm(tree.items())]
+    samples_queue = mp.JoinableQueue()  # maxsize=0)
+    [samples_queue.put((sample_id, dict(item_data))) for sample_id, item_data in tqdm(tree.items())]
 
-    def inserter(q: Queue, bar: ShadyBar):
-        while not q.empty():
-            sample_id, item_data = q.get()
-            metadata = {}
-            if 'metadata' in item_data:
-                metadata = yaml.safe_load(open(item_data['metadata'], 'r'))
+    total_size = samples_queue.qsize()
+    worker_approx_size = total_size // num_workers
 
-            sample: MNode = bucket.new_sample(new_dataset_name, metadata=metadata, sample_id=sample_id)
-            assert sample is not None
+    def inserter(worker_id: int, worker_size: int, q: mp.JoinableQueue):
+        with tqdm(total=worker_size, position=w) as pbar:
+            while not q.empty():
+                sample_id, item_data = q.get()
+                metadata = {}
+                if 'metadata' in item_data:
+                    metadata = yaml.safe_load(open(item_data['metadata'], 'r'))
 
-            for item_name, filename in item_data.items():
-                if item_name != 'metadata':
-                    bucket.new_item(
-                        new_dataset_name,
-                        sample_id,
-                        item_name,
-                        open(filename, 'rb').read(),
-                        Path(filename).suffix.replace('.', '')
-                    )
-            bar.next()
-            q.task_done()
+                sample: MNode = bucket.new_sample(new_dataset_name, metadata=metadata, sample_id=sample_id)
+                assert sample is not None
 
-    # Loading BAR
-    bar = ShadyBar('Inserting data', max=len(tree), suffix='%(percent).1f%% - %(remaining)ds')
+                for item_name, filename in item_data.items():
+                    if item_name != 'metadata':
+                        bucket.new_item(
+                            new_dataset_name,
+                            sample_id,
+                            item_name,
+                            open(filename, 'rb').read(),
+                            Path(filename).suffix.replace('.', '')
+                        )
+                pbar.update(1)
+                q.task_done()
 
     for w in range(num_workers):
-        worker = Thread(target=inserter, args=(samples_queue, bar,), daemon=True)
+        worker = mp.Process(target=inserter, args=(w, worker_approx_size, samples_queue,))  # , daemon=True)
         worker.start()
 
     samples_queue.join()
