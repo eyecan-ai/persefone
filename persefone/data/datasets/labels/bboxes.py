@@ -255,7 +255,10 @@ class BoundingBoxLabelDrawerParameters(object):
         try:
             self.font = ImageFont.truetype('Pillow/Tests/fonts/FreeMono.ttf', 12)
         except Exception:
-            self.font = ImageFont.truetype('Arial.ttf', 12)
+            try:
+                self.font = ImageFont.truetype('Arial.ttf', 12)
+            except Exception:
+                self.font = ImageFont.load_default()
 
         self.label_size = [80, 20]
         self.default_foreground = (0, 0, 0)

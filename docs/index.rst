@@ -1,6 +1,11 @@
 
-.. include:: ../README.rst
+Persefone
+===========================================
 
+
+.. image:: images/logo.png
+   :height: 100px
+ 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:

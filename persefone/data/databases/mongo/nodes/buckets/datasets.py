@@ -8,7 +8,7 @@ from schema import Optional, Schema
 from persefone.utils.configurations import XConfiguration
 from persefone.utils.mongo.queries import MongoQueryParser
 from typing import Any, Dict, List, Sequence
-from persefone.data.databases.mongo.nodes.nodes import MLink, MNode, NodesBucket
+from persefone.data.databases.mongo.nodes.nodes import CustomPath, MLink, MNode, NodesBucket, NodesPath
 from mongoengine.errors import DoesNotExist
 from persefone.data.databases.mongo.clients import MongoDatabaseClientCFG
 from persefone.utils.bytes import DataCoding
@@ -41,11 +41,13 @@ class DatasetsBucket(NodesBucket):
         """
         return self.get_namespace_node().outbound_nodes(link_type=self.LINK_TYPE_NAMESPACE2GENERIC)
 
-    def new_dataset(self, dataset_name: str) -> MNode:
+    def new_dataset(self, dataset_name: str, metadata: dict = None) -> MNode:
         """ Creates new dataset node by name
 
         :param dataset_name: dataset name
         :type dataset_name: str
+        :param metadata: dataset metadata
+        :type metadata: dict
         :raises NameError: raise Exectpion if name collision occurs
         :return: created MNode
         :rtype: MNode
@@ -61,6 +63,8 @@ class DatasetsBucket(NodesBucket):
 
             dataset_node: MNode = self[self.namespace / dataset_name]
             dataset_node.node_type = self.NODE_TYPE_DATASET
+            if metadata is not None:
+                dataset_node.metadata = metadata
             dataset_node.save()
 
             namespace_node.link_to(dataset_node, link_type=self.LINK_TYPE_NAMESPACE2GENERIC)
@@ -168,7 +172,35 @@ class DatasetsBucket(NodesBucket):
         sample_node: MNode = self.get_sample(dataset_name, sample_id)
         return sample_node.outbound_nodes(link_type=self.LINK_TYPE_SAMPLE2ITEM)
 
-    def delete_dataset(self, dataset_name: str, num_workers: int = 10):
+    def get_items_by_query(self, dataset_name: str, queries: list = None, orders_by: list = None) -> QuerySet:
+        """ Retrieves items nodes by query strings
+
+        :param dataset_name: target dataset name
+        :type dataset_name: str
+        :param queries: plain queries strings (e.g. ['metadata.field_0 >= 33.3']) , defaults to None
+        :type queries: list, optional
+        :param orders_by: plain orders strngs (e.g. ['+metadata.field_X']), defaults to None
+        :type orders_by: list, optional
+        :return: list of retrieved MNode
+        :rtype: MNode
+        """
+
+        if queries is None:
+            queries = []
+        if orders_by is None:
+            orders_by = []
+
+        orders_by = orders_by.copy()
+        queries = queries.copy()
+
+        name_chunk = NodesPath.builds_path(self.DATASET_NAMSPACE_NAME, dataset_name).value
+        queries.append(f"name contains '{name_chunk}'")
+        queries.append(f"node_type == '{self.NODE_TYPE_ITEM}'")
+        query_dict = MongoQueryParser.parse_queries_list(queries)
+        orders_bys = MongoQueryParser.parse_orders_list(orders_by)
+        return MNode.get_by_queries(query_dict, orders_bys)
+
+    def delete_dataset(self, dataset_name: str):
         """ Recursive deletion of dataset
 
         :param dataset_name: target dataset name
@@ -177,30 +209,15 @@ class DatasetsBucket(NodesBucket):
         :type num_workers: int
         """
 
-        from queue import Queue
-        garbage = Queue(maxsize=0)
-
-        def destroyer(q: Queue):
-            while not q.empty():
-                q.get().delete()
-                q.task_done()
-
         dataset_node = self.get_dataset(dataset_name)
 
-        samples = dataset_node.outbound_nodes(link_type=self.LINK_TYPE_DATASET2SAMPLE)
-
-        for sample_node in samples:
-            items = sample_node.outbound_nodes(link_type=self.LINK_TYPE_SAMPLE2ITEM)
-            for item_node in items:
-                garbage.put(item_node)
-                garbage.put(sample_node)
-        garbage.put(dataset_node)
-
-        for w in range(num_workers):
-            worker = Thread(target=destroyer, args=(garbage,), daemon=True)
-            worker.start()
-
-        garbage.join()
+        samples = self.get_samples_by_query(dataset_name)
+        items = self.get_items_by_query(dataset_name)
+        for item in items:
+            item.data.delete()
+        samples.delete()
+        items.delete()
+        dataset_node.delete()
 
     def _sample_id_name(self, sample_id: Any) -> str:
         """ Converts a sample id (Any) in a string

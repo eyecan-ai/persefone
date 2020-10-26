@@ -32,9 +32,16 @@ class TestDatasetsBucket(object):
         print(R)
 
         datasets_names = ['Data_A', 'Data_B']
+        dataset_metadata_map = {
+            'Data_A': {
+                'dataset_version': 1.0,
+                'test_mode': True
+            },
+            'Data_B': None
+        }
 
         for dataset_name in datasets_names:
-            dataset = R.new_dataset(dataset_name)
+            dataset = R.new_dataset(dataset_name, metadata=dataset_metadata_map[dataset_name])
             assert dataset.node_type == R.NODE_TYPE_DATASET, "dataset type is wrong!"
 
             with pytest.raises(NameError):
@@ -42,12 +49,18 @@ class TestDatasetsBucket(object):
 
             assert dataset is not None, "Dataset creation should be valid"
             dataset_r = R.get_dataset(dataset_name)
+
+            if dataset_metadata_map[dataset_name]:
+                assert dataset_r.metadata
+
             assert dataset_r.node_type == R.NODE_TYPE_DATASET, "dataset type is wrong!"
 
             with pytest.raises(DoesNotExist):
                 R.get_dataset(impossible_dataset_name)
 
             assert dataset == dataset_r, "Retrieved dataset is wrong"
+
+            created_items = 0
 
             for sample_str, items in tree.items():
                 n_items = len(items.items())
@@ -78,6 +91,7 @@ class TestDatasetsBucket(object):
                     blob, encoding = DataCoding.file_to_bytes(filename)
 
                     item: MNode = R.new_item(dataset_name, sample_id, item_name, blob_data=blob, blob_encoding=encoding)
+                    created_items += 1
 
                     with pytest.raises(NameError):
                         R.new_item(dataset_name, sample_id, item_name, blob_data=blob, blob_encoding=encoding)
@@ -113,6 +127,8 @@ class TestDatasetsBucket(object):
                     # assert item is not None, "Item should be not None!"
                     # item_r = dataset.get_item(sample_idx, item_name)
                     # assert item_r is not None, "Retrieved Item should be not None!"
+
+            assert len(R.get_items_by_query(dataset_name)) == created_items, "Number of items is wrong"
 
             assert len(R.get_samples(dataset_name)) == n_samples, "Number of samples is wrong"
             assert len(R.get_samples_by_query(dataset_name)) == n_samples, "Number of  queryed samples is wrong"
