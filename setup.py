@@ -28,6 +28,8 @@ setup(
     entry_points={
         'console_scripts': [
             'persefone=persefone.cli:main',
+            'persefone_database_f2d=persefone.cli.tools.converters.folder_to_mongo:folder_to_mongo',
+            'persefone_database_d2f=persefone.cli.tools.converters.mongo_to_folder:mongo_to_folder',
         ],
     },
     install_requires=requirements,

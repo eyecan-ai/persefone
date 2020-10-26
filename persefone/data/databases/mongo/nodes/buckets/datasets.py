@@ -41,11 +41,13 @@ class DatasetsBucket(NodesBucket):
         """
         return self.get_namespace_node().outbound_nodes(link_type=self.LINK_TYPE_NAMESPACE2GENERIC)
 
-    def new_dataset(self, dataset_name: str) -> MNode:
+    def new_dataset(self, dataset_name: str, metadata: dict = None) -> MNode:
         """ Creates new dataset node by name
 
         :param dataset_name: dataset name
         :type dataset_name: str
+        :param metadata: dataset metadata
+        :type metadata: dict
         :raises NameError: raise Exectpion if name collision occurs
         :return: created MNode
         :rtype: MNode
@@ -61,6 +63,8 @@ class DatasetsBucket(NodesBucket):
 
             dataset_node: MNode = self[self.namespace / dataset_name]
             dataset_node.node_type = self.NODE_TYPE_DATASET
+            if metadata is not None:
+                dataset_node.metadata = metadata
             dataset_node.save()
 
             namespace_node.link_to(dataset_node, link_type=self.LINK_TYPE_NAMESPACE2GENERIC)
