@@ -1,6 +1,4 @@
-import multiprocessing
 from pathlib import Path
-from threading import Thread
 from persefone.utils.filesystem import tree_from_underscore_notation_files
 from persefone.data.databases.mongo.clients import MongoDatabaseClientCFG
 from persefone.data.databases.mongo.nodes.nodes import MNode
@@ -10,19 +8,39 @@ import yaml
 from tqdm import tqdm
 import time
 import multiprocessing as mp
+from persefone.data.databases.filesystem.underfolder import UnderfolderDatabase
 
 
 @click.command("Converts Folder dataset into MongoDB Dataset")
-@click.option('--database_cfg', default='database.yml', help="Database configuration file", show_default=True)
+@click.option('--database_host', default='localhost', help="Database host")
+@click.option('--database_port', default=27017, help="Database post")
+@click.option('--database_user', default='root', help="Database username")
+@click.option('--database_pass', default='', help="Database password")
+@click.option('--database_name', required=True, help="Database name")
 @click.option('--folder', required=True, help="Input Dataset folder")
 @click.option('--new_dataset_name', required=True, help="New Dataset desired name")
 @click.option('--overwrite', default=False, help="Overwrite dataset with same name")
-def folder_to_datasets_bucket(database_cfg, folder, new_dataset_name, overwrite):
+def folder_to_mongo(
+        database_host,
+        database_port,
+        database_user,
+        database_pass,
+        database_name,
+        folder,
+        new_dataset_name,
+        overwrite):
 
     num_workers = 8
-    bucket = DatasetsBucket(client_cfg=MongoDatabaseClientCFG(filename=database_cfg))
+    database_cfg = {
+        'host': database_host,
+        'port': database_port,
+        'user': database_user,
+        'pass': database_pass,
+        'db': database_name
+    }
+    bucket = DatasetsBucket(client_cfg=MongoDatabaseClientCFG.from_dict(database_cfg))
 
-    tree = tree_from_underscore_notation_files(folder)
+    ufolder = UnderfolderDatabase(folder)
 
     try:
         old_dataset = bucket.get_dataset(new_dataset_name)
@@ -38,30 +56,35 @@ def folder_to_datasets_bucket(database_cfg, folder, new_dataset_name, overwrite)
     except Exception as e:
         print(e)
 
-    # return
-    t1 = time.time()
-    dataset = bucket.new_dataset(new_dataset_name)
+    dataset = bucket.new_dataset(new_dataset_name, metadata=ufolder.metadata)
     assert dataset is not None
+    bucket.disconnect()
 
     samples_queue = mp.JoinableQueue()  # maxsize=0)
-    [samples_queue.put((sample_id, dict(item_data))) for sample_id, item_data in tqdm(tree.items())]
+
+    [samples_queue.put(item_data) for item_data in ufolder.skeleton]
 
     total_size = samples_queue.qsize()
     worker_approx_size = total_size // num_workers
 
     def inserter(worker_id: int, worker_size: int, q: mp.JoinableQueue):
+
+        bucket = DatasetsBucket(client_cfg=MongoDatabaseClientCFG.from_dict(database_cfg))
+
         with tqdm(total=worker_size, position=w) as pbar:
             while not q.empty():
-                sample_id, item_data = q.get()
+                item_data = q.get()
+                sample_id = item_data['_id']
                 metadata = {}
+
                 if 'metadata' in item_data:
-                    metadata = yaml.safe_load(open(item_data['metadata'], 'r'))
+                    metadata = ufolder.load_data(item_data['metadata'])
 
                 sample: MNode = bucket.new_sample(new_dataset_name, metadata=metadata, sample_id=sample_id)
                 assert sample is not None
 
                 for item_name, filename in item_data.items():
-                    if item_name != 'metadata':
+                    if item_name != 'metadata' and item_name != '_id':
                         bucket.new_item(
                             new_dataset_name,
                             sample_id,
@@ -77,9 +100,7 @@ def folder_to_datasets_bucket(database_cfg, folder, new_dataset_name, overwrite)
         worker.start()
 
     samples_queue.join()
-    t2 = time.time()
-    print("Inserting time: ", t2 - t1)
 
 
 if __name__ == "__main__":
-    folder_to_datasets_bucket()
+    folder_to_mongo()

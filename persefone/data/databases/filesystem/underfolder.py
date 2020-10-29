@@ -23,17 +23,30 @@ class UnderfolderDatabase(object):
         self._folder = Path(folder)
         self._data_tags = data_tags
 
-        # builds tree from folder with underscore notation
-        self._tree = tree_from_underscore_notation_files(self._folder / self.DATA_SUBFOLDER)
+        self._data_folder = self._folder / self.DATA_SUBFOLDER
 
-        self._ids = list(sorted(self._tree.keys()))
+        if self._data_folder.exists():
+            # builds tree from subfolder with underscore notation
+            self._tree = tree_from_underscore_notation_files(self._folder / self.DATA_SUBFOLDER)
+            self._ids = list(sorted(self._tree.keys()))
 
-        self._dataset_files = [x for x in Path(self._folder).glob('*') if x.is_file()]
-        self._dataset_metadata = {}
-        for f in self._dataset_files:
-            self._dataset_metadata[f.stem] = self._load_data(f)
+            self._dataset_files = [x for x in Path(self._folder).glob('*') if x.is_file()]
+            self._dataset_metadata = {}
+            for f in self._dataset_files:
+                self._dataset_metadata[f.stem] = self.load_data(f)
+        else:
+            # builds tree from current folder with underscore notation
+            self._tree = tree_from_underscore_notation_files(self._folder)
+            self._ids = list(sorted(self._tree.keys()))
 
-    @property
+            self._dataset_files = []
+            self._dataset_metadata = {}
+
+        self._filenames = [None] * len(self)
+        for idx in range(len(self)):
+            self._filenames[idx] = self._get_filenames(idx)
+
+    @ property
     def metadata(self):
         return self._dataset_metadata
 
@@ -51,7 +64,7 @@ class UnderfolderDatabase(object):
             return tag
         return self._data_tags.get(tag, None)
 
-    def _load_data(self, filename: str) -> Union[None, np.ndarray, dict]:
+    def load_data(self, filename: str) -> Union[None, np.ndarray, dict]:
         """ Load data from file based on its extension
 
         :param filename: target filename
@@ -85,6 +98,24 @@ class UnderfolderDatabase(object):
     def __len__(self):
         return len(self._ids)
 
+    def _get_filenames(self, idx):
+
+        if idx >= len(self):
+            raise IndexError
+
+        data = self._tree[self._ids[idx]]
+        output = {}
+        for tag, filename in data.items():
+            remap = self._get_tag_remap(tag)
+            output[remap] = str(filename)
+
+        output['_id'] = self._ids[idx]
+        return output
+
+    @property
+    def skeleton(self):
+        return self._filenames
+
     def __getitem__(self, idx):
 
         if idx >= len(self):
@@ -95,6 +126,6 @@ class UnderfolderDatabase(object):
         for tag, filename in data.items():
             remap = self._get_tag_remap(tag)
             if remap is not None:
-                output[remap] = self._load_data(filename)
+                output[remap] = self.load_data(filename)
 
         return output

@@ -65,7 +65,7 @@ coverage: ## check code coverage quickly with the default Python
 docs: ## generate Sphinx HTML documentation, including API docs
 	rm -f docs/persefone.rst
 	rm -f docs/modules.rst
-	sphinx-apidoc -t template/ -o docs/ persefone
+	sphinx-apidoc -o docs/ persefone
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
 	$(BROWSER) docs/_build/html/index.html

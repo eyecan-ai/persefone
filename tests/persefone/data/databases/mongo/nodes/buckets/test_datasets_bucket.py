@@ -32,9 +32,16 @@ class TestDatasetsBucket(object):
         print(R)
 
         datasets_names = ['Data_A', 'Data_B']
+        dataset_metadata_map = {
+            'Data_A': {
+                'dataset_version': 1.0,
+                'test_mode': True
+            },
+            'Data_B': None
+        }
 
         for dataset_name in datasets_names:
-            dataset = R.new_dataset(dataset_name)
+            dataset = R.new_dataset(dataset_name, metadata=dataset_metadata_map[dataset_name])
             assert dataset.node_type == R.NODE_TYPE_DATASET, "dataset type is wrong!"
 
             with pytest.raises(NameError):
@@ -42,6 +49,10 @@ class TestDatasetsBucket(object):
 
             assert dataset is not None, "Dataset creation should be valid"
             dataset_r = R.get_dataset(dataset_name)
+
+            if dataset_metadata_map[dataset_name]:
+                assert dataset_r.metadata
+
             assert dataset_r.node_type == R.NODE_TYPE_DATASET, "dataset type is wrong!"
 
             with pytest.raises(DoesNotExist):
