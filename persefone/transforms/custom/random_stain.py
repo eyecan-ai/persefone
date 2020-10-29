@@ -12,6 +12,88 @@ from albumentations import GaussNoise, Rotate
 from persefone.transforms.custom.drawing_utils import DrawingUtils
 
 
+class Stain(ImageOnlyTransform):
+    """Adds a stain patch to a target image
+
+    :param size: ellipse major axis size
+    :type size: int
+    :param ratio: ellipse ratio
+    :type ratio: float
+    :param color: stain color
+    :type color: Union[Tuple[int, int, int], Tuple[Tuple], np.ndarray]
+    :param pos: rc position
+    :type pos: Tuple[int, int]
+    :param n_points: number of points per stain, default 20
+    :type n_points: int
+    :param perturbation_radius: points displacement radius, default -1
+    :type perturbation_radius: int
+    :param noise: max gaussian noise sigma if single float, min and max sigma if tuple of two floats
+    :type noise: Union[float, Tuple[float, float]]
+    """
+
+    def __init__(self,
+                 size: int,
+                 ratio: float,
+                 color: Union[Tuple[int, int, int], Tuple[Tuple], np.ndarray],
+                 pos: Tuple[int, int],
+                 n_points: int = 20,
+                 perturbation_radius: int = -1,
+                 noise: Union[float, Tuple[float, float]] = 0,
+                 always_apply=False, p=1.0) -> None:
+        super().__init__(always_apply, p)
+        self.size = size
+        self.ratio = ratio
+        self.color = color
+        self.pos = pos
+        self.n_points = n_points
+        self.perturbation_radius = perturbation_radius
+        self.noise = noise
+
+    def apply(self, image, **params):
+        out = copy.deepcopy(image)
+
+        size_a = self.size
+        ratio = self.ratio
+        size_b = int(size_a / ratio)
+        angle = random.random() * math.pi * 2
+
+        # Compute perturbation
+        pert = self.perturbation_radius
+        if pert < 0:
+            pert = int(math.sqrt((size_a ** 2 + size_b ** 2) / 2) * math.pi / self.n_points)
+
+        # Compute Points
+        points = DrawingUtils.ellipse((size_a, size_b), angle, self.n_points)
+        points = DrawingUtils.random_displace(points, pert)
+        try:
+            points = DrawingUtils.interpolate(points, len(points) * 10)
+        except Exception:
+            print(points)
+            raise RuntimeError
+
+        # Create patch
+        corr, corr_mask = DrawingUtils.polygon(points, self.color)
+        pos = tuple(self.pos[i] - corr.shape[i] // 2 for i in range(2))
+
+        # Add noise to patch
+        corr = GaussNoise(var_limit=self.noise, p=1.)(image=corr)['image']
+
+        # Apply patch
+        DrawingUtils.apply_patch(out, None, corr, corr_mask, pos, blend_radius=5)
+        return out
+
+    def get_transform_init_args_names(self):
+        return (
+            'size',
+            'ratio',
+            'color',
+            'pos'
+            'n_points',
+            'perturbation_radius',
+            'noise'
+        )
+
+
 class RandomStain(ImageOnlyTransform):
     """Adds random stain patches to a target image
 
@@ -23,10 +105,10 @@ class RandomStain(ImageOnlyTransform):
     :type min_size: int
     :param max_size: maximum ellipse major axis size
     :type max_size: int
-    :param min_eccentricity: minimum eccentricity
-    :type min_eccentricity: float
-    :param max_eccentricity: maximum eccentricity
-    :type max_eccentricity: float
+    :param min_ratio: minimum ratio
+    :type min_ratio: float
+    :param max_ratio: maximum ratio
+    :type max_ratio: float
     :param fill_mode: 'solid', 'gradient', 'crop'
     :type fill_mode: str
     :param min_rgb: minimum rgb value, ignored if fill_mode is 'crop', default None
@@ -53,8 +135,8 @@ class RandomStain(ImageOnlyTransform):
                  max_holes: int,
                  min_size: int,
                  max_size: int,
-                 min_eccentricity: float,
-                 max_eccentricity: float,
+                 min_ratio: float,
+                 max_ratio: float,
                  fill_mode: str = 'gradient',
                  min_rgb: Tuple[int, int, int] = None,
                  max_rgb: Tuple[int, int, int] = None,
@@ -65,13 +147,13 @@ class RandomStain(ImageOnlyTransform):
                  displacement_radius: int = -10,
                  noise: Union[float, Tuple[float, float]] = (4, 6),
                  always_apply=False, p=1.0) -> None:
-        super(RandomStain, self).__init__(always_apply, p)
+        super().__init__(always_apply, p)
         self.min_holes = min_holes
         self.max_holes = max_holes
         self.min_size = min_size
         self.max_size = max_size
-        self.min_eccentricity = min_eccentricity
-        self.max_eccentricity = max_eccentricity
+        self.min_ratio = min_ratio
+        self.max_ratio = max_ratio
         self.fill_mode = fill_mode
         self.min_rgb = min_rgb
         self.max_rgb = max_rgb
@@ -151,19 +233,7 @@ class RandomStain(ImageOnlyTransform):
 
         for i in range(n_holes):
             size_a = random.randint(self.min_size, self.max_size)
-            eccentricity = random.uniform(self.min_eccentricity, self.max_eccentricity)
-            size_b = int(size_a / eccentricity)
-            angle = random.random() * math.pi * 2
-
-            # Compute perturbation
-            pert = self.perturbation_radius
-            if pert < 0:
-                pert = int(math.sqrt((size_a ** 2 + size_b ** 2) / 2) * math.pi / self.n_points)
-
-            # Compute Points
-            points = DrawingUtils.ellipse((size_a, size_b), angle, self.n_points)
-            points = DrawingUtils.random_displace(points, pert)
-            points = DrawingUtils.interpolate(points, len(points) * 10)
+            ratio = random.uniform(self.min_ratio, self.max_ratio)
 
             # Compute displacement
             if self.displacement_radius >= 0:
@@ -197,16 +267,10 @@ class RandomStain(ImageOnlyTransform):
             else:
                 colors = np.zeros((16, 16, 3))
 
-            # Create patch
-            corr, corr_mask = DrawingUtils.polygon(points, colors)
             pos = self._rand_pos(min_r, max_r, min_c, max_c, saliency, disp)
-            pos = tuple(pos[i] - corr.shape[i] // 2 for i in range(2))
+            stain = Stain(size_a, ratio, colors, pos, self.n_points, self.perturbation_radius, self.noise)
+            out = stain(image=out)['image']
 
-            # Add noise to patch
-            corr = GaussNoise(var_limit=self.noise, p=1.)(image=corr)['image']
-
-            # Apply patch
-            DrawingUtils.apply_patch(out, None, corr, corr_mask, pos, blend_radius=5)
         return out
 
     def get_transform_init_args_names(self):
@@ -215,8 +279,8 @@ class RandomStain(ImageOnlyTransform):
             'max_holes',
             'min_size',
             'max_size',
-            'min_eccentricity',
-            'max_eccentricity',
+            'min_ratio',
+            'max_ratio',
             'fill_mode',
             'min_rgb',
             'max_rgb',

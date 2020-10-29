@@ -129,7 +129,7 @@ class DrawingUtils:
         else:
             if isinstance(color[0], Sequence):
                 color = color[0]
-            poly = np.stack([mask * color[i] for i in range(3)], axis=-1)
+            poly = np.stack([mask * color[i] for i in range(3)], axis=-1).astype('uint8')
 
         return poly, mask
 
