@@ -19,6 +19,7 @@ class DataCoding(object):
 
     NUMPY_CODECS = ['npy']
     TEXT_CODECS = ['txt']
+    METADATA_CODECS = ['json', 'yml', 'yaml']
 
     @classmethod
     def bytes_to_data(cls, data: bytes, data_encoding: str) -> np.ndarray:

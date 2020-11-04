@@ -27,7 +27,13 @@ def augmentations_folder():
     return pathlib.Path(__file__).parent / 'sample_data/augmentations'
 
 
+@pytest.fixture(scope="function")
+def generic_temp_folder(tmpdir_factory):
+    fn = tmpdir_factory.mktemp("_generic_persefone_test_temp")
+    return fn
+
 # MONGO
+
 
 def pytest_addoption(parser):
     parser.addoption("--mongo_real_server", action="store_true",

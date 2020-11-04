@@ -1,6 +1,8 @@
 
+from json.encoder import JSONEncoder
 from pathlib import Path
-from typing import Dict, Union
+from persefone.utils.bytes import DataCoding
+from typing import Any, Dict, Union
 from persefone.utils.filesystem import tree_from_underscore_notation_files, is_file_image, get_file_extension, is_file_numpy_array, is_metadata_file
 import imageio
 import numpy as np
@@ -38,7 +40,6 @@ class UnderfolderDatabase(object):
             # builds tree from current folder with underscore notation
             self._tree = tree_from_underscore_notation_files(self._folder)
             self._ids = list(sorted(self._tree.keys()))
-
             self._dataset_files = []
             self._dataset_metadata = {}
 
@@ -129,3 +130,68 @@ class UnderfolderDatabase(object):
                 output[remap] = self.load_data(filename)
 
         return output
+
+
+class UnderfolderDatabaseGenerator(object):
+
+    class NumpyArrayEncoder(JSONEncoder):
+
+        def default(self, obj):
+            if isinstance(obj, np.ndarray):
+                return obj.tolist()
+            return JSONEncoder.default(self, obj)
+
+    def __init__(self, folder: str, zfill: int = 5, create_if_none: bool = True):
+        self._folder = Path(folder)
+        self._data_folder = self._folder / UnderfolderDatabase.DATA_SUBFOLDER
+        if create_if_none:
+            self._data_folder.mkdir(exist_ok=True, parents=True)
+        self._zfill = zfill
+
+    def _generate_number(self, idx: int):
+        return str(idx).zfill(self._zfill)
+
+    def _generate_tag_name(self, idx: int, tag: str):
+        return f'{self._generate_number(idx)}_{tag}'
+
+    def _purge_metadata(self, metadata: dict):
+        return json.loads(json.dumps(metadata, cls=self.NumpyArrayEncoder))
+
+    def store_sample(self, idx: int, tag: str, data: Any, extension: str) -> str:
+        """ Stores sample computing name based on IDX/TAG and extension
+
+        :param idx: sample id
+        :type idx: int
+        :param tag: item tag
+        :type tag: str
+        :param data: data to store
+        :type data: Any
+        :param extension: desired extension
+        :type extension: str
+        :raises NotImplementedError: not supported extension
+        """
+
+        extension = extension.replace('.', '')
+        if idx >= 0:
+            name = self._generate_tag_name(idx, tag)
+            filename = self._data_folder / f'{name}.{extension}'
+        else:
+            filename = self._folder / f'{tag}.{extension}'
+
+        if extension in DataCoding.IMAGE_CODECS:
+            imageio.imwrite(filename, data)
+        elif extension in DataCoding.NUMPY_CODECS:
+            np.save(filename, data)
+        elif extension in DataCoding.TEXT_CODECS:
+            np.savetxt(filename, data)
+        elif extension in DataCoding.METADATA_CODECS:
+            if 'json' in extension:
+                json.dump(self._purge_metadata(data), open(filename, 'w'))
+            elif 'yml' in extension or 'yaml':
+                yaml.safe_dump(self._purge_metadata(data), open(filename, 'w'))
+            else:
+                raise NotImplementedError(f"EXtension [{extension}] not supported as metadata yet!")
+        else:
+            raise NotImplementedError(f"EXtension [{extension}] not supported yet!")
+
+        return str(filename)
