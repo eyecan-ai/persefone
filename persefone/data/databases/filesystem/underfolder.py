@@ -38,6 +38,7 @@ class UnderfolderDatabase(object):
                 self._dataset_metadata[f.stem] = self.load_data(f)
         else:
             # builds tree from current folder with underscore notation
+            self._data_folder = self._folder
             self._tree = tree_from_underscore_notation_files(self._folder)
             self._ids = list(sorted(self._tree.keys()))
             self._dataset_files = []
@@ -46,6 +47,18 @@ class UnderfolderDatabase(object):
         self._filenames = [None] * len(self)
         for idx in range(len(self)):
             self._filenames[idx] = self._get_filenames(idx)
+
+    @property
+    def base_folder(self):
+        return self._folder
+
+    @property
+    def data_folder(self):
+        return self._data_folder
+
+    @property
+    def has_data_in_subfolder(self):
+        return self.base_folder != self.data_folder
 
     @ property
     def metadata(self):
