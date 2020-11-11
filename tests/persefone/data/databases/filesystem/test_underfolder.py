@@ -123,6 +123,37 @@ class TestUnderscoreFolder(object):
 
         assert counter == len(dataset)
 
+    def test_creation_lazy_samples(self, underfolder_folder):
+
+        print(underfolder_folder)
+        dataset = UnderfolderDatabase(folder=underfolder_folder, use_lazy_samples=True)
+
+        assert isinstance(dataset.metadata, dict)
+
+        assert 'cfg' in dataset.metadata
+        assert 'numbers' in dataset.metadata
+        assert 'pose' in dataset.metadata
+
+        assert len(dataset) == 20
+
+        counter = 0
+        for sample in dataset:
+
+            assert 'image' in sample
+            assert 'image_mask' in sample
+            assert 'image_maskinv' in sample
+            assert 'label' in sample
+            assert 'metadata' in sample
+            assert 'metadatay' in sample
+            assert 'points' in sample
+
+            assert isinstance(sample['image'], np.ndarray)
+            assert isinstance(sample['image_mask'], np.ndarray)
+            assert isinstance(sample['image_maskinv'], np.ndarray)
+            counter += 1
+
+        assert counter == len(dataset)
+
 
 class TestUnderscoreFolderCreation(object):
 

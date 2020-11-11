@@ -10,20 +10,52 @@ import yaml
 import json
 
 
+class UnderfolderLazySample(dict):
+
+    def __init__(self, database: 'UnderfolderDatabase'):
+        """ Creates a LazySample, aka a dict with items loaded when called
+
+        :param database: [description]
+        :type database: UnderfolderDatabase
+        """
+        self._database = database
+        self._cached = {}
+        self._keys_map = {}
+
+    def add_key(self, key: Any, reference: str):
+        self._keys_map[key] = reference
+
+    def __contains__(self, key: Any):
+        return key in self._keys_map
+
+    def __getitem__(self, key: Any):
+
+        if key not in self._keys_map:
+            raise KeyError
+
+        if key not in self._cached:
+            self._cached[key] = self._database.load_data(self._keys_map[key])
+
+        return self._cached[key]
+
+
 class UnderfolderDatabase(object):
     DATA_SUBFOLDER = 'data'
 
-    def __init__(self, folder: str, data_tags: Union[None, Dict] = None):
+    def __init__(self, folder: str, data_tags: Union[None, Dict] = None, use_lazy_samples: bool = False):
         """ Creates a database based on an UNderscore Notation Folder
 
         :param folder: input folder
         :type folder: str
         :param data_tags: dict of allowed tags with remapped name, leave None for all tags allowed, defaults to None
         :type data_tags: Union[None, Dict], optional
+        :param use_future_samples: TRUE to use lazy samples
+        :type use_future_samples: bool
         """
 
         self._folder = Path(folder)
         self._data_tags = data_tags
+        self._use_lazy_samples = use_lazy_samples
 
         self._data_folder = self._folder / self.DATA_SUBFOLDER
 
@@ -136,11 +168,14 @@ class UnderfolderDatabase(object):
             raise IndexError
 
         data = self._tree[self._ids[idx]]
-        output = {}
+        output = {} if not self._use_lazy_samples else UnderfolderLazySample(self)
         for tag, filename in data.items():
             remap = self._get_tag_remap(tag)
             if remap is not None:
-                output[remap] = self.load_data(filename)
+                if not self._use_lazy_samples:
+                    output[remap] = self.load_data(filename)
+                else:
+                    output.add_key(remap, filename)
 
         return output
 
