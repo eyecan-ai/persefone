@@ -16,6 +16,12 @@ def underfolder_folder():
 
 
 @pytest.fixture()
+def underfoldertomix_folder():
+    import pathlib
+    return pathlib.Path(__file__).parent / 'sample_data/datasets/underfolder_tomix'
+
+
+@pytest.fixture()
 def configurations_folder():
     import pathlib
     return pathlib.Path(__file__).parent / 'sample_data/configurations/'

@@ -1,5 +1,5 @@
 from pathlib import Path
-from persefone.data.databases.filesystem.underfolder import UnderfolderDatabase, UnderfolderDatabaseGenerator
+from persefone.data.databases.filesystem.underfolder import UnderfolderDatabase, UnderfolderDatabaseGenerator, UnderfolderDatabaseMixer
 import numpy as np
 
 
@@ -187,3 +187,63 @@ class TestUnderscoreFolderCreation(object):
             sample = dataset[idx]
             r_sample = reloaded_dataset[idx]
             assert sample.keys() == r_sample.keys()
+
+    def test_export(self, underfolder_folder, generic_temp_folder):
+        assert generic_temp_folder is not None
+
+        print(generic_temp_folder)
+
+        generator = UnderfolderDatabaseGenerator(generic_temp_folder)
+
+        dataset = UnderfolderDatabase(folder=underfolder_folder)
+        assert len(dataset) == 20
+
+        generator.export_skeleton_database(dataset, generic_temp_folder)
+
+        reloaded_dataset = UnderfolderDatabase(folder=generic_temp_folder)
+
+        assert len(reloaded_dataset) == len(dataset)
+
+        for idx in range(len(dataset)):
+            sample = dataset[idx]
+            r_sample = reloaded_dataset[idx]
+            assert sample.keys() == r_sample.keys()
+
+
+class TestUnderscoreFolderMixer(object):
+
+    def test_creation(self, underfoldertomix_folder):
+
+        print(underfoldertomix_folder)
+        dataset = UnderfolderDatabase(folder=underfoldertomix_folder)
+        mixer = UnderfolderDatabaseMixer(database=dataset, group_by_key='counter')
+
+        assert isinstance(dataset.metadata, dict)
+
+        for sample_id in range(len(mixer)):
+            sample = mixer.skeleton[sample_id]
+            print(sample)
+
+        # assert 'cfg' in dataset.metadata
+        # assert 'numbers' in dataset.metadata
+        # assert 'pose' in dataset.metadata
+
+        # assert len(dataset) == 20
+
+        # counter = 0
+        # for sample in dataset:
+
+        #     assert 'image' in sample
+        #     assert 'image_mask' in sample
+        #     assert 'image_maskinv' in sample
+        #     assert 'label' in sample
+        #     assert 'metadata' in sample
+        #     assert 'metadatay' in sample
+        #     assert 'points' in sample
+
+        #     assert isinstance(sample['image'], np.ndarray)
+        #     assert isinstance(sample['image_mask'], np.ndarray)
+        #     assert isinstance(sample['image_maskinv'], np.ndarray)
+        #     counter += 1
+
+        # assert counter == len(dataset)

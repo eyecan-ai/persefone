@@ -1,8 +1,10 @@
 
+import shutil
+from tqdm import tqdm
 from json.encoder import JSONEncoder
 from pathlib import Path
 from persefone.utils.bytes import DataCoding
-from typing import Any, Dict, Union
+from typing import Any, Dict, OrderedDict, Tuple, Union
 from persefone.utils.filesystem import tree_from_underscore_notation_files, is_file_image, get_file_extension, is_file_numpy_array, is_metadata_file
 import imageio
 import numpy as np
@@ -28,6 +30,12 @@ class UnderfolderLazySample(dict):
     def __contains__(self, key: Any):
         return key in self._keys_map
 
+    def keys(self):
+        return self._keys_map.keys()
+
+    def items(self):
+        return [(k, self[k]) for k in self.keys()]
+
     def __getitem__(self, key: Any):
 
         if key not in self._keys_map:
@@ -39,7 +47,27 @@ class UnderfolderLazySample(dict):
         return self._cached[key]
 
 
-class UnderfolderDatabase(object):
+class SkeletonDatabase(object):
+
+    def __init__(self):
+        self._filenames = []
+        self._dataset_files = []
+        self._dataset_metadata = {}
+
+    @property
+    def skeleton(self):
+        return self._filenames
+
+    @property
+    def metadata(self):
+        return self._dataset_metadata
+
+    @property
+    def root_files(self):
+        return self._dataset_files
+
+
+class UnderfolderDatabase(SkeletonDatabase):
     DATA_SUBFOLDER = 'data'
 
     def __init__(self, folder: str, data_tags: Union[None, Dict] = None, use_lazy_samples: bool = False):
@@ -52,6 +80,7 @@ class UnderfolderDatabase(object):
         :param use_future_samples: TRUE to use lazy samples
         :type use_future_samples: bool
         """
+        super().__init__()
 
         self._folder = Path(folder)
         self._data_tags = data_tags
@@ -91,10 +120,6 @@ class UnderfolderDatabase(object):
     @property
     def has_data_in_subfolder(self):
         return self.base_folder != self.data_folder
-
-    @ property
-    def metadata(self):
-        return self._dataset_metadata
 
     def _get_tag_remap(self, tag: str) -> Union[str, None]:
         """ Returns the remapped tag name. If data_tags list is None
@@ -157,10 +182,6 @@ class UnderfolderDatabase(object):
 
         output['_id'] = self._ids[idx]
         return output
-
-    @property
-    def skeleton(self):
-        return self._filenames
 
     def __getitem__(self, idx):
 
@@ -243,3 +264,102 @@ class UnderfolderDatabaseGenerator(object):
             raise NotImplementedError(f"EXtension [{extension}] not supported yet!")
 
         return str(filename)
+
+    def export_skeleton_database(self, input_database: SkeletonDatabase, use_tqdm=True):
+        """ Exports an input database into target folder
+
+        :param input_database: input database
+        :type input_database: SkeletonDatabase
+        :param use_tqdm: TRUE for progress bar display
+        :type use_tqdm: bool
+        """
+
+        iterable = range(len(input_database))
+        if use_tqdm:
+            iterable = tqdm(iterable)
+
+        for file in input_database.root_files:
+            shutil.copy(file, self._folder / Path(file).name)
+
+        for sample_id in iterable:
+            sample = input_database[sample_id]
+            extensions = input_database.skeleton[sample_id]
+            for key, data in sample.items():
+                if key != 'metadata':
+                    ext = Path(extensions[key]).suffix.replace('.', '')
+                    self.store_sample(sample_id, key, data, ext)
+                else:
+                    self.store_sample(sample_id, key, data, 'yml')
+
+
+class UnderfolderDatabaseMixer(SkeletonDatabase):
+
+    def __init__(self, database: UnderfolderDatabase, group_by_key: str):
+        super().__init__()
+        self._database = database
+        self._group_key = group_by_key
+        self._dataset_files = database.root_files
+        self._dataset_metadata = dict(database.metadata)
+
+        self._group_map = OrderedDict()
+        self._group_map_skeleton = OrderedDict()
+
+        for sample_id in range(len(self._database)):
+            sample = self._database[sample_id]
+            skeleton = self._database.skeleton[sample_id]
+            assert 'metadata' in sample, f"No metadata found in sample [{sample_id}]"
+
+            metadata = sample['metadata']
+            assert self._group_key in metadata, f"No '{self._group_map}'' found in metadata!"
+
+            group_val = metadata[self._group_key]
+            if group_val not in self._group_map:
+                self._group_map[group_val] = []
+                self._group_map_skeleton[group_val] = []
+
+            self._group_map[group_val].append((sample_id, sample, group_val))
+            self._group_map_skeleton[group_val].append((sample_id, skeleton, group_val))
+
+        self._groups = [v for k, v in self._group_map.items()]
+        self._groups_skeleton = [v for k, v in self._group_map_skeleton.items()]
+
+        self._filenames = [None] * len(self)
+        for idx in range(len(self)):
+            self._filenames[idx] = self._get_filenames(idx)
+
+    def __len__(self):
+        return len(self._groups)
+
+    def _get_filenames(self, idx):
+
+        if idx >= len(self):
+            raise IndexError
+
+        group = self._groups_skeleton[idx]
+        output = {'metadata': {'group_by': -1}}
+        element_counter = 0
+        for sample_id, (element_id, element_data, group_val) in enumerate(group):
+            for key, data in element_data.items():
+                item_name = f'{key}_{element_counter}'
+                output[item_name] = data
+            element_counter += 1
+            output['metadata']['group_by'] = group_val
+
+        return output
+
+    def __getitem__(self, idx):
+
+        if idx >= len(self):
+            raise IndexError
+
+        group = self._groups[idx]
+        output = {'metadata': {'group_by': -1}}
+        element_counter = 0
+        for sample_id, (element_id, element_data, group_val) in enumerate(group):
+            for key, data in element_data.items():
+                item_name = f'{key}_{element_counter}'
+                output[item_name] = data
+            element_counter += 1
+            output['metadata']['group_by'] = group_val
+
+        return output
