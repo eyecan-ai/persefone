@@ -187,7 +187,9 @@ def random_stain(image: np.ndarray,
             color = tuple(random.uniform(min_rgb[i], max_rgb[i]) for i in range(3))
         else:
             pos = _rand_pos(min_r, max_r, min_c, max_c, saliency, disp)
-            color = tuple(image[pos[0], pos[1]].reshape(3,))
+            r = max(0, min(image.shape[0] - 1, pos[0]))
+            c = max(0, min(image.shape[1] - 1, pos[1]))
+            color = tuple(image[r, c].reshape(3,))
         return color
 
     for i in range(n_holes):
