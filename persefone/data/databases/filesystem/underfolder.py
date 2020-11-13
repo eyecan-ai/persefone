@@ -1,4 +1,5 @@
 
+from persefone.transforms.factory import TransformsFactory
 import shutil
 from tqdm import tqdm
 from json.encoder import JSONEncoder
@@ -363,3 +364,39 @@ class UnderfolderDatabaseMixer(SkeletonDatabase):
             output['metadata']['group_by'] = group_val
 
         return output
+
+
+class TransformedUnderfolderDatabase(UnderfolderDatabase):
+
+    def __init__(self,
+                 folder: str,
+                 data_tags: Union[None, Dict] = None,
+                 use_lazy_samples: bool = False,
+                 augmentations_file: str = ''
+                 ):
+        super().__init__(folder=folder, data_tags=data_tags, use_lazy_samples=use_lazy_samples)
+
+        assert len(str(augmentations_file)) > 0, "invalid augmentation file!"
+        self._transforms_cfg = yaml.safe_load(open(augmentations_file, 'r'))
+        self._transforms = TransformsFactory.parse_dict(self._transforms_cfg)
+        self._tramsforms_targets = self._transforms_cfg.get('inputs', {})
+        self._transforms.add_targets(self._tramsforms_targets)
+
+    def __getitem__(self, idx):
+
+        if idx >= len(self):
+            raise IndexError
+
+        sample = super().__getitem__(idx)
+
+        to_transform = {}
+        for key in self._tramsforms_targets.keys():
+            if key in sample:
+                to_transform[key] = sample[key]
+
+        transformed = self._transforms(**to_transform)
+        for key in self._tramsforms_targets.keys():
+            if key in sample:
+                sample[key] = transformed[key]
+
+        return sample

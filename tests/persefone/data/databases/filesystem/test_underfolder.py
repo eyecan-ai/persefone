@@ -1,5 +1,7 @@
 from pathlib import Path
-from persefone.data.databases.filesystem.underfolder import UnderfolderDatabase, UnderfolderDatabaseGenerator, UnderfolderDatabaseMixer
+from persefone.data.databases.filesystem.underfolder import (
+    TransformedUnderfolderDatabase, UnderfolderDatabase, UnderfolderDatabaseGenerator, UnderfolderDatabaseMixer
+)
 import numpy as np
 
 
@@ -224,26 +226,18 @@ class TestUnderscoreFolderMixer(object):
             sample = mixer.skeleton[sample_id]
             print(sample)
 
-        # assert 'cfg' in dataset.metadata
-        # assert 'numbers' in dataset.metadata
-        # assert 'pose' in dataset.metadata
 
-        # assert len(dataset) == 20
+class TestUnderscoreFolderTransformed(object):
 
-        # counter = 0
-        # for sample in dataset:
+    def test_transformed(self, underfolder_folder, augmentations_folder):
 
-        #     assert 'image' in sample
-        #     assert 'image_mask' in sample
-        #     assert 'image_maskinv' in sample
-        #     assert 'label' in sample
-        #     assert 'metadata' in sample
-        #     assert 'metadatay' in sample
-        #     assert 'points' in sample
+        cfg_file = underfolder_folder / 'augmentations.yml'
+        t_dataset = TransformedUnderfolderDatabase(folder=underfolder_folder, augmentations_file=cfg_file)
+        dataset = UnderfolderDatabase(folder=underfolder_folder)
+        assert isinstance(t_dataset.metadata, dict)
 
-        #     assert isinstance(sample['image'], np.ndarray)
-        #     assert isinstance(sample['image_mask'], np.ndarray)
-        #     assert isinstance(sample['image_maskinv'], np.ndarray)
-        #     counter += 1
-
-        # assert counter == len(dataset)
+        for sample_id in range(len(t_dataset)):
+            sample = t_dataset[sample_id]
+            original_sample = dataset[sample_id]
+            assert sample.keys() == original_sample.keys()
+            assert sample['image'].shape != original_sample['image'].shape
