@@ -1,0 +1,11 @@
+inputs:
+        image: 'image'
+        image_mask: 'mask'
+        image_maskinv: 'mask'
+transforms:
+      - aug.resize:
+                size: [500, 500]
+                always_apply: True
+      - aug.random_crop:
+                size: [256, 256]
+                always_apply: True
