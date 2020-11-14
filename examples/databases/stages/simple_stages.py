@@ -44,12 +44,16 @@ stages = StagesComposition([
         'image_mask': 'gt',
         'image_maskinv': 'gt_inv'
     }),
+    StageQuery(queries=[
+        '`info.sample_id` < 111',
+    ]),
 ])
 
 with timing("Staging database"):
     database = stages(database)
 
-while True:
+
+while len(database) > 0:
     for sample_id in range(len(database)):
         sample = database[sample_id]
         print(sample['info'])
