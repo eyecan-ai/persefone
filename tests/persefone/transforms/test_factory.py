@@ -74,7 +74,8 @@ class TestTransformsFactory(object):
             {
                 'name': 'albumentations.augmentations.transforms.ShiftScaleRotate',
                 'params': {
-                    'shift_limit': (0.1, 0.2),
+                    'shift_limit_x': [-0.1, 0.1],
+                    'shift_limit_y': [-0.2, 0.2],
                     'scale_limit': (0.3, 0.4),
                     'rotate_limit': (-22, 22),
                     'interpolation': AlbumentationTransformsFactory.INTERPOLATIONS['linear'],
@@ -152,7 +153,68 @@ class TestTransformsFactory(object):
                     'always_apply': True,
                     'p': 0.8
                 }
+            },
+            {
+                'name': 'albumentations.augmentations.transforms.LongestMaxSize',
+                'params': {
+                    'max_size': 1024,
+                    'p': 0.44,
+                    'always_apply': True,
+                    'interpolation': AlbumentationTransformsFactory.INTERPOLATIONS['linear'],
+                }
+            },
+            {
+                'name': 'albumentations.augmentations.transforms.SmallestMaxSize',
+                'params': {
+                    'max_size': 1024,
+                    'p': 0.33,
+                    'always_apply': True,
+                    'interpolation': AlbumentationTransformsFactory.INTERPOLATIONS['linear'],
+                }
+            },
+            {
+                'name': 'albumentations.augmentations.transforms.CenterCrop',
+                'params': {
+                    'height': 50,
+                    'width': 100,
+                    'p': 0.22,
+                    'always_apply': False
+                }
+            },
+            {
+                'name': 'albumentations.imgaug.transforms.IAAPerspective',
+                'params': {
+                    'scale': [0.06, 0.12],
+                    'keep_size': True,
+                    'p': 0.11,
+                    'always_apply': False
+                }
+            },
+            {
+                'name': 'albumentations.augmentations.transforms.Blur',
+                'params': {
+                    'blur_limit': [7, 8],
+                    'p': 0.05,
+                    'always_apply': False
+                }
+            },
+            {
+                'name': 'albumentations.augmentations.transforms.InvertImg',
+                'params': {
+                    'p': 0.05,
+                    'always_apply': False
+                }
+            },
+            {
+                'name': 'albumentations.augmentations.transforms.GaussNoise',
+                'params': {
+                    'var_limit': [5., 7.],
+                    'p': 0.05,
+                    'always_apply': False
+                }
             }
+
+
         ]
 
     def _compare_param(self, p1, p2):

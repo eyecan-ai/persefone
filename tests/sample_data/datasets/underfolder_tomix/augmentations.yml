@@ -1,0 +1,23 @@
+inputs:
+        image: 'image'
+        image_mask: 'mask'
+        image_maskinv: 'mask'
+transforms:
+      - aug.resize:
+          size: [500, 500]
+          always_apply: True
+      - aug.random_hsv:
+              hue_shift_limit: 2
+              sat_shift_limit: 20
+              val_shift_limit: 20
+              always_apply: True
+      - aug.random_crop:
+          size: [256, 256]
+          always_apply: True
+      - aug.pad_if_needed:
+              min_height: 600
+              min_width: 600
+              border_mode: "constant"
+              value: [0, 0, 0]
+              mask_value: 0
+              always_apply: True
