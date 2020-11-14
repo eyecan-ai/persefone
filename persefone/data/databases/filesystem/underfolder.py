@@ -28,8 +28,8 @@ class UnderfolderLazySample(dict):
 
     def copy(self):
         newsample = type(self)(database=self._database)
-        newsample._cached = self._cached
-        newsample._keys_map = self._keys_map
+        newsample._cached = self._cached.copy()
+        newsample._keys_map = self._keys_map.copy()
         return newsample
 
     def add_key(self, key: Any, reference: str):
@@ -174,6 +174,10 @@ class UnderfolderDatabase(SkeletonDatabase):
         :return: Loaded data as array or dict. May return NONE
         :rtype: Union[None, np.ndarray, dict]
         """
+
+        if isinstance(filename, list):
+            bunch = [self.load_data(x) for x in filename]
+            return np.stack(bunch)
 
         extension = get_file_extension(filename)
         data = None
@@ -321,112 +325,3 @@ class UnderfolderDatabaseGenerator(object):
                     self.store_sample(sample_id, key, data, ext)
                 else:
                     self.store_sample(sample_id, key, data, 'yml')
-
-
-class UnderfolderDatabaseMixer(SkeletonDatabase):
-
-    def __init__(self, database: UnderfolderDatabase, group_by_key: str):
-        super().__init__()
-        self._database = database
-        self._group_key = group_by_key
-        self._dataset_files = database.root_files
-        self._dataset_metadata = dict(database.metadata)
-
-        self._group_map = OrderedDict()
-        self._group_map_skeleton = OrderedDict()
-
-        for sample_id in range(len(self._database)):
-            sample = self._database[sample_id]
-            skeleton = self._database.skeleton[sample_id]
-            assert 'metadata' in sample, f"No metadata found in sample [{sample_id}]"
-
-            metadata = sample['metadata']
-            assert self._group_key in metadata, f"No '{self._group_map}'' found in metadata!"
-
-            group_val = metadata[self._group_key]
-            if group_val not in self._group_map:
-                self._group_map[group_val] = []
-                self._group_map_skeleton[group_val] = []
-
-            self._group_map[group_val].append((sample_id, sample, group_val))
-            self._group_map_skeleton[group_val].append((sample_id, skeleton, group_val))
-
-        self._groups = [v for k, v in self._group_map.items()]
-        self._groups_skeleton = [v for k, v in self._group_map_skeleton.items()]
-
-        self._filenames = [None] * len(self)
-        for idx in range(len(self)):
-            self._filenames[idx] = self._get_filenames(idx)
-
-    def __len__(self):
-        return len(self._groups)
-
-    def _get_filenames(self, idx):
-
-        if idx >= len(self):
-            raise IndexError
-
-        group = self._groups_skeleton[idx]
-        output = {'metadata': {'group_by': -1}}
-        element_counter = 0
-        for sample_id, (element_id, element_data, group_val) in enumerate(group):
-            for key, data in element_data.items():
-                item_name = f'{key}_{element_counter}'
-                output[item_name] = data
-            element_counter += 1
-            output['metadata']['group_by'] = group_val
-
-        return output
-
-    def __getitem__(self, idx):
-
-        if idx >= len(self):
-            raise IndexError
-
-        group = self._groups[idx]
-        output = {'metadata': {'group_by': -1}}
-        element_counter = 0
-        for sample_id, (element_id, element_data, group_val) in enumerate(group):
-            for key, data in element_data.items():
-                item_name = f'{key}_{element_counter}'
-                output[item_name] = data
-            element_counter += 1
-            output['metadata']['group_by'] = group_val
-
-        return output
-
-
-class TransformedUnderfolderDatabase(UnderfolderDatabase):
-
-    def __init__(self,
-                 folder: str,
-                 data_tags: Union[None, Dict] = None,
-                 use_lazy_samples: bool = False,
-                 augmentations_file: str = ''
-                 ):
-        super().__init__(folder=folder, data_tags=data_tags, use_lazy_samples=use_lazy_samples)
-
-        assert len(str(augmentations_file)) > 0, "invalid augmentation file!"
-        self._transforms_cfg = yaml.safe_load(open(augmentations_file, 'r'))
-        self._transforms = TransformsFactory.parse_dict(self._transforms_cfg)
-        self._tramsforms_targets = self._transforms_cfg.get('inputs', {})
-        self._transforms.add_targets(self._tramsforms_targets)
-
-    def __getitem__(self, idx):
-
-        if idx >= len(self):
-            raise IndexError
-
-        sample = super().__getitem__(idx)
-
-        to_transform = {}
-        for key in self._tramsforms_targets.keys():
-            if key in sample:
-                to_transform[key] = sample[key]
-
-        transformed = self._transforms(**to_transform)
-        for key in self._tramsforms_targets.keys():
-            if key in sample:
-                sample[key] = transformed[key]
-
-        return sample

@@ -1,11 +1,23 @@
 from pathlib import Path
 from persefone.data.databases.filesystem.underfolder import (
-    TransformedUnderfolderDatabase, UnderfolderDatabase, UnderfolderDatabaseGenerator, UnderfolderDatabaseMixer
+    UnderfolderDatabase, UnderfolderDatabaseGenerator, UnderfolderLazySample
 )
 import numpy as np
 
 
 class TestUnderscoreFolder(object):
+
+    def test_lazysamples(self, underfolder_folder):
+
+        print(underfolder_folder)
+        dataset = UnderfolderDatabase(folder=underfolder_folder, use_lazy_samples=True)
+
+        for sample_id in range(len(dataset)):
+            sample = dataset[sample_id]
+            assert isinstance(sample, UnderfolderLazySample)
+            keys = list(sample.keys())
+            for key in keys:
+                del sample[key]
 
     def test_creation(self, underfolder_folder):
 
@@ -210,34 +222,3 @@ class TestUnderscoreFolderCreation(object):
             sample = dataset[idx]
             r_sample = reloaded_dataset[idx]
             assert sample.keys() == r_sample.keys()
-
-
-class TestUnderscoreFolderMixer(object):
-
-    def test_creation(self, underfoldertomix_folder):
-
-        print(underfoldertomix_folder)
-        dataset = UnderfolderDatabase(folder=underfoldertomix_folder)
-        mixer = UnderfolderDatabaseMixer(database=dataset, group_by_key='counter')
-
-        assert isinstance(dataset.metadata, dict)
-
-        for sample_id in range(len(mixer)):
-            sample = mixer.skeleton[sample_id]
-            print(sample)
-
-
-class TestUnderscoreFolderTransformed(object):
-
-    def test_transformed(self, underfolder_folder, augmentations_folder):
-
-        cfg_file = underfolder_folder / 'augmentations.yml'
-        t_dataset = TransformedUnderfolderDatabase(folder=underfolder_folder, augmentations_file=cfg_file)
-        dataset = UnderfolderDatabase(folder=underfolder_folder)
-        assert isinstance(t_dataset.metadata, dict)
-
-        for sample_id in range(len(t_dataset)):
-            sample = t_dataset[sample_id]
-            original_sample = dataset[sample_id]
-            assert sample.keys() == original_sample.keys()
-            assert sample['image'].shape != original_sample['image'].shape

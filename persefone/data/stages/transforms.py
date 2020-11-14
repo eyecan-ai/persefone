@@ -1,4 +1,5 @@
 
+from pathlib import Path
 from persefone.transforms.factory import TransformsFactory
 from typing import Dict, Union
 from persefone.data.databases.filesystem.underfolder import UnderfolderDatabase
@@ -18,7 +19,7 @@ class StageTransforms(DStage):
         super().__init__()
 
         self._transforms_cfg = {}
-        if isinstance(augmentations, str):
+        if isinstance(augmentations, str) or isinstance(augmentations, Path):
             self._transforms_cfg = yaml.safe_load(open(augmentations, 'r'))
         elif isinstance(augmentations, dict):
             self._transforms_cfg = augmentations
