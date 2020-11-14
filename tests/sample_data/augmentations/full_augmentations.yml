@@ -144,3 +144,6 @@ transforms:
                   blur_limit: [7, 8]
                   always_apply: False
                   p: 0.05
+        - aug.invert:
+                  always_apply: False
+                  p: 0.05

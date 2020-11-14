@@ -197,6 +197,13 @@ class TestTransformsFactory(object):
                     'p': 0.05,
                     'always_apply': False
                 }
+            },
+            {
+                'name': 'albumentations.augmentations.transforms.InvertImg',
+                'params': {
+                    'p': 0.05,
+                    'always_apply': False
+                }
             }
 
         ]

@@ -65,6 +65,7 @@ class AlbumentationTransformsFactory(AbstractFactory):
             'pad_if_needed': {'f': cls._build_pad_if_needed, 'targets': cls._targets_map()['spatial_full']},
             'random_perspective': {'f': cls._build_random_perspective, 'targets': cls._targets_map()['spatial_full']},
             'blur': {'f': cls._build_blur_transform, 'targets': cls._targets_map()['spatial_full']},
+            'invert': {'f': cls._build_invert_transform, 'targets': cls._targets_map()['spatial_full']},
         }
 
     @classmethod
@@ -253,9 +254,15 @@ class AlbumentationTransformsFactory(AbstractFactory):
 
     @classmethod
     def _build_blur_transform(cls, **params):
-        print("BLUR PARAMS", params)
         return A.Blur(
             blur_limit=get_arg(params, 'blur_limit', 8),
+            always_apply=get_arg(params, 'always_apply', False),
+            p=get_arg(params, 'p', 0.5)
+        )
+
+    @classmethod
+    def _build_invert_transform(cls, **params):
+        return A.InvertImg(
             always_apply=get_arg(params, 'always_apply', False),
             p=get_arg(params, 'p', 0.5)
         )
