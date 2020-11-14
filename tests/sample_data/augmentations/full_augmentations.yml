@@ -134,3 +134,8 @@ transforms:
                   width: 100
                   always_apply: False
                   p: 0.22
+        - aug.random_perspective:
+                  scale: [0.06, 0.12]
+                  keep_size: True
+                  always_apply: False
+                  p: 0.11

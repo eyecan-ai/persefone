@@ -179,6 +179,15 @@ class TestTransformsFactory(object):
                     'p': 0.22,
                     'always_apply': False
                 }
+            },
+            {
+                'name': 'albumentations.imgaug.transforms.IAAPerspective',
+                'params': {
+                    'scale': [0.06, 0.12],
+                    'keep_size': True,
+                    'p': 0.11,
+                    'always_apply': False
+                }
             }
         ]
 

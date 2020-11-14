@@ -63,6 +63,7 @@ class AlbumentationTransformsFactory(AbstractFactory):
             'normalize': {'f': cls._build_normalize, 'targets': cls._targets_map()['spatial_full']},
             'coarse_dropout': {'f': cls._build_coarse_dropout, 'targets': cls._targets_map()['spatial_full']},
             'pad_if_needed': {'f': cls._build_pad_if_needed, 'targets': cls._targets_map()['spatial_full']},
+            'random_perspective': {'f': cls._build_random_perspective, 'targets': cls._targets_map()['spatial_full']},
         }
 
     @classmethod
@@ -235,6 +236,15 @@ class AlbumentationTransformsFactory(AbstractFactory):
             border_mode=cls._get_borders_value(get_arg(params, 'border_mode', 'constant')),
             value=get_arg(params, 'value', 0),
             mask_value=get_arg(params, 'value', 0),
+            always_apply=get_arg(params, 'always_apply', False),
+            p=get_arg(params, 'p', 0.5)
+        )
+
+    @classmethod
+    def _build_random_perspective(cls, **params):
+        return A.IAAPerspective(
+            scale=get_arg(params, 'scale', (0.05, 0.1)),
+            keep_size=get_arg(params, 'keep_size', True),
             always_apply=get_arg(params, 'always_apply', False),
             p=get_arg(params, 'p', 0.5)
         )
