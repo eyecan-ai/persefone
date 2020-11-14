@@ -3,6 +3,8 @@ import dictquery as dq
 from typing import List, Sequence, Union
 from abc import ABC
 
+from tqdm import tqdm
+
 
 class DStage(ABC):
 
@@ -77,11 +79,13 @@ class StageKeyFiltering(DStage):
         if idx >= len(self):
             raise IndexError
 
-        output = {}
-        sample = self._dataset[idx]
-        for key, v in sample.items():
+        output = self._dataset[idx].copy()
+        keys = list(output.keys())
+        for key in keys:
             if key in self._keys_map:
-                output[self._keys_map[key]] = v
+                output[self._keys_map[key]] = output.pop(key)
+            else:
+                del output[key]
 
         return output
 
@@ -115,7 +119,7 @@ class StageSubsampling(DStage):
 
 class StageQuery(DStage):
 
-    def __init__(self, queries: Sequence[str]):
+    def __init__(self, queries: Sequence[str], debug: bool = False):
         """ Query stage to filter samples based on specific
         queriable field (dict fields)
 
@@ -125,12 +129,18 @@ class StageQuery(DStage):
 
         super().__init__()
         self._queries = queries
+        self._debug = debug
 
     def _update(self):
 
         self._indices = []
 
-        for idx in range(len(self._dataset)):
+        samples_iterator = range(len(self._dataset))
+        if self._debug:
+            samples_iterator = tqdm(samples_iterator)
+            samples_iterator.set_description("Querying Dataset:")
+
+        for idx in samples_iterator:
             sample = self._dataset[idx]
             matches = [dq.match(sample, q) for q in self._queries]
             if all(matches):

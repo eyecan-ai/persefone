@@ -47,6 +47,8 @@ class AlbumentationTransformsFactory(AbstractFactory):
     def _functions_map(cls):
         return {
             'resize': {'f': cls._build_resize_transform, 'targets': cls._targets_map()['spatial_full']},
+            'resize_longest': {'f': cls._build_resize_longest_transform, 'targets': cls._targets_map()['spatial_full']},
+            'resize_smallest': {'f': cls._build_resize_smallest_transform, 'targets': cls._targets_map()['spatial_full']},
             'rotate': {'f': cls._build_rotate_transform, 'targets': cls._targets_map()['spatial_full']},
             'shift_scale_rotate': {'f': cls._build_random_shift_scale_rotate, 'targets': cls._targets_map()['spatial_full']},
             'crop': {'f': cls._build_crop_transform, 'targets': cls._targets_map()['spatial_full']},
@@ -74,6 +76,24 @@ class AlbumentationTransformsFactory(AbstractFactory):
             interpolation=interpolation,
             always_apply=always,
             p=p
+        )
+
+    @classmethod
+    def _build_resize_longest_transform(cls, **params):
+        return A.LongestMaxSize(
+            max_size=params.get('max_size', 1024),
+            interpolation=cls._get_interpolation_value(get_arg(params, 'interpolation', 'none')),
+            always_apply=get_arg(params, 'always_apply', True),
+            p=get_arg(params, 'p', 1.0)
+        )
+
+    @classmethod
+    def _build_resize_smallest_transform(cls, **params):
+        return A.SmallestMaxSize(
+            max_size=params.get('max_size', 1024),
+            interpolation=cls._get_interpolation_value(get_arg(params, 'interpolation', 'none')),
+            always_apply=get_arg(params, 'always_apply', True),
+            p=get_arg(params, 'p', 1.0)
         )
 
     @classmethod

@@ -152,6 +152,24 @@ class TestTransformsFactory(object):
                     'always_apply': True,
                     'p': 0.8
                 }
+            },
+            {
+                'name': 'albumentations.augmentations.transforms.LongestMaxSize',
+                'params': {
+                    'max_size': 1024,
+                    'p': 0.44,
+                    'always_apply': True,
+                    'interpolation': AlbumentationTransformsFactory.INTERPOLATIONS['linear'],
+                }
+            },
+            {
+                'name': 'albumentations.augmentations.transforms.SmallestMaxSize',
+                'params': {
+                    'max_size': 1024,
+                    'p': 0.33,
+                    'always_apply': True,
+                    'interpolation': AlbumentationTransformsFactory.INTERPOLATIONS['linear'],
+                }
             }
         ]
 

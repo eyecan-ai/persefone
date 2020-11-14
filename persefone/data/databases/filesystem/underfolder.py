@@ -21,9 +21,16 @@ class UnderfolderLazySample(dict):
         :param database: [description]
         :type database: UnderfolderDatabase
         """
+        super().__init__()
         self._database = database
         self._cached = {}
         self._keys_map = {}
+
+    def copy(self):
+        newsample = type(self)(database=self._database)
+        newsample._cached = self._cached
+        newsample._keys_map = self._keys_map
+        return newsample
 
     def add_key(self, key: Any, reference: str):
         self._keys_map[key] = reference
@@ -46,6 +53,29 @@ class UnderfolderLazySample(dict):
             self._cached[key] = self._database.load_data(self._keys_map[key])
 
         return self._cached[key]
+
+    def pop(self, key):
+        k = self._keys_map[key]
+        del self._keys_map[key]
+        return k
+
+    def __setitem__(self, key, value):
+        self._keys_map[key] = value
+
+    def __delitem__(self, key):
+        if key in self._cached:
+            del self._cached[key]
+        if key in self._keys_map:
+            del self._keys_map[key]
+
+    def __iter__(self):
+        return iter(self._cached)
+
+    def __len__(self):
+        return len(self._keys_map)
+
+    def _keytransform(self, key):
+        return key
 
 
 class SkeletonDatabase(object):

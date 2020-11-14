@@ -119,3 +119,13 @@ transforms:
                   col_align: "left"
                   always_apply: true
                   p: 0.8
+        - aug.resize_longest:
+                  max_size: 1024
+                  always_apply: True
+                  p: 0.44
+                  interpolation: "linear"
+        - aug.resize_smallest:
+                  max_size: 1024
+                  always_apply: True
+                  p: 0.33
+                  interpolation: "linear"
