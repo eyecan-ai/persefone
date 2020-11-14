@@ -64,6 +64,7 @@ class AlbumentationTransformsFactory(AbstractFactory):
             'coarse_dropout': {'f': cls._build_coarse_dropout, 'targets': cls._targets_map()['spatial_full']},
             'pad_if_needed': {'f': cls._build_pad_if_needed, 'targets': cls._targets_map()['spatial_full']},
             'random_perspective': {'f': cls._build_random_perspective, 'targets': cls._targets_map()['spatial_full']},
+            'blur': {'f': cls._build_blur_transform, 'targets': cls._targets_map()['spatial_full']},
         }
 
     @classmethod
@@ -164,7 +165,8 @@ class AlbumentationTransformsFactory(AbstractFactory):
     @classmethod
     def _build_random_shift_scale_rotate(cls, **params):
         return A.ShiftScaleRotate(
-            shift_limit=get_arg(params, 'shift_limit', 0.0),
+            shift_limit_x=get_arg(params, 'shift_limit_x', 0),
+            shift_limit_y=get_arg(params, 'shift_limit_y', 0),
             scale_limit=get_arg(params, 'scale_limit', 0.0),
             rotate_limit=get_arg(params, 'rotate_limit', 0),
             interpolation=cls._get_interpolation_value(get_arg(params, 'interpolation', 'linear')),
@@ -245,6 +247,15 @@ class AlbumentationTransformsFactory(AbstractFactory):
         return A.IAAPerspective(
             scale=get_arg(params, 'scale', (0.05, 0.1)),
             keep_size=get_arg(params, 'keep_size', True),
+            always_apply=get_arg(params, 'always_apply', False),
+            p=get_arg(params, 'p', 0.5)
+        )
+
+    @classmethod
+    def _build_blur_transform(cls, **params):
+        print("BLUR PARAMS", params)
+        return A.Blur(
+            blur_limit=get_arg(params, 'blur_limit', 8),
             always_apply=get_arg(params, 'always_apply', False),
             p=get_arg(params, 'p', 0.5)
         )

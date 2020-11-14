@@ -61,7 +61,8 @@ transforms:
                   always_apply: False
                   p: 0.10
         - aug.shift_scale_rotate:
-                  shift_limit: [0.1, 0.2]
+                  shift_limit_x: 0.1
+                  shift_limit_y: 0.2
                   scale_limit: [0.3, 0.4]
                   rotate_limit: 22
                   interpolation: "linear"
@@ -139,3 +140,7 @@ transforms:
                   keep_size: True
                   always_apply: False
                   p: 0.11
+        - aug.blur:
+                  blur_limit: [7, 8]
+                  always_apply: False
+                  p: 0.05

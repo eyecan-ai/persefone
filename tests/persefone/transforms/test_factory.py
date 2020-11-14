@@ -74,7 +74,8 @@ class TestTransformsFactory(object):
             {
                 'name': 'albumentations.augmentations.transforms.ShiftScaleRotate',
                 'params': {
-                    'shift_limit': (0.1, 0.2),
+                    'shift_limit_x': [-0.1, 0.1],
+                    'shift_limit_y': [-0.2, 0.2],
                     'scale_limit': (0.3, 0.4),
                     'rotate_limit': (-22, 22),
                     'interpolation': AlbumentationTransformsFactory.INTERPOLATIONS['linear'],
@@ -188,7 +189,16 @@ class TestTransformsFactory(object):
                     'p': 0.11,
                     'always_apply': False
                 }
+            },
+            {
+                'name': 'albumentations.augmentations.transforms.Blur',
+                'params': {
+                    'blur_limit': [7, 8],
+                    'p': 0.05,
+                    'always_apply': False
+                }
             }
+
         ]
 
     def _compare_param(self, p1, p2):
