@@ -101,21 +101,29 @@ class SkeletonDatabase(object):
 class UnderfolderDatabase(SkeletonDatabase):
     DATA_SUBFOLDER = 'data'
 
-    def __init__(self, folder: str, data_tags: Union[None, Dict] = None, use_lazy_samples: bool = False):
+    def __init__(self,
+                 folder: str,
+                 data_tags: Union[None, Dict] = None,
+                 use_lazy_samples: bool = False,
+                 cached: bool = False):
         """ Creates a database based on an UNderscore Notation Folder
 
         :param folder: input folder
         :type folder: str
         :param data_tags: dict of allowed tags with remapped name, leave None for all tags allowed, defaults to None
         :type data_tags: Union[None, Dict], optional
-        :param use_future_samples: TRUE to use lazy samples
-        :type use_future_samples: bool
+        :param use_lazy_samples: TRUE to use lazy samples
+        :type use_lazy_samples: bool
+        :param cached: TRUE to cache loaded data
+        :type cached: bool
         """
         super().__init__()
 
         self._folder = Path(folder)
         self._data_tags = data_tags
         self._use_lazy_samples = use_lazy_samples
+        self._cached = cached
+        self._cached_data = {}
 
         self._data_folder = self._folder / self.DATA_SUBFOLDER
 
@@ -179,6 +187,10 @@ class UnderfolderDatabase(SkeletonDatabase):
             bunch = [self.load_data(x) for x in filename]
             return np.stack(bunch)
 
+        if self._cached:
+            if filename in self._cached_data:
+                return self._cached_data[filename]
+
         extension = get_file_extension(filename)
         data = None
 
@@ -198,6 +210,10 @@ class UnderfolderDatabase(SkeletonDatabase):
                 data = yaml.safe_load(open(filename, 'r'))
             elif extension in ['json']:
                 data = json.load(open(filename))
+
+        if self._cached:
+            if filename not in self._cached_data:
+                self._cached_data[filename] = data
 
         return data
 
