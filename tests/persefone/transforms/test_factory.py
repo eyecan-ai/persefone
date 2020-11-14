@@ -170,6 +170,15 @@ class TestTransformsFactory(object):
                     'always_apply': True,
                     'interpolation': AlbumentationTransformsFactory.INTERPOLATIONS['linear'],
                 }
+            },
+            {
+                'name': 'albumentations.augmentations.transforms.CenterCrop',
+                'params': {
+                    'height': 50,
+                    'width': 100,
+                    'p': 0.22,
+                    'always_apply': False
+                }
             }
         ]
 

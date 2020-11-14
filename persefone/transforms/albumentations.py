@@ -52,6 +52,7 @@ class AlbumentationTransformsFactory(AbstractFactory):
             'rotate': {'f': cls._build_rotate_transform, 'targets': cls._targets_map()['spatial_full']},
             'shift_scale_rotate': {'f': cls._build_random_shift_scale_rotate, 'targets': cls._targets_map()['spatial_full']},
             'crop': {'f': cls._build_crop_transform, 'targets': cls._targets_map()['spatial_full']},
+            'center_crop': {'f': cls._build_center_crop_transform, 'targets': cls._targets_map()['spatial_full']},
             'random_crop': {'f': cls._build_random_crop_transform, 'targets': cls._targets_map()['spatial_full']},
             'random_brightness_contrast': {'f': cls._build_random_brightness_contrast, 'targets': cls._targets_map()['pixels']},
             'random_hsv': {'f': cls._build_random_hsv, 'targets': cls._targets_map()['pixels']},
@@ -116,6 +117,15 @@ class AlbumentationTransformsFactory(AbstractFactory):
             y_min=box[1],
             x_max=box[2],
             y_max=box[3],
+            always_apply=get_arg(params, 'always_apply', True),
+            p=get_arg(params, 'p', 1.0)
+        )
+
+    @classmethod
+    def _build_center_crop_transform(cls, **params):
+        return A.CenterCrop(
+            height=get_arg(params, 'height', 100),
+            width=get_arg(params, 'width', 100),
             always_apply=get_arg(params, 'always_apply', True),
             p=get_arg(params, 'p', 1.0)
         )

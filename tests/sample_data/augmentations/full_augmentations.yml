@@ -129,3 +129,8 @@ transforms:
                   always_apply: True
                   p: 0.33
                   interpolation: "linear"
+        - aug.center_crop:
+                  height: 50
+                  width: 100
+                  always_apply: False
+                  p: 0.22
