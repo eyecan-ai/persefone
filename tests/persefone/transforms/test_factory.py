@@ -204,7 +204,16 @@ class TestTransformsFactory(object):
                     'p': 0.05,
                     'always_apply': False
                 }
+            },
+            {
+                'name': 'albumentations.augmentations.transforms.GaussNoise',
+                'params': {
+                    'var_limit': [5., 7.],
+                    'p': 0.05,
+                    'always_apply': False
+                }
             }
+
 
         ]
 

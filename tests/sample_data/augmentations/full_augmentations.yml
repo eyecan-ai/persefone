@@ -147,3 +147,7 @@ transforms:
         - aug.invert:
                   always_apply: False
                   p: 0.05
+        - aug.noise_gaussian:
+                  var_limit: [5., 7.]
+                  always_apply: False
+                  p: 0.05

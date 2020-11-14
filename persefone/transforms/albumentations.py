@@ -66,6 +66,7 @@ class AlbumentationTransformsFactory(AbstractFactory):
             'random_perspective': {'f': cls._build_random_perspective, 'targets': cls._targets_map()['spatial_full']},
             'blur': {'f': cls._build_blur_transform, 'targets': cls._targets_map()['spatial_full']},
             'invert': {'f': cls._build_invert_transform, 'targets': cls._targets_map()['spatial_full']},
+            'noise_gaussian': {'f': cls._build_noise_gaussian, 'targets': cls._targets_map()['spatial_full']},
         }
 
     @classmethod
@@ -263,6 +264,14 @@ class AlbumentationTransformsFactory(AbstractFactory):
     @classmethod
     def _build_invert_transform(cls, **params):
         return A.InvertImg(
+            always_apply=get_arg(params, 'always_apply', False),
+            p=get_arg(params, 'p', 0.5)
+        )
+
+    @classmethod
+    def _build_noise_gaussian(cls, **params):
+        return A.GaussNoise(
+            var_limit=get_arg(params, 'var_limit', [10., 50.]),
             always_apply=get_arg(params, 'always_apply', False),
             p=get_arg(params, 'p', 0.5)
         )
