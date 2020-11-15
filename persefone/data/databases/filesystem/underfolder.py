@@ -149,6 +149,13 @@ class UnderfolderDatabase(SkeletonDatabase):
             self._filenames[idx] = self._get_filenames(idx)
 
     @property
+    def zfill(self):
+        if len(self) > 0:
+            return len(self._ids[0])
+        else:
+            return 0
+
+    @property
     def base_folder(self):
         return self._folder
 
