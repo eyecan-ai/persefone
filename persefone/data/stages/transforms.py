@@ -52,12 +52,14 @@ class StageTransforms(DStage):
 
         assert self._default_image_key in to_transform, f"Missing default '{self._default_image_key}' key in samples"
 
-        to_transform[self.NEEDED_IMAGE_KEY] = to_transform[self._default_image_key]
-        del to_transform[self._default_image_key]
+        if self.NEEDED_IMAGE_KEY != self._default_image_key:
+            to_transform[self.NEEDED_IMAGE_KEY] = to_transform[self._default_image_key]
+            del to_transform[self._default_image_key]
 
         # Applies transforms to targets
         transformed = self._transforms(**to_transform)
-        transformed[self._default_image_key] = transformed[self.NEEDED_IMAGE_KEY]
+        if self.NEEDED_IMAGE_KEY != self._default_image_key:
+            transformed[self._default_image_key] = transformed[self.NEEDED_IMAGE_KEY]
 
         # Replace original fields
         for key in self._transforms_targets.keys():
