@@ -35,7 +35,11 @@ class DrawingUtils:
         """
         if blend_radius is not None:
             r = blend_radius
-            pad = PadIfNeeded(patch.shape[0] + 2 * r, patch.shape[1] + 2 * r, cv2.BORDER_CONSTANT)
+            pad = PadIfNeeded(
+                min_height=patch.shape[0] + 2 * r,
+                min_width=patch.shape[1] + 2 * r,
+                border_mode=cv2.BORDER_CONSTANT
+            )
             padded = pad(image=patch, mask=patch_mask)
             patch = padded['image']
             patch_mask = padded['mask']
