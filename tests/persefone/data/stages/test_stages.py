@@ -1,6 +1,3 @@
-from logging import debug
-from pathlib import Path
-
 import yaml
 from persefone.data.databases.filesystem.underfolder import (
     UnderfolderDatabase
@@ -9,7 +6,7 @@ import numpy as np
 from persefone.data.stages.base import (
     StagesComposition, StageQuery, StageGroupBy, StageKeyFiltering, StageSubsampling
 )
-from persefone.data.stages.transforms import StageTransforms
+from persefone.data.stages.transforms import StageTransforms, StageTranspose, StageRangeRemap
 
 
 class TestStages(object):
@@ -47,7 +44,6 @@ class TestStages(object):
 
     def test_groupby_stage_stacked(self, underfoldertomix_folder, augmentations_folder):
 
-        augmentation_file = underfoldertomix_folder / 'augmentations.yml'
         datasets = [
             UnderfolderDatabase(folder=underfoldertomix_folder),
             UnderfolderDatabase(folder=underfoldertomix_folder, use_lazy_samples=True)
@@ -83,7 +79,6 @@ class TestStages(object):
 
     def test_groupby_stage_unstacked(self, underfoldertomix_folder, augmentations_folder):
 
-        augmentation_file = underfoldertomix_folder / 'augmentations.yml'
         datasets = [
             UnderfolderDatabase(folder=underfoldertomix_folder),
             UnderfolderDatabase(folder=underfoldertomix_folder, use_lazy_samples=True)
@@ -110,8 +105,62 @@ class TestStages(object):
 
     def test_groupby_stage_wrong(self, underfoldertomix_folder, augmentations_folder):
 
-        augmentation_file = underfoldertomix_folder / 'augmentations.yml'
         dataset = UnderfolderDatabase(folder=underfoldertomix_folder)
 
         StageGroupBy('metadata.XXX', stack_values=False)(dataset)
         StageGroupBy('metadata.XXX', stack_values=False, debug=True)(dataset)
+
+    def test_stage_transpose(self, underfolder_folder):
+        datasets = [
+            UnderfolderDatabase(folder=underfolder_folder),
+            UnderfolderDatabase(folder=underfolder_folder, use_lazy_samples=True)
+        ]
+
+        for dataset in datasets:
+            transposition = {
+                'image': (2, 0, 1),
+                'image_mask': (0, 1, 2),
+            }
+
+            stage = StageTranspose(transposition)
+
+            staged_dataset = stage(dataset)
+            sample = dataset[0]
+            staged_sample = staged_dataset[0]
+            expected = {
+                k: np.transpose(sample[k], v)
+                for k, v in transposition.items()
+            }
+            assert sample.keys() == staged_sample.keys()
+            for k in transposition:
+                assert np.allclose(expected[k], staged_sample[k])
+
+    def test_stage_range_remap(self, underfolder_folder):
+        datasets = [
+            UnderfolderDatabase(folder=underfolder_folder),
+            UnderfolderDatabase(folder=underfolder_folder, use_lazy_samples=True)
+        ]
+
+        for dataset in datasets:
+            range_remap = {
+                'image': {
+                    'in_range': (0., 1.),
+                    'out_range': (0, 255),
+                    'dtype': 'uint8',
+                },
+            }
+
+            stage = StageRangeRemap(range_remap)
+            staged_dataset = stage(dataset)
+            sample = dataset[0]
+            staged_sample = staged_dataset[0]
+
+            expected = {}
+            for k, v in range_remap.items():
+                a = (v['out_range'][1] - v['out_range'][0]) / (v['in_range'][1] - v['in_range'][0])
+                expected[k] = (sample[k] - v['in_range'][0]) * a + v['out_range'][0]
+                expected[k] = expected[k].astype(v['dtype'])
+
+            assert sample.keys() == staged_sample.keys()
+            for k in range_remap:
+                assert np.allclose(expected[k], staged_sample[k])
