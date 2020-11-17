@@ -2,7 +2,7 @@ import yaml
 import numpy as np
 import pytest
 from persefone.data.stages.base import (
-    StagesComposition, StageQuery, StageGroupBy, StageKeyFiltering, StageSubsampling
+    StageCache, StagesComposition, StageQuery, StageGroupBy, StageKeyFiltering, StageSubsampling
 )
 from persefone.data.stages.transforms import StageToCHWFloat, StageToHWCUint8, StageTransforms, StageTranspose, StageRangeRemap
 from persefone.data.databases.filesystem.underfolder import (
@@ -207,3 +207,17 @@ class TestStages(object):
             assert sample['image'].shape == image.shape
             assert np.max(image) <= 255
             assert np.min(image) >= 0
+
+    def test_stage_cache(self, underfolder_folder):
+        datasets = [
+            UnderfolderDatabase(folder=underfolder_folder),
+            UnderfolderDatabase(folder=underfolder_folder, use_lazy_samples=True)
+        ]
+
+        for dataset in datasets:
+            stage_cache = StageCache()
+            staged_dataset = stage_cache(dataset)
+            sample = dataset[0]
+            staged_sample = staged_dataset[0]
+
+            assert sample.keys() == staged_sample.keys()

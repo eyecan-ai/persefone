@@ -159,6 +159,28 @@ class StageQuery(DStage):
         return self._dataset[self._indices[idx]]
 
 
+class StageCache(DStage):
+    """Performs no operation on input dataset, but caches it to avoid recomputing previous expensive operations
+
+    :param max_size: maximum cache size, set to a negative integer for unlimited cache, defaults to -1
+    :type max_size: int, optional
+    """
+
+    def __init__(self, max_size: int = -1) -> None:
+        super().__init__()
+        self.max_size = max_size
+        self._cache = {}
+
+    def __getitem__(self, idx) -> dict:
+        if idx in self._cache:
+            return self._cache[idx]
+        else:
+            res = self._dataset[idx]
+            if self.max_size < 0 or len(self._cache < self.max_size):
+                self._cache[idx] = res
+            return res
+
+
 class StageGroupBy(DStage):
 
     def __init__(self, field_name: str, stack_values: bool = False, debug: bool = False):
