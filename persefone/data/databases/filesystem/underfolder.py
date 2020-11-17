@@ -202,7 +202,7 @@ class UnderfolderDatabase(SkeletonDatabase):
         data = None
 
         if is_file_image(filename):
-            data = imageio.imread(filename)
+            data = np.array(imageio.imread(filename))
 
         if is_file_numpy_array(filename):
             if extension in ['txt']:
