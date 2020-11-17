@@ -1,12 +1,13 @@
 import yaml
-from persefone.data.databases.filesystem.underfolder import (
-    UnderfolderDatabase
-)
 import numpy as np
+import pytest
 from persefone.data.stages.base import (
     StagesComposition, StageQuery, StageGroupBy, StageKeyFiltering, StageSubsampling
 )
-from persefone.data.stages.transforms import StageTransforms, StageTranspose, StageRangeRemap
+from persefone.data.stages.transforms import StageToCHWFloat, StageToHWCUint8, StageTransforms, StageTranspose, StageRangeRemap
+from persefone.data.databases.filesystem.underfolder import (
+    UnderfolderDatabase
+)
 
 
 class TestStages(object):
@@ -142,25 +143,67 @@ class TestStages(object):
         ]
 
         for dataset in datasets:
+            for clamp in [True, False]:
+                range_remap = {
+                    'image': {
+                        'in_range': (0, 255),
+                        'out_range': (0., 1.),
+                        'dtype': 'float',
+                        'clamp': clamp
+                    },
+                }
+                stage = StageRangeRemap(range_remap)
+                staged_dataset = stage(dataset)
+                sample = dataset[0]
+                staged_sample = staged_dataset[0]
+
+                expected = {}
+                for k, v in range_remap.items():
+                    a = (v['out_range'][1] - v['out_range'][0]) / (v['in_range'][1] - v['in_range'][0])
+                    expected[k] = (sample[k] - v['in_range'][0]) * a + v['out_range'][0]
+                    expected[k] = expected[k].astype(v['dtype'])
+
+                assert sample.keys() == staged_sample.keys()
+                for k in range_remap:
+                    assert np.allclose(expected[k], staged_sample[k])
+
+            # Check raises when input is outside of specified range
             range_remap = {
                 'image': {
-                    'in_range': (0., 1.),
-                    'out_range': (0, 255),
-                    'dtype': 'uint8',
+                    'in_range': (-100, -50),
+                    'out_range': (0., 1.),
+                    'dtype': 'float',
+                    'clamp': False
                 },
             }
-
             stage = StageRangeRemap(range_remap)
             staged_dataset = stage(dataset)
+            with pytest.raises(AssertionError):
+                staged_dataset[0]
+
+    def test_stage_to_chw_float(self, underfolder_folder):
+        datasets = [
+            UnderfolderDatabase(folder=underfolder_folder),
+            UnderfolderDatabase(folder=underfolder_folder, use_lazy_samples=True)
+        ]
+
+        for dataset in datasets:
+            keys = ['image']
+            stage_to_torch = StageToCHWFloat(keys)
+            staged_dataset = stage_to_torch(dataset)
             sample = dataset[0]
             staged_sample = staged_dataset[0]
 
-            expected = {}
-            for k, v in range_remap.items():
-                a = (v['out_range'][1] - v['out_range'][0]) / (v['in_range'][1] - v['in_range'][0])
-                expected[k] = (sample[k] - v['in_range'][0]) * a + v['out_range'][0]
-                expected[k] = expected[k].astype(v['dtype'])
+            image = staged_sample['image']
+            assert image.shape[2] == image.shape[0]
+            assert np.max(image) <= 1.
+            assert np.min(image) >= 0.
 
-            assert sample.keys() == staged_sample.keys()
-            for k in range_remap:
-                assert np.allclose(expected[k], staged_sample[k])
+            stage_to_numpy = StageToHWCUint8(keys)
+            staged_dataset = stage_to_numpy(staged_dataset)
+            staged_sample = staged_dataset[0]
+
+            image = staged_sample['image']
+            assert sample['image'].shape == image.shape
+            assert np.max(image) <= 255
+            assert np.min(image) >= 0

@@ -1,11 +1,13 @@
 
+from typing import Any, Dict, Iterable, Sequence, Union
 from pathlib import Path
 
 import numpy as np
-from persefone.transforms.factory import TransformsFactory
-from typing import Any, Dict, Sequence, Union
-from persefone.data.stages.base import DStage
 import yaml
+from schema import Or, Schema, And, Use, Optional
+
+from persefone.transforms.factory import TransformsFactory
+from persefone.data.stages.base import DStage, StagesComposition
 
 
 class StageTransforms(DStage):
@@ -69,6 +71,12 @@ class StageTransforms(DStage):
 
 
 class StageTranspose(DStage):
+    """Transposes axis in specified numpy arrays
+
+    :param transposition: transposition operation parameters. Must contain,
+    for each dataset key to transpose, a sequence of integers representing the axis to transpose
+    :type transposition: Dict[str, Sequence[int]]
+    """
 
     def __init__(self, transposition: Dict[str, Sequence[int]]) -> None:
         super().__init__()
@@ -88,10 +96,31 @@ class StageTranspose(DStage):
 
 
 class StageRangeRemap(DStage):
+    """Remaps all values from input range to specified output range, then casts numpy arrays to
+    desired dtype.
+
+    :param range_remap: range remap operation parameters. Must contain,
+    for each dataset key to remap, a dictionary with the following keys:
+    `in_range` - input data range, tuple or list of two integers or floats
+    `out_range` - output data range, tuple or list of two integers or floats
+    `dtype` - output dtype
+    `clamp` - optional, if True clamps input data to its range,
+    else expects input data to be already in range and raises AssertionError if it is not, default False
+    :type range_remap: Dict[str, Dict[str, Any]]
+    """
+
+    range_remap_schema = Schema({
+        str: {
+            'in_range': And(Use(list), Or([int, int], [float, float])),
+            'out_range': And(Use(list), Or([int, int], [float, float])),
+            'dtype': str,
+            Optional('clamp', default=False): bool
+        }
+    })
 
     def __init__(self, range_remap: Dict[str, Dict[str, Any]]) -> None:
         super().__init__()
-        self._range_remap = range_remap
+        self._range_remap = self.range_remap_schema.validate(range_remap)
 
     def __getitem__(self, idx) -> dict:
         if idx >= len(self):
@@ -106,7 +135,57 @@ class StageRangeRemap(DStage):
             o_min = self._range_remap[key]['out_range'][0]
             o_max = self._range_remap[key]['out_range'][1]
             dtype = self._range_remap[key]['dtype']
+            clamp = self._range_remap[key]['clamp']
+
+            if clamp:
+                sample[key] = np.clip(sample[key], i_min, i_max)
+            else:
+                assert np.max(sample[key]) <= i_max
+                assert np.min(sample[key]) >= i_min
+
             a = (o_max - o_min) / (i_max - i_min)
             sample[key] = ((sample[key] - i_min) * a + o_min).astype(dtype)
 
         return sample
+
+
+class StageToCHWFloat(StagesComposition):
+    """Transforms input images from "numpy" format ([H, W, C], uint8 [0, 255]) to "torch" format ([C, H, W], float [0., 1.])
+    Output images will still be numpy arrays.
+
+    :param keys: iterable of keys to which apply the transformation
+    :type keys: Iterable[str]
+    """
+
+    def __init__(self, keys: Iterable[str]) -> None:
+        transposition = (1, 2, 0)
+        params = {
+            'in_range': (0, 255),
+            'out_range': (0., 1.),
+            'dtype': 'float'
+        }
+        super().__init__([
+            StageTranspose({k: transposition for k in keys}),
+            StageRangeRemap({k: params for k in keys})
+        ])
+
+
+class StageToHWCUint8(StagesComposition):
+    """Transforms input images from "torch" format ([C, H, W], float [0., 1.]) to "numpy" format ([H, W, C], uint8 [0, 255])
+    Input images must be numpy arrays.
+
+    :param keys: iterable of keys to which apply the transformation
+    :type keys: Iterable[str]
+    """
+
+    def __init__(self, keys: Iterable[str]) -> None:
+        transposition = (2, 0, 1)
+        params = {
+            'in_range': (0., 1.),
+            'out_range': (0, 255),
+            'dtype': 'uint8'
+        }
+        super().__init__([
+            StageTranspose({k: transposition for k in keys}),
+            StageRangeRemap({k: params for k in keys})
+        ])
