@@ -158,7 +158,7 @@ class StageToCHWFloat(StagesComposition):
     """
 
     def __init__(self, keys: Iterable[str]) -> None:
-        transposition = (1, 2, 0)
+        transposition = (2, 0, 1)
         params = {
             'in_range': (0, 255),
             'out_range': (0., 1.),
@@ -179,7 +179,7 @@ class StageToHWCUint8(StagesComposition):
     """
 
     def __init__(self, keys: Iterable[str]) -> None:
-        transposition = (2, 0, 1)
+        transposition = (1, 2, 0)
         params = {
             'in_range': (0., 1.),
             'out_range': (0, 255),

@@ -195,7 +195,7 @@ class TestStages(object):
             staged_sample = staged_dataset[0]
 
             image = staged_sample['image']
-            assert image.shape[2] == image.shape[0]
+            assert sample['image'].shape[2] == image.shape[0] == 3
             assert np.max(image) <= 1.
             assert np.min(image) >= 0.
 
