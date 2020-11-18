@@ -162,7 +162,7 @@ class StageToCHWFloat(StagesComposition):
         params = {
             'in_range': (0, 255),
             'out_range': (0., 1.),
-            'dtype': 'float'
+            'dtype': 'float32'
         }
         super().__init__([
             StageTranspose({k: transposition for k in keys}),
