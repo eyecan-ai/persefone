@@ -160,9 +160,12 @@ class YConfiguration(Box):
                 p = Path(value.replace(self.REFERENCE_QUALIFIER, ''))
                 if self._filename is not None and not p.is_absolute():
                     p = self._filename.parent / p
+
                 if p.exists():
                     sub_cfg = YConfiguration(filename=p)
                     pydash.set_(self, chunk_name, sub_cfg)
+                else:
+                    raise OSError(f'File {p} not found!')
 
     def _could_be_path(self, p: str) -> bool:
         """ Check if a string could be a path. It's not a robust test outside YConfiguration!

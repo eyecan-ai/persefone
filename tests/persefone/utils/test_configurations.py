@@ -1,5 +1,6 @@
 import copy
 from box.box_list import BoxList
+from more_itertools.more import sample
 import numpy as np
 from typing import Union
 from box.box import Box
@@ -99,7 +100,7 @@ class TestYConfiguration(object):
 
         sample_dict = {
             'one': placeholders[0],
-            'two': np.random.randint(-50, 50, (32, 32)).tolist(),
+            'two': np.random.randint(-50, 50, (3, 3)).tolist(),
             'three': {
                 '3.1': True,
                 '2.1': [False, False],
@@ -119,7 +120,7 @@ class TestYConfiguration(object):
                 'f2': 2.22,
                 'f3': [3, 3, 3, 3, 3, 3],
                 'external': {
-                    'ext': np.random.uniform(-2, 2, (7, 12)).tolist(),
+                    'ext': np.random.uniform(-2, 2, (2, 3)).tolist(),
                     'ext_name': placeholders[3],
                 }
             }
@@ -146,7 +147,7 @@ class TestYConfiguration(object):
 
         generic_temp_folder = Path(generic_temp_folder)
 
-        extensions = ['yaml', 'json', 'toml']
+        extensions = ['yaml']  # , 'json', 'toml']
 
         for cfg_extension in extensions:
 
@@ -162,18 +163,22 @@ class TestYConfiguration(object):
 
             subtitutions_values = {}
             for k in to_be_raplaced_keys:
-                random_name = str(uuid.uuid1()) + f".{cfg_extension}@"
-                # print(k, random_name)
-                subtitutions_values[random_name] = pydash.get(sample_dict, k)
+                random_name = k + f".{cfg_extension}@"
+                subtitutions_values[random_name] = pydash.get(volatile_dict, k)
+
+                subtitutions_values[random_name]
                 pydash.set_(volatile_dict, k, random_name)
 
             output_cfg_filename = generic_temp_folder / f'out_config.{cfg_extension}'
             output_cfg_filename2 = generic_temp_folder / f'out_config2.{cfg_extension}'
 
             subtitutions_values[str(output_cfg_filename)] = volatile_dict
+
+            saved_cfgs = []
             for output_filename, d in subtitutions_values.items():
                 output_filename = generic_temp_folder / output_filename.replace('@', '')
                 self._store_cfg(output_filename, d)
+                saved_cfgs.append(output_filename)
 
             yconf = YConfiguration(output_cfg_filename)
             yconf.save_to(output_cfg_filename2)
@@ -183,6 +188,12 @@ class TestYConfiguration(object):
             assert not DeepDiff(yconf_reloaded.to_dict(), sample_dict)
             assert not DeepDiff(YConfiguration.from_dict(yconf_reloaded.to_dict()).to_dict(), yconf_reloaded.to_dict())
             assert len(YConfiguration.from_dict(yconf_reloaded.to_dict())) > len(sample_dict)  # YConf contains 2 more private keys!
+
+            # remove last cfg file
+            saved_cfgs[0].unlink()
+
+            with pytest.raises(OSError):
+                yconf = YConfiguration(output_cfg_filename)
 
     def test_replace(self, generic_temp_folder):
 
