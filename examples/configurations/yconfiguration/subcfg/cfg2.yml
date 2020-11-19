@@ -1,0 +1,7 @@
+main: 'main'
+numeber: 2
+array: [2.2,3.3,4.4] 
+nested:
+  a: 'a'
+  b: 'b'
+common: common.tml@
