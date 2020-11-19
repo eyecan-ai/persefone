@@ -176,7 +176,7 @@ class StageCache(DStage):
             return self._cache[idx]
         else:
             res = self._dataset[idx]
-            if self.max_size < 0 or len(self._cache < self.max_size):
+            if self.max_size < 0 or len(self._cache) < self.max_size:
                 self._cache[idx] = res
             return res
 

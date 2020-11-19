@@ -221,3 +221,10 @@ class TestStages(object):
             staged_sample = staged_dataset[0]
 
             assert sample.keys() == staged_sample.keys()
+
+            stage_cache = StageCache(max_size=2)
+            staged_dataset = stage_cache(dataset)
+            sample = dataset[0]
+            staged_sample = staged_dataset[0]
+
+            assert sample.keys() == staged_sample.keys()
