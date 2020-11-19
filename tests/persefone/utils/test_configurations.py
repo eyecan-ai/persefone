@@ -1,6 +1,5 @@
 import copy
 from box.box_list import BoxList
-from more_itertools.more import sample
 import numpy as np
 from typing import Union
 from box.box import Box
