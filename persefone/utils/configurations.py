@@ -1,7 +1,7 @@
 from box.from_file import converters
 from box import box_from_file, Box, BoxList
 import pydash
-from typing import Dict, Sequence
+from typing import Any, Dict, Sequence, Tuple
 from schema import Schema
 from pathlib import Path
 
@@ -72,44 +72,88 @@ class YConfiguration(Box):
         self._schema = None
         self.deep_parse()
 
-    @property
-    def schema(self):
+    def get_schema(self):
         return self._schema
 
-    @schema.setter
-    def schema(self, schema: Schema):
-        assert isinstance(schema, Schema), "schema is not a valid Schema object!"
-        self._schema = schema
+    def set_schema(self, s: Schema):
+        """ Push validation schema
+
+        :param schema: validation schema
+        :type schema: Schema
+        """
+        if s is not None:
+            assert isinstance(s, Schema), "schema is not a valid Schema object!"
+        self._schema: Schema = s
 
     def validate(self):
-        if self.schema is not None:
-            self.schema.validate(self.to_dict())
+        """ Validate internal schema if any """
+        if self.get_schema() is not None:
+            self.get_schema().validate(self.to_dict())
 
-    def is_valid(self):
-        if self.schema is not None:
-            return self.schema.is_valid(self.to_dict())
+    def is_valid(self) -> bool:
+        """ Check for schema validity
+
+        :return: TRUE for valid or no schema inside
+        :rtype: bool
+        """
+        if self.get_schema() is not None:
+            return self.get_schema().is_valid(self.to_dict())
         return True
 
-    def save_to(self, filename):
+    def save_to(self, filename: str):
+        """ Save configuration to output file
+
+        :param filename: output filename
+        :type filename: str
+        :raises NotImplementedError: Raise error for unrecognized extension
+        """
         filename = Path(filename)
-        if 'yml' or 'yaml' in filename.suffix.lower():
+        if 'yml' in filename.suffix.lower() or 'yaml' in filename.suffix.lower():
             self.to_yaml(filename=filename)
         elif 'json' in filename.suffix.lower():
             self.to_json(filename=filename)
+        elif 'toml' in filename.suffix.lower():
+            self.to_toml(filename=filename)
         else:
             raise NotImplementedError(f"Extension {filename.suffix.lower()} not supported yet!")
 
-    def chunks(self, discard_private_qualifiers: bool = True):
+    def chunks(self, discard_private_qualifiers: bool = True) -> Sequence[Tuple[str, Any]]:
+        """ Builds a plain view of dictionary with pydash notation
+
+        :param discard_private_qualifiers: TRUE to discard keys starting with private qualifier, defaults to True
+        :type discard_private_qualifiers: bool, optional
+        :return: list of pairs (key, value) where key is a dot notation pydash key (e.g. d['one']['two']['three'] -> 'one.two.three' )
+        :rtype: Sequence[Tuple[str, Any]]
+        """
         return self._walk(self, discard_private_qualifiers=discard_private_qualifiers)
 
-    def replace(self, key: str, new_value: str):
-        if key.startswith(self.REPLACE_QUALIFIER):
+    def replace(self, old_value: str, new_value: str):
+        """ Replaces target value with custom new value
+
+        :param old_value: value to replace
+        :type old_value: str
+        :param new_value: new key value
+        :type new_value: str
+        """
+        if old_value.startswith(self.REPLACE_QUALIFIER):
             chunks = self.chunks(discard_private_qualifiers=True)
             for k, v in chunks:
-                if v == key:
+                if v == old_value:
                     pydash.set_(self, k, new_value)
 
+    def replace_map(self, m: dict):
+        """ Replace target old values with new values represented as dict
+
+        :param m: dict of key/value = old/new
+        :type m: dict
+        """
+
+        for old_v, new_v in m.items():
+            self.replace(old_v, new_v)
+
     def deep_parse(self):
+        """ Deep visit of dictionary replacing filename values with a new YConfiguration object recusively
+        """
         chunks = self.chunks()
         for chunk_name, value in chunks:
             if self._could_be_path(value):
@@ -119,9 +163,15 @@ class YConfiguration(Box):
                 if p.exists():
                     sub_cfg = YConfiguration(filename=p)
                     pydash.set_(self, chunk_name, sub_cfg)
-            # print(chunk_name, '*' * 20 if self._could_be_path(value) else '')
 
-    def _could_be_path(self, p: str):
+    def _could_be_path(self, p: str) -> bool:
+        """ Check if a string could be a path. It's not a robust test outside YConfiguration!
+
+        :param p: source string
+        :type p: str
+        :return: TRUE = 'maybe is path'
+        :rtype: bool
+        """
         if isinstance(p, str):
             if any(f'.{x}{self.REFERENCE_QUALIFIER}' in p for x in self.KNOWN_EXTENSIONS):
                 return True
@@ -150,13 +200,36 @@ class YConfiguration(Box):
         return out_dict
 
     @classmethod
-    def from_dict(cls, d):
+    def from_dict(cls, d: dict) -> 'YConfiguration':
+        """ Creates YConfiguration from a plain dictionary
+
+        :param d: input dictionary
+        :type d: dict
+        :return: built YConfiguration
+        :rtype: YConfiguration
+        """
         cfg = YConfiguration()
         cfg.update(Box(d))
         return cfg
 
     @classmethod
-    def _walk(cls, d, path: Sequence = None, chunks: Sequence = None, discard_private_qualifiers: bool = True):
+    def _walk(cls,
+              d: Dict, path: Sequence = None,
+              chunks: Sequence = None,
+              discard_private_qualifiers: bool = True) -> Sequence[Tuple[str, Any]]:
+        """ Deep visit of dictionary building a plain sequence of pairs (key,value) where key has a pydash notation
+
+        :param d: input dictionary
+        :type d: Dict
+        :param path: private output value for path (not use), defaults to None
+        :type path: Sequence, optional
+        :param chunks: private output to be fileld with retrieved pairs (not use), defaults to None
+        :type chunks: Sequence, optional
+        :param discard_private_qualifiers: TRUE to discard keys starting with private qualifier, defaults to True
+        :type discard_private_qualifiers: bool, optional
+        :return: sequence of retrieved pairs
+        :rtype: Sequence[Tuple[str, Any]]
+        """
         root = False
         if path is None:
             path, chunks, root = [], [], True
