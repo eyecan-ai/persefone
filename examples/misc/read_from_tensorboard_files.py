@@ -140,5 +140,5 @@ def read_from_path(root_dir: Path):
 
 if __name__ == "__main__":
     path = Path('/home/luca/Desktop/test_tensorboard')
-    hparams = read_from_path(path)
-    print(hparams)
+    hparams, scalars = read_from_path(path)
+    print(hparams, scalars)
