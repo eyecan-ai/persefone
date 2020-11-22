@@ -109,7 +109,7 @@ class TestYConfiguration(object):
                     'john3': {
                         'pino': [3.3, 3.3],
                         'mino': {
-                            'a': [True, False]
+                            'a': {'f': True, 's': False}
                         }
                     }
                 }
@@ -142,11 +142,11 @@ class TestYConfiguration(object):
 
         return sample_dict, schema, placeholders
 
-    def test_creation(self, generic_temp_folder):
+    def test_creation(self, generic_temp_folder):  # TODO: toml 0.10.2 needed! toml has a bug otherwise
 
         generic_temp_folder = Path(generic_temp_folder)
 
-        extensions = ['yaml']  # , 'json', 'toml']
+        extensions = ['yaml', 'json', 'toml']
 
         for cfg_extension in extensions:
 
@@ -193,6 +193,47 @@ class TestYConfiguration(object):
 
             with pytest.raises(OSError):
                 yconf = YConfiguration(output_cfg_filename)
+
+    def test_creation_root_replace(self, generic_temp_folder):
+        """ Test with double @@ -> replace value with content of content
+        """
+        generic_temp_folder = Path(generic_temp_folder)
+
+        extensions = ['yaml', 'json', 'toml']
+
+        for cfg_extension in extensions:
+
+            sample_dict, _, _ = self._sample_dict()
+            volatile_dict = copy.deepcopy(sample_dict)
+            to_be_raplaced_keys = sorted([
+                'three.john',
+                'three.john.john3',
+                'three.john.john3.mino',
+                'first',
+                'first.external'
+            ], reverse=True)
+
+            subtitutions_values = {}
+            for k in to_be_raplaced_keys:
+                random_name = k + f".{cfg_extension}@@"
+                subtitutions_values[random_name] = pydash.get(volatile_dict, k)
+
+                subtitutions_values[random_name]
+                pydash.set_(volatile_dict, k, random_name)
+
+            output_cfg_filename = generic_temp_folder / f'out_config.{cfg_extension}'
+
+            subtitutions_values[str(output_cfg_filename)] = volatile_dict
+
+            saved_cfgs = []
+            for output_filename, d in subtitutions_values.items():
+                output_filename = generic_temp_folder / output_filename.replace('@', '')
+                self._store_cfg(output_filename, d)
+                saved_cfgs.append(output_filename)
+
+            yconf = YConfiguration(output_cfg_filename)
+
+            assert DeepDiff(yconf.to_dict(), sample_dict)
 
     def test_replace(self, generic_temp_folder):
 
