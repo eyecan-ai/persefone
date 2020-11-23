@@ -1,7 +1,7 @@
 from box.from_file import converters
 from box import box_from_file, Box, BoxList
 import pydash
-from typing import Any, Dict, Sequence, Tuple
+from typing import Any, Dict, Sequence, Tuple, Union
 from schema import Schema
 from pathlib import Path
 
@@ -71,6 +71,19 @@ class YConfiguration(Box):
             self.update(box_from_file(file=Path(filename)))
         self._schema = None
         self.deep_parse()
+
+    @property
+    def root_content(self) -> Union[None, Any]:
+        """ Returns the 'value' if configuration is a single 'key'/'value' pair.
+        Otherwise None
+
+        :return: 'value' if configuration is a single 'key'/'value' pair. Otherwise None
+        :rtype: Union[None, Any]
+        """
+        d = self.to_dict(discard_private_qualifiers=True)
+        if len(d.keys()) == 1:
+            return d[list(d.keys())[0]]
+        return None
 
     def get_schema(self):
         return self._schema
@@ -157,13 +170,20 @@ class YConfiguration(Box):
         chunks = self.chunks()
         for chunk_name, value in chunks:
             if self._could_be_path(value):
+                n_references = value.count(self.REFERENCE_QUALIFIER)
                 p = Path(value.replace(self.REFERENCE_QUALIFIER, ''))
                 if self._filename is not None and not p.is_absolute():
                     p = self._filename.parent / p
 
                 if p.exists():
                     sub_cfg = YConfiguration(filename=p)
-                    pydash.set_(self, chunk_name, sub_cfg)
+                    # if sub_cfg.root_content is not None:
+                    #     pydash.set_(self, chunk_name, sub_cfg.root_content)
+                    # else:
+                    if n_references == 2:
+                        pydash.set_(self, chunk_name, sub_cfg.root_content)
+                    elif n_references == 1:
+                        pydash.set_(self, chunk_name, sub_cfg)
                 else:
                     raise OSError(f'File {p} not found!')
 

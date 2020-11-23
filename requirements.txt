@@ -17,3 +17,4 @@ h5py==2.10.0
 tqdm>=4.49.0
 dictquery==0.4.0
 pydash>=4.9.0
+toml>=0.10.2
