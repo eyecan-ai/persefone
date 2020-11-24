@@ -246,6 +246,13 @@ class TestYConfiguration(object):
         for p in placeholders:
             to_replace[p] = np.random.randint(0, 10)
 
+        assert len(conf.available_placeholders()) == len(placeholders)
+
+        conf.check_available_placeholders(close_app=False)
+
+        with pytest.raises(SystemExit):
+            conf.check_available_placeholders(close_app=True)
+
         conf.replace_map(to_replace)
 
         chunks = conf.chunks()

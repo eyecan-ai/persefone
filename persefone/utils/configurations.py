@@ -1,3 +1,4 @@
+from colorama import Fore, Back, Style
 from box.from_file import converters
 from box import box_from_file, Box, BoxList
 import pydash
@@ -222,14 +223,49 @@ class YConfiguration(Box):
                     pydash.unset(out_dict, chunk_name)
         return out_dict
 
+    def available_placeholders(self) -> Sequence[Tuple[str, str]]:
+        """ Retrieves the available placeholders list
+
+        :return: list of tuple (key/value) of replace(able) values
+        :rtype: Sequence[Tuple[str, str]]
+        """
+
+        chunks = self.chunks(discard_private_qualifiers=True)
+        placeholders = []
+        for k, v in chunks:
+            if isinstance(v, str):
+                if v.startswith(self.REPLACE_QUALIFIER):
+                    placeholders.append((k, v))
+        return placeholders
+
+    def check_available_placeholders(self, close_app: bool = False):
+        """ Check for available placeholder and close app if necessary
+
+        :param close_app: TRUE to close app if at least one placeholder found, defaults to False
+        :type close_app: bool, optional
+        """
+
+        placeholders = self.available_placeholders()
+        if len(placeholders) > 0:
+            header = "*** {}: Incomplete Configuration, Placeholders found! ***\n"
+            print(Fore.RED + header + Style.RESET_ALL)
+            for p in placeholders:
+                print(Fore.LIGHTRED_EX + f"\t {p[0]}: {p[1]}")
+            print(Fore.RED + "\n" + "*" * len(header))
+            print(Style.RESET_ALL)
+
+            if close_app:
+                import sys
+                sys.exit(1)
+
     @classmethod
     def from_dict(cls, d: dict) -> 'YConfiguration':
         """ Creates YConfiguration from a plain dictionary
 
-        :param d: input dictionary
-        :type d: dict
-        :return: built YConfiguration
-        :rtype: YConfiguration
+        : param d: input dictionary
+        : type d: dict
+        : return: built YConfiguration
+        : rtype: YConfiguration
         """
         cfg = YConfiguration()
         cfg.update(Box(d))
@@ -240,18 +276,18 @@ class YConfiguration(Box):
               d: Dict, path: Sequence = None,
               chunks: Sequence = None,
               discard_private_qualifiers: bool = True) -> Sequence[Tuple[str, Any]]:
-        """ Deep visit of dictionary building a plain sequence of pairs (key,value) where key has a pydash notation
+        """ Deep visit of dictionary building a plain sequence of pairs(key, value) where key has a pydash notation
 
-        :param d: input dictionary
-        :type d: Dict
-        :param path: private output value for path (not use), defaults to None
-        :type path: Sequence, optional
-        :param chunks: private output to be fileld with retrieved pairs (not use), defaults to None
-        :type chunks: Sequence, optional
-        :param discard_private_qualifiers: TRUE to discard keys starting with private qualifier, defaults to True
-        :type discard_private_qualifiers: bool, optional
-        :return: sequence of retrieved pairs
-        :rtype: Sequence[Tuple[str, Any]]
+        : param d: input dictionary
+        : type d: Dict
+        : param path: private output value for path(not use), defaults to None
+        : type path: Sequence, optional
+        : param chunks: private output to be fileld with retrieved pairs(not use), defaults to None
+        : type chunks: Sequence, optional
+        : param discard_private_qualifiers: TRUE to discard keys starting with private qualifier, defaults to True
+        : type discard_private_qualifiers: bool, optional
+        : return: sequence of retrieved pairs
+        : rtype: Sequence[Tuple[str, Any]]
         """
         root = False
         if path is None:
