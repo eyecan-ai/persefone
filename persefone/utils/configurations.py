@@ -1,3 +1,4 @@
+from colorama import Fore, Back, Style
 from box.from_file import converters
 from box import box_from_file, Box, BoxList
 import pydash
@@ -236,6 +237,26 @@ class YConfiguration(Box):
                 if v.startswith(self.REPLACE_QUALIFIER):
                     placeholders.append((k, v))
         return placeholders
+
+    def check_available_placeholders(self, close_app: bool = False):
+        """ Check for available placeholder and close app if necessary
+
+        :param close_app: TRUE to close app if at least one placeholder found, defaults to False
+        :type close_app: bool, optional
+        """
+
+        placeholders = self.available_placeholders()
+        if len(placeholders) > 0:
+            header = "*** {}: Incomplete Configuration, Placeholders found! ***\n"
+            print(Fore.RED + header + Style.RESET_ALL)
+            for p in placeholders:
+                print(Fore.LIGHTRED_EX + f"\t {p[0]}: {p[1]}")
+            print(Fore.RED + "\n" + "*" * len(header))
+            print(Style.RESET_ALL)
+
+            if close_app:
+                import sys
+                sys.exit(1)
 
     @classmethod
     def from_dict(cls, d: dict) -> 'YConfiguration':

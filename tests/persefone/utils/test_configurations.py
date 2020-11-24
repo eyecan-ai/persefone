@@ -248,6 +248,11 @@ class TestYConfiguration(object):
 
         assert len(conf.available_placeholders()) == len(placeholders)
 
+        conf.check_available_placeholders(close_app=False)
+
+        with pytest.raises(SystemExit):
+            conf.check_available_placeholders(close_app=True)
+
         conf.replace_map(to_replace)
 
         chunks = conf.chunks()
