@@ -1,12 +1,14 @@
 
-from persefone.transforms.factory import TransformsFactory
 import shutil
 from tqdm import tqdm
 from json.encoder import JSONEncoder
 from pathlib import Path
 from persefone.utils.bytes import DataCoding
-from typing import Any, Dict, OrderedDict, Tuple, Union
-from persefone.utils.filesystem import tree_from_underscore_notation_files, is_file_image, get_file_extension, is_file_numpy_array, is_metadata_file
+from typing import Any, Dict, Union
+from persefone.utils.filesystem import (
+    tree_from_underscore_notation_files, is_file_image, get_file_extension,
+    is_file_numpy_array, is_metadata_file
+)
 import imageio
 import numpy as np
 import yaml
@@ -37,6 +39,9 @@ class UnderfolderLazySample(dict):
 
     def __contains__(self, key: Any):
         return key in self._keys_map
+
+    def get_path(self, key: Any) -> Path:
+        return Path(self._keys_map[key])
 
     def keys(self):
         return self._keys_map.keys()
