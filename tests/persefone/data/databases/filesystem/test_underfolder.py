@@ -17,6 +17,7 @@ class TestUnderscoreFolder(object):
             assert isinstance(sample, UnderfolderLazySample)
             keys = list(sample.keys())
             for key in keys:
+                assert isinstance(sample.get_path(key), Path)
                 del sample[key]
 
     def test_creation(self, underfolder_folder):
