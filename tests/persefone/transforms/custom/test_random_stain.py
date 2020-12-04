@@ -16,9 +16,7 @@ class TestRandomStain:
         assert np.allclose(img, stained)
 
     def debug(self):
-        import torch
         from PIL import Image
-        from ae_playground.utils.tensor_utils import TensorUtils
         from albumentations import Resize
         import matplotlib.pyplot as plt
 
@@ -41,7 +39,7 @@ class TestRandomStain:
             'zipper'
         ]
         for i in range(0, 1):
-            stain = RandomStain(50, 100, 16, 64, 1, 3, fill_mode='crop')
+            stain = RandomStain(50, 100, 64, 256, 1, 3, fill_mode='solid', min_rgb=(0, 0, 0), max_rgb=(255, 255, 255))
             for cat in categories:
                 img = Image.open(f'/home/luca/ae_playground_data/mvtec/{cat}/train/good/00{i}.png')
                 img = np.array(img).astype('uint8')
@@ -55,9 +53,7 @@ class TestRandomStain:
                     img = ToFloat()(image=img)['image']
                 if len(img.shape) == 2:
                     img = np.stack([img] * 3, axis=2)
-                img = np.transpose(img, (2, 0, 1))
                 imgs.append(img)
-        imgs = np.stack(imgs, axis=0)
-        imgs = torch.from_numpy(imgs)
-        plt.imshow(TensorUtils.to_numpy(TensorUtils.make_images(imgs)))
+        imgs = np.concatenate(imgs, axis=0)
+        plt.imshow(imgs)
         plt.show()

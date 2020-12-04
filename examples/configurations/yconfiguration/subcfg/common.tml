@@ -1,0 +1,5 @@
+a = [2, 3, 4]
+
+[subcommon]
+first = "$PLACEHOLDER2"
+second = "second"

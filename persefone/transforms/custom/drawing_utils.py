@@ -2,9 +2,10 @@ import math
 import random
 from typing import Iterable, Tuple, Sequence, Union
 
-from PIL import Image, ImageDraw
-from albumentations.augmentations.transforms import Resize
+import cv2
 import numpy as np
+from PIL import Image, ImageDraw
+from albumentations.augmentations.transforms import Resize, ToFloat, PadIfNeeded
 from scipy.interpolate import interp1d
 from skimage.draw import ellipse_perimeter
 
@@ -17,7 +18,8 @@ class DrawingUtils:
                     img_mask: np.ndarray,
                     patch: np.ndarray,
                     patch_mask: np.ndarray,
-                    pos: Tuple[int, int]) -> None:
+                    pos: Tuple[int, int],
+                    blend_radius: int = None) -> None:
         """Applies a patch on a target image
 
         :param img: target image
@@ -31,6 +33,23 @@ class DrawingUtils:
         :param pos: pos in img coords
         :type pos: Tuple[int, int]
         """
+        if blend_radius is not None:
+            r = blend_radius
+            pad = PadIfNeeded(
+                min_height=patch.shape[0] + 2 * r,
+                min_width=patch.shape[1] + 2 * r,
+                border_mode=cv2.BORDER_CONSTANT
+            )
+            padded = pad(image=patch, mask=patch_mask)
+            patch = padded['image']
+            patch_mask = padded['mask']
+            eroded = cv2.erode(patch_mask, np.ones((r, r), dtype='uint8'))
+            blending = cv2.GaussianBlur(eroded * 255, (2 * r + 1, 2 * r + 1), 0)
+            blending = ToFloat()(image=blending)['image'] * patch_mask
+        else:
+            blending = patch_mask
+        blending = np.stack([blending] * 3, axis=-1)
+
         size_x = max(0, min(img.shape[0], pos[0] + patch.shape[0]) - max(0, pos[0]))
         size_y = max(0, min(img.shape[1], pos[1] + patch.shape[1]) - max(0, pos[1]))
 
@@ -46,8 +65,8 @@ class DrawingUtils:
 
         patch = patch[ra_p: rb_p, ca_p: cb_p]
         patch_mask = patch_mask[ra_p: rb_p, ca_p: cb_p]
-        corruption_mask_3 = np.stack([patch_mask] * 3, axis=-1)
-        img[ra: rb, ca: cb, :] = img[ra: rb, ca: cb, :] * (1 - corruption_mask_3) + patch * corruption_mask_3
+        blending = blending[ra_p: rb_p, ca_p: cb_p, :]
+        img[ra: rb, ca: cb, :] = img[ra: rb, ca: cb, :] * (1 - blending) + patch * blending
         if img_mask is not None:
             img_mask[ra: rb, ca: cb] = np.maximum(img_mask[ra: rb, ca: cb], patch_mask)
 
@@ -114,7 +133,7 @@ class DrawingUtils:
         else:
             if isinstance(color[0], Sequence):
                 color = color[0]
-            poly = np.stack([mask * color[i] for i in range(3)], axis=-1)
+            poly = np.stack([mask * color[i] for i in range(3)], axis=-1).astype('uint8')
 
         return poly, mask
 

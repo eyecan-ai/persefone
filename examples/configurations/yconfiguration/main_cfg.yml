@@ -1,0 +1,8 @@
+data:
+  one: $PLACEHOLDER
+  two: 2.2
+  three: [3,3,3]
+sub_params:
+  alpha: subcfg/cfg1.yml@
+  beta: subcfg/cfg2.yml@
+  delta: subcfg/cfg3.json@

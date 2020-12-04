@@ -1,0 +1,6 @@
+{
+    "json_name": "JSON",
+    "is_json": true,
+    "a_list": [1.1, 2.2, 3.3],
+    "common": "common.tml@"
+}

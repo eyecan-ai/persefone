@@ -61,7 +61,8 @@ transforms:
                   always_apply: False
                   p: 0.10
         - aug.shift_scale_rotate:
-                  shift_limit: [0.1, 0.2]
+                  shift_limit_x: 0.1
+                  shift_limit_y: 0.2
                   scale_limit: [0.3, 0.4]
                   rotate_limit: 22
                   interpolation: "linear"
@@ -98,8 +99,8 @@ transforms:
                   max_holes: 15
                   min_size: 32
                   max_size: 32
-                  min_eccentricity: 1
-                  max_eccentricity: 3
+                  min_ratio: 1
+                  max_ratio: 3
                   fill_mode: solid
                   min_rgb: [0.5, 0.5, 0.5]
                   max_rgb: [1.0, 1.0, 1.0]
@@ -119,3 +120,34 @@ transforms:
                   col_align: "left"
                   always_apply: true
                   p: 0.8
+        - aug.resize_longest:
+                  max_size: 1024
+                  always_apply: True
+                  p: 0.44
+                  interpolation: "linear"
+        - aug.resize_smallest:
+                  max_size: 1024
+                  always_apply: True
+                  p: 0.33
+                  interpolation: "linear"
+        - aug.center_crop:
+                  height: 50
+                  width: 100
+                  always_apply: False
+                  p: 0.22
+        - aug.random_perspective:
+                  scale: [0.06, 0.12]
+                  keep_size: True
+                  always_apply: False
+                  p: 0.11
+        - aug.blur:
+                  blur_limit: [7, 8]
+                  always_apply: False
+                  p: 0.05
+        - aug.invert:
+                  always_apply: False
+                  p: 0.05
+        - aug.noise_gaussian:
+                  var_limit: [5., 7.]
+                  always_apply: False
+                  p: 0.05

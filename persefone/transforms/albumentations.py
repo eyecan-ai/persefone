@@ -47,9 +47,12 @@ class AlbumentationTransformsFactory(AbstractFactory):
     def _functions_map(cls):
         return {
             'resize': {'f': cls._build_resize_transform, 'targets': cls._targets_map()['spatial_full']},
+            'resize_longest': {'f': cls._build_resize_longest_transform, 'targets': cls._targets_map()['spatial_full']},
+            'resize_smallest': {'f': cls._build_resize_smallest_transform, 'targets': cls._targets_map()['spatial_full']},
             'rotate': {'f': cls._build_rotate_transform, 'targets': cls._targets_map()['spatial_full']},
             'shift_scale_rotate': {'f': cls._build_random_shift_scale_rotate, 'targets': cls._targets_map()['spatial_full']},
             'crop': {'f': cls._build_crop_transform, 'targets': cls._targets_map()['spatial_full']},
+            'center_crop': {'f': cls._build_center_crop_transform, 'targets': cls._targets_map()['spatial_full']},
             'random_crop': {'f': cls._build_random_crop_transform, 'targets': cls._targets_map()['spatial_full']},
             'random_brightness_contrast': {'f': cls._build_random_brightness_contrast, 'targets': cls._targets_map()['pixels']},
             'random_hsv': {'f': cls._build_random_hsv, 'targets': cls._targets_map()['pixels']},
@@ -60,6 +63,10 @@ class AlbumentationTransformsFactory(AbstractFactory):
             'normalize': {'f': cls._build_normalize, 'targets': cls._targets_map()['spatial_full']},
             'coarse_dropout': {'f': cls._build_coarse_dropout, 'targets': cls._targets_map()['spatial_full']},
             'pad_if_needed': {'f': cls._build_pad_if_needed, 'targets': cls._targets_map()['spatial_full']},
+            'random_perspective': {'f': cls._build_random_perspective, 'targets': cls._targets_map()['spatial_full']},
+            'blur': {'f': cls._build_blur_transform, 'targets': cls._targets_map()['spatial_full']},
+            'invert': {'f': cls._build_invert_transform, 'targets': cls._targets_map()['spatial_full']},
+            'noise_gaussian': {'f': cls._build_noise_gaussian, 'targets': cls._targets_map()['spatial_full']},
         }
 
     @classmethod
@@ -74,6 +81,24 @@ class AlbumentationTransformsFactory(AbstractFactory):
             interpolation=interpolation,
             always_apply=always,
             p=p
+        )
+
+    @classmethod
+    def _build_resize_longest_transform(cls, **params):
+        return A.LongestMaxSize(
+            max_size=params.get('max_size', 1024),
+            interpolation=cls._get_interpolation_value(get_arg(params, 'interpolation', 'none')),
+            always_apply=get_arg(params, 'always_apply', True),
+            p=get_arg(params, 'p', 1.0)
+        )
+
+    @classmethod
+    def _build_resize_smallest_transform(cls, **params):
+        return A.SmallestMaxSize(
+            max_size=params.get('max_size', 1024),
+            interpolation=cls._get_interpolation_value(get_arg(params, 'interpolation', 'none')),
+            always_apply=get_arg(params, 'always_apply', True),
+            p=get_arg(params, 'p', 1.0)
         )
 
     @classmethod
@@ -96,6 +121,15 @@ class AlbumentationTransformsFactory(AbstractFactory):
             y_min=box[1],
             x_max=box[2],
             y_max=box[3],
+            always_apply=get_arg(params, 'always_apply', True),
+            p=get_arg(params, 'p', 1.0)
+        )
+
+    @classmethod
+    def _build_center_crop_transform(cls, **params):
+        return A.CenterCrop(
+            height=get_arg(params, 'height', 100),
+            width=get_arg(params, 'width', 100),
             always_apply=get_arg(params, 'always_apply', True),
             p=get_arg(params, 'p', 1.0)
         )
@@ -133,7 +167,8 @@ class AlbumentationTransformsFactory(AbstractFactory):
     @classmethod
     def _build_random_shift_scale_rotate(cls, **params):
         return A.ShiftScaleRotate(
-            shift_limit=get_arg(params, 'shift_limit', 0.0),
+            shift_limit_x=get_arg(params, 'shift_limit_x', 0),
+            shift_limit_y=get_arg(params, 'shift_limit_y', 0),
             scale_limit=get_arg(params, 'scale_limit', 0.0),
             rotate_limit=get_arg(params, 'rotate_limit', 0),
             interpolation=cls._get_interpolation_value(get_arg(params, 'interpolation', 'linear')),
@@ -205,6 +240,38 @@ class AlbumentationTransformsFactory(AbstractFactory):
             border_mode=cls._get_borders_value(get_arg(params, 'border_mode', 'constant')),
             value=get_arg(params, 'value', 0),
             mask_value=get_arg(params, 'value', 0),
+            always_apply=get_arg(params, 'always_apply', False),
+            p=get_arg(params, 'p', 0.5)
+        )
+
+    @classmethod
+    def _build_random_perspective(cls, **params):
+        return A.IAAPerspective(
+            scale=get_arg(params, 'scale', (0.05, 0.1)),
+            keep_size=get_arg(params, 'keep_size', True),
+            always_apply=get_arg(params, 'always_apply', False),
+            p=get_arg(params, 'p', 0.5)
+        )
+
+    @classmethod
+    def _build_blur_transform(cls, **params):
+        return A.Blur(
+            blur_limit=get_arg(params, 'blur_limit', 8),
+            always_apply=get_arg(params, 'always_apply', False),
+            p=get_arg(params, 'p', 0.5)
+        )
+
+    @classmethod
+    def _build_invert_transform(cls, **params):
+        return A.InvertImg(
+            always_apply=get_arg(params, 'always_apply', False),
+            p=get_arg(params, 'p', 0.5)
+        )
+
+    @classmethod
+    def _build_noise_gaussian(cls, **params):
+        return A.GaussNoise(
+            var_limit=get_arg(params, 'var_limit', [10., 50.]),
             always_apply=get_arg(params, 'always_apply', False),
             p=get_arg(params, 'p', 0.5)
         )
