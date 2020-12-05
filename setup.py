@@ -17,11 +17,13 @@ test_requirements = ['pytest>=3', ]
 setup(
     author="daniele de gregorio",
     author_email='daniele.degregorio@eyecan.ai',
-    python_requires='>=3.8',
+    python_requires='>=3.6',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
         'Natural Language :: English',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
     ],
     description="Python library for deep learning data manipulation",
