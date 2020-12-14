@@ -232,13 +232,13 @@ class TestStages(object):
 
             assert sample.keys() == staged_sample.keys()
 
-    @pytest.mark.parametrize(['start', 'stop', 'subsample', 'indices', 'expected'], [
+    @pytest.mark.parametrize(['start', 'stop', 'step', 'indices', 'expected'], [
         [None, None, None, None, None],
         [0, 10, 2, None, range(0, 10, 2)],
         [2, 10, None, [5, 3, 12], [5, 3]],
         [-11, -1, 2, [-6, -5, -7], [-5, -7]]
     ])
-    def test_stage_slice(self, underfolder_folder, start, stop, subsample, indices, expected):
+    def test_stage_slice(self, underfolder_folder, start, stop, step, indices, expected):
         datasets = [
             UnderfolderDatabase(folder=underfolder_folder),
             UnderfolderDatabase(folder=underfolder_folder, use_lazy_samples=True)
@@ -247,7 +247,7 @@ class TestStages(object):
         for dataset in datasets:
             if expected is None:
                 expected = range(len(dataset))
-            stage = StageSlice(start, stop, subsample, indices)
+            stage = StageSlice(start, stop, step, indices)
             staged_dataset = stage(dataset)
             for i, sample in enumerate(staged_dataset):
                 assert not DeepDiff(sample, dataset[expected[i]])
