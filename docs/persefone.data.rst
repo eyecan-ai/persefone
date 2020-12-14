@@ -1,22 +1,19 @@
 persefone.data package
 ======================
 
-Submodules
-----------
+Subpackages
+-----------
 
-persefone.data.databases module
--------------------------------
+.. toctree::
 
-.. automodule:: persefone.data.databases
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
+    persefone.data.databases
+    persefone.data.datasets
+    persefone.data.stages
 
 Module contents
 ---------------
 
 .. automodule:: persefone.data
-   :members:
-   :undoc-members:
-   :show-inheritance:
+    :members:
+    :undoc-members:
+    :show-inheritance:
