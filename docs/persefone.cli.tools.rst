@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
 
     persefone.cli.tools.converters
+    persefone.cli.tools.gui
 
 Module contents
 ---------------

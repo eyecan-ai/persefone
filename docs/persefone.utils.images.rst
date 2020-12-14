@@ -12,6 +12,14 @@ persefone.utils.images.drawing module
     :undoc-members:
     :show-inheritance:
 
+persefone.utils.images.get\_image\_size module
+----------------------------------------------
+
+.. automodule:: persefone.utils.images.get_image_size
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------

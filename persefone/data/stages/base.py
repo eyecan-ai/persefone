@@ -1,11 +1,12 @@
-
-import numpy as np
-from persefone.data.databases.filesystem.underfolder import UnderfolderLazySample
-import dictquery as dq
+import random
 from typing import List, Sequence, Union
 from abc import ABC
 
+import numpy as np
+import dictquery as dq
 from tqdm import tqdm
+
+from persefone.data.databases.filesystem.underfolder import UnderfolderLazySample
 
 
 class DStage(ABC):
@@ -265,3 +266,91 @@ class StageGroupBy(DStage):
                     output[key] = np.stack(output[key])
 
         return output
+
+
+class StageSlice(DStage):
+    """Stage for sample selection based on indices
+
+    :param start: start index, if None no constraint is applied, defaults to None
+    :type start: int, optional
+    :param stop: stop index (excluded), if None no constraint is applied, defaults to None
+    :type stop: int, optional
+    :param step: sample once every k elements, if None no subsampling is applied, defaults to None
+    :type step: int, optional
+    :param indices: select only specified indices (order applies), defaults to None
+    :type indices: Sequence[int], optional
+
+    Use start, stop and step to select a sample slice from the dataset:
+
+    :example:
+        >>> dataset = [{'a': i} for i in range(100)]
+        >>> stage = StageSlice(0, 10, 2)
+        >>> staged_dataset = stage(dataset)
+        >>> list(staged_dataset)
+        [{'a': 0}, {'a': 2}, {'a': 4}, {'a': 6}, {'a': 8}]
+
+    You can also index the dataset with a custom list of indices:
+
+    :example:
+        >>> dataset = [{'a': i} for i in range(100)]
+        >>> stage = StageSlice(indices=[1, 1, 3, 2, 2])
+        >>> staged_dataset = stage(dataset)
+        >>> list(staged_dataset)
+        [{'a': 1}, {'a': 1}, {'a': 3}, {'a': 2}, {'a': 2}]
+    """
+
+    def __init__(self, start: int = None, stop: int = None, step: int = None, indices: Sequence[int] = None):
+        super().__init__()
+        self._start = start
+        self._stop = stop
+        self._step = step
+        self._requested_indices = indices
+        self._indices = []
+
+    def _update(self):
+        self._indices = list(range(len(self._dataset)))
+        self._indices = self._indices[self._start:self._stop:self._step]
+        if self._requested_indices is not None:
+            self._indices = [x for x in self._requested_indices if x in self._indices]
+
+    def __len__(self):
+        return len(self._indices)
+
+    def __getitem__(self, idx) -> dict:
+
+        if idx >= len(self):
+            raise IndexError
+
+        return self._dataset[self._indices[idx]]
+
+
+class StageShuffle(DStage):
+    """Stage for random shuffling dataset samples
+
+    Use StageShuffle to randomly shuffle dataset samples:
+
+    :example:
+        >>> dataset = [{'a': i} for i in range(5)]
+        >>> stage = StageShuffle()
+        >>> staged_dataset = stage(dataset)
+        >>> list(staged_dataset)
+        [{'a': 1}, {'a': 0}, {'a': 4}, {'a': 3}, {'a': 2}]
+    """
+
+    def __init__(self):
+        super().__init__()
+        self._indices = []
+
+    def _update(self):
+        self._indices = list(range(len(self._dataset)))
+        random.shuffle(self._indices)
+
+    def __len__(self):
+        return len(self._indices)
+
+    def __getitem__(self, idx) -> dict:
+
+        if idx >= len(self):
+            raise IndexError
+
+        return self._dataset[self._indices[idx]]
