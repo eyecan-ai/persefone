@@ -1,11 +1,12 @@
-
-import numpy as np
-from persefone.data.databases.filesystem.underfolder import UnderfolderLazySample
-import dictquery as dq
+import random
 from typing import List, Sequence, Union
 from abc import ABC
 
+import numpy as np
+import dictquery as dq
 from tqdm import tqdm
+
+from persefone.data.databases.filesystem.underfolder import UnderfolderLazySample
 
 
 class DStage(ABC):
@@ -265,3 +266,64 @@ class StageGroupBy(DStage):
                     output[key] = np.stack(output[key])
 
         return output
+
+
+class StageSlice(DStage):
+
+    def __init__(self, start: int = None, stop: int = None, subsample: int = None, indices: Sequence[int] = None):
+        """Stage for sample selection based on indices
+
+        :param start: start index, if None no constraint is applied, defaults to None
+        :type start: int, optional
+        :param stop: stop index (excluded), if None no constraint is applied, defaults to None
+        :type stop: int, optional
+        :param subsample: sample once every k elements, if None no subsampling is applied, defaults to None
+        :type subsample: int, optional
+        :param indices: select only specified indices (order applies), defaults to None
+        :type indices: Sequence[int], optional
+        """
+        super().__init__()
+        self._start = start
+        self._stop = stop
+        self._subsample = subsample
+        self._requested_indices = indices
+        self._indices = []
+
+    def _update(self):
+        self._indices = list(range(len(self._dataset)))
+        self._indices = self._indices[self._start:self._stop:self._subsample]
+        if self._requested_indices is not None:
+            self._indices = [x for x in self._requested_indices if x in self._indices]
+
+    def __len__(self):
+        return len(self._indices)
+
+    def __getitem__(self, idx) -> dict:
+
+        if idx >= len(self):
+            raise IndexError
+
+        return self._dataset[self._indices[idx]]
+
+
+class StageShuffle(DStage):
+
+    def __init__(self):
+        """Stage for random shuffling dataset samples
+        """
+        super().__init__()
+        self._indices = []
+
+    def _update(self):
+        self._indices = list(range(len(self._dataset)))
+        random.shuffle(self._indices)
+
+    def __len__(self):
+        return len(self._indices)
+
+    def __getitem__(self, idx) -> dict:
+
+        if idx >= len(self):
+            raise IndexError
+
+        return self._dataset[self._indices[idx]]

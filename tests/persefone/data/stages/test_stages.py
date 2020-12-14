@@ -1,13 +1,16 @@
+import random
+
 import yaml
 import numpy as np
 import pytest
 from persefone.data.stages.base import (
-    StageCache, StagesComposition, StageQuery, StageGroupBy, StageKeyFiltering, StageSubsampling
+    StageCache, StageShuffle, StagesComposition, StageQuery, StageGroupBy, StageKeyFiltering, StageSubsampling, StageSlice
 )
 from persefone.data.stages.transforms import StageToCHWFloat, StageToHWCUint8, StageTransforms, StageTranspose, StageRangeRemap
 from persefone.data.databases.filesystem.underfolder import (
     UnderfolderDatabase
 )
+from deepdiff import DeepDiff
 
 
 class TestStages(object):
@@ -228,3 +231,42 @@ class TestStages(object):
             staged_sample = staged_dataset[0]
 
             assert sample.keys() == staged_sample.keys()
+
+    @pytest.mark.parametrize(['start', 'stop', 'subsample', 'indices', 'expected'], [
+        [None, None, None, None, None],
+        [0, 10, 2, None, range(0, 10, 2)],
+        [2, 10, None, [5, 3, 12], [5, 3]],
+        [-11, -1, 2, [-6, -5, -7], [-5, -7]]
+    ])
+    def test_stage_slice(self, underfolder_folder, start, stop, subsample, indices, expected):
+        datasets = [
+            UnderfolderDatabase(folder=underfolder_folder),
+            UnderfolderDatabase(folder=underfolder_folder, use_lazy_samples=True)
+        ]
+
+        for dataset in datasets:
+            if expected is None:
+                expected = range(len(dataset))
+            stage = StageSlice(start, stop, subsample, indices)
+            staged_dataset = stage(dataset)
+            for i, sample in enumerate(staged_dataset):
+                assert not DeepDiff(sample, dataset[expected[i]])
+
+    def test_stage_shuffle(self, underfolder_folder):
+        datasets = [
+            UnderfolderDatabase(folder=underfolder_folder),
+            UnderfolderDatabase(folder=underfolder_folder, use_lazy_samples=True)
+        ]
+
+        for dataset in datasets:
+            indices = list(range(len(dataset)))
+            stage = StageShuffle()
+
+            seed = random.getrandbits(16)
+            random.seed(seed)
+            staged_dataset = stage(dataset)
+            random.seed(seed)
+            random.shuffle(indices)
+
+            for i, sample in enumerate(staged_dataset):
+                assert not DeepDiff(sample, dataset[indices[i]])
