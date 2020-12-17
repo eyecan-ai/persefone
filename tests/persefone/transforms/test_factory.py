@@ -135,7 +135,11 @@ class TestTransformsFactory(object):
                     'max_rgb': [1.0, 1.0, 1.0],
                     'n_points': 20,
                     'perturbation_radius': 10,
+                    'min_pos': [0, 0],
+                    'max_pos': [50, 50],
+                    'displacement_radius': -10,
                     'noise': 10,
+                    'blend_radius': 2,
                     'always_apply': True,
                     'p': 0.5,
                 }
