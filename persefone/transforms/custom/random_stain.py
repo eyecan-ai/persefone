@@ -71,7 +71,8 @@ def stain(image: np.ndarray,
           pos: Tuple[int, int],
           n_points: int = 20,
           perturbation_radius: int = -1,
-          noise: Union[float, Tuple[float, float]] = 0) -> Tuple[np.ndarray, np.ndarray]:
+          noise: Union[float, Tuple[float, float]] = 0,
+          blend_radius: int = 5) -> Tuple[np.ndarray, np.ndarray]:
     """Adds a stain patch to a target image
 
     :param image: the image to stain
@@ -90,6 +91,8 @@ def stain(image: np.ndarray,
     :type perturbation_radius: int
     :param noise: max gaussian noise sigma if single float, min and max sigma if tuple of two floats
     :type noise: Union[float, Tuple[float, float]]
+    :param blend_radius: edge blending radius in pixels, defaults to 5
+    :type blend_radius: int
     :return: stained image (H, W, C), stain mask (H, W)
     :rtype: Tuple[np.ndarray, np.ndarray]
     """
@@ -118,7 +121,7 @@ def stain(image: np.ndarray,
     corr = GaussNoise(var_limit=noise, p=1.)(image=corr)['image']
 
     # Apply patch
-    DrawingUtils.apply_patch(out, out_mask, corr, corr_mask, pos, blend_radius=5)
+    DrawingUtils.apply_patch(out, out_mask, corr, corr_mask, pos, blend_radius=blend_radius)
     return out, out_mask
 
 
@@ -137,7 +140,8 @@ def random_stain(image: np.ndarray,
                  min_pos: Tuple[int, int] = None,
                  max_pos: Tuple[int, int] = None,
                  displacement_radius: int = -10,
-                 noise: Union[float, Tuple[float, float]] = (4, 6)) -> Tuple[np.ndarray, np.ndarray]:
+                 noise: Union[float, Tuple[float, float]] = (4, 6),
+                 blend_radius: int = 5) -> Tuple[np.ndarray, np.ndarray]:
     """Adds random stain patches to a target image
 
     :param image: image to stain
@@ -173,6 +177,8 @@ def random_stain(image: np.ndarray,
     :type max_pos: Tuple[int, int]
     :param noise: max gaussian noise sigma if single float, min and max sigma if tuple of two floats
     :type noise: Union[float, Tuple[float, float]]
+    :param blend_radius: edge blending radius in pixels, defaults to 5
+    :type blend_radius: int
     :return: stained image (H, W, C), stain mask (H, W)
     :rtype: Tuple[np.ndarray, np.ndarray]
     """
@@ -229,7 +235,7 @@ def random_stain(image: np.ndarray,
             colors = np.zeros((16, 16, 3))
 
         pos = _rand_pos(min_r, max_r, min_c, max_c, saliency, disp)
-        out, out_mask_i = stain(out, size_a, ratio, colors, pos, n_points, perturbation_radius, noise)
+        out, out_mask_i = stain(out, size_a, ratio, colors, pos, n_points, perturbation_radius, noise, blend_radius)
         out_mask = np.maximum(out_mask, out_mask_i)
 
     return out, out_mask
@@ -252,6 +258,8 @@ class Stain(ImageOnlyTransform):
     :type perturbation_radius: int
     :param noise: max gaussian noise sigma if single float, min and max sigma if tuple of two floats
     :type noise: Union[float, Tuple[float, float]]
+    :param blend_radius: edge blending radius in pixels, defaults to 5
+    :type blend_radius: int
     """
 
     def __init__(self,
@@ -262,6 +270,7 @@ class Stain(ImageOnlyTransform):
                  n_points: int = 20,
                  perturbation_radius: int = -1,
                  noise: Union[float, Tuple[float, float]] = 0,
+                 blend_radius: int = 5,
                  always_apply=False, p=1.0) -> None:
         super().__init__(always_apply, p)
         self.size = size
@@ -271,6 +280,7 @@ class Stain(ImageOnlyTransform):
         self.n_points = n_points
         self.perturbation_radius = perturbation_radius
         self.noise = noise
+        self.blend_radius = blend_radius
 
     def apply(self, image, **params):
         out, _ = stain(
@@ -281,7 +291,8 @@ class Stain(ImageOnlyTransform):
             self.pos,
             self.n_points,
             self.perturbation_radius,
-            self.noise
+            self.noise,
+            self.blend_radius
         )
         return out
 
@@ -293,7 +304,8 @@ class Stain(ImageOnlyTransform):
             'pos'
             'n_points',
             'perturbation_radius',
-            'noise'
+            'noise',
+            'blend_radius'
         )
 
 
@@ -331,6 +343,8 @@ class RandomStain(ImageOnlyTransform):
     :type max_pos: Tuple[int, int]
     :param noise: max gaussian noise sigma if single float, min and max sigma if tuple of two floats
     :type noise: Union[float, Tuple[float, float]]
+    :param blend_radius: edge blending radius in pixels, defaults to 5
+    :type blend_radius: int
     """
 
     def __init__(self,
@@ -349,6 +363,7 @@ class RandomStain(ImageOnlyTransform):
                  max_pos: Tuple[int, int] = None,
                  displacement_radius: int = -10,
                  noise: Union[float, Tuple[float, float]] = (4, 6),
+                 blend_radius: int = 5,
                  always_apply=False, p=1.0) -> None:
         super().__init__(always_apply, p)
         self.min_holes = min_holes
@@ -366,6 +381,7 @@ class RandomStain(ImageOnlyTransform):
         self.max_pos = max_pos
         self.displacement_radius = displacement_radius
         self.noise = noise
+        self.blend_radius = blend_radius
 
     def apply(self, image, **params):
         out, _ = random_stain(
@@ -384,7 +400,8 @@ class RandomStain(ImageOnlyTransform):
             self.min_pos,
             self.max_pos,
             self.displacement_radius,
-            self.noise
+            self.noise,
+            self.blend_radius
         )
         return out
 
@@ -404,5 +421,6 @@ class RandomStain(ImageOnlyTransform):
             'min_pos',
             'max_pos',
             'displacement_radius',
-            'noise'
+            'noise',
+            'blend_radius'
         )
