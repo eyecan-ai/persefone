@@ -254,6 +254,8 @@ class TestTransformsFactory(object):
                 continue
             assert t[name_field] == exp['name'], f"Transform name {t[name_field]} is wrong! Expected: {exp['name']}"
             for param, value in exp['params'].items():
+                if 'RandomStain' in exp['name']:
+                    print(param, value, t[param])
                 assert param in t, f"Param {param} not found in transform {t}"
                 assert self._compare_param(t[param], value), f"{exp['name']}: Param {param}={t[param]} is wrong! Expected: {value}"
 
