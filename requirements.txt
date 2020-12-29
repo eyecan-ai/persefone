@@ -3,7 +3,7 @@ Click>=7.0
 schema>=0.7.3
 python-box>=5.2.0
 mongoengine>=0.20.0
-torch==1.6.0
+torch
 Pillow>=7.2.0
 pyyaml>=5.3.1
 opencv-python-headless==4.4.0.44
