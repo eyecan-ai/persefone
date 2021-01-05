@@ -182,10 +182,8 @@ class YConfiguration(Box):
                     #     pydash.set_(self, chunk_name, sub_cfg.root_content)
                     # else:
                     if n_references == 2:
-                        print("REPLACING", chunk_name)
                         pydash.set_(self, chunk_name, sub_cfg.root_content)
                     elif n_references == 1:
-                        print("REPLACING 1", chunk_name)
                         pydash.set_(self, chunk_name, sub_cfg)
                 else:
                     raise OSError(f'File {p} not found!')
