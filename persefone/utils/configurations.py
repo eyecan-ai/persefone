@@ -299,7 +299,7 @@ class YConfiguration(Box):
                 path.pop()
             else:
                 path.append(k)
-                chunk_name = ".".join(path)
+                chunk_name = ".".join(map(str, path))
                 if not(discard_private_qualifiers and chunk_name.startswith(cls.PRIVATE_QUALIFIER)):
                     chunks.append((chunk_name, v))
                 path.pop()
