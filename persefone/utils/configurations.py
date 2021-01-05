@@ -182,8 +182,10 @@ class YConfiguration(Box):
                     #     pydash.set_(self, chunk_name, sub_cfg.root_content)
                     # else:
                     if n_references == 2:
+                        print("REPLACING", chunk_name)
                         pydash.set_(self, chunk_name, sub_cfg.root_content)
                     elif n_references == 1:
+                        print("REPLACING 1", chunk_name)
                         pydash.set_(self, chunk_name, sub_cfg)
                 else:
                     raise OSError(f'File {p} not found!')
@@ -292,16 +294,22 @@ class YConfiguration(Box):
         root = False
         if path is None:
             path, chunks, root = [], [], True
-        for k, v in d.items():
-            if isinstance(v, dict):
-                path.append(k)
+        if isinstance(d, dict):
+            for k, v in d.items():
+                if isinstance(v, dict) or isinstance(v, list):
+                    path.append(k)
+                    cls._walk(v, path=path, chunks=chunks, discard_private_qualifiers=discard_private_qualifiers)
+                    path.pop()
+                else:
+                    path.append(k)
+                    chunk_name = ".".join(map(str, path))
+                    if not(discard_private_qualifiers and chunk_name.startswith(cls.PRIVATE_QUALIFIER)):
+                        chunks.append((chunk_name, v))
+                    path.pop()
+        elif isinstance(d, list):
+            for idx, v in enumerate(d):
+                path.append(str(idx))
                 cls._walk(v, path=path, chunks=chunks, discard_private_qualifiers=discard_private_qualifiers)
-                path.pop()
-            else:
-                path.append(k)
-                chunk_name = ".".join(map(str, path))
-                if not(discard_private_qualifiers and chunk_name.startswith(cls.PRIVATE_QUALIFIER)):
-                    chunks.append((chunk_name, v))
                 path.pop()
         if root:
             return chunks
