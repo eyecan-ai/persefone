@@ -1,5 +1,6 @@
 
 import shutil
+# import warnings
 from tqdm import tqdm
 from json.encoder import JSONEncoder
 from pathlib import Path
@@ -110,7 +111,8 @@ class UnderfolderDatabase(SkeletonDatabase):
                  folder: str,
                  data_tags: Union[None, Dict] = None,
                  use_lazy_samples: bool = False,
-                 cached: bool = False):
+                 cached: bool = False,
+                 copy_database_metadata: Union[str, None] = None):
         """ Creates a database based on an UNderscore Notation Folder
 
         :param folder: input folder
@@ -121,14 +123,20 @@ class UnderfolderDatabase(SkeletonDatabase):
         :type use_lazy_samples: bool
         :param cached: TRUE to cache loaded data
         :type cached: bool
+        :param copy_database_metadata: if not None copies the metadata of database to the metadata of sample using the str as prefix
+        :type copy_database_metadata: Union[str, None]
         """
         super().__init__()
+
+        # if not use_lazy_samples:
+        #     warnings.warn('`use_lazy_samples` set to False is deprecated, it should always set to True', DeprecationWarning)
 
         self._folder = Path(folder)
         self._data_tags = data_tags
         self._use_lazy_samples = use_lazy_samples
         self._cached = cached
         self._cached_data = {}
+        self._copy_database_metadata = copy_database_metadata
 
         self._data_folder = self._folder / self.DATA_SUBFOLDER
 
@@ -260,6 +268,15 @@ class UnderfolderDatabase(SkeletonDatabase):
                     output[remap] = self.load_data(filename)
                 else:
                     output.add_key(remap, filename)
+
+        # copy database metadata to sample metadata
+        if self._copy_database_metadata is not None:
+            for k, v in self.metadata.items():
+                new_key = f'{self._copy_database_metadata}{k}'
+                if not self._use_lazy_samples:
+                    output[new_key] = v
+                else:
+                    output.add_key(new_key, v)
 
         return output
 
