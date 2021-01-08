@@ -123,8 +123,9 @@ class UnderfolderDatabase(SkeletonDatabase):
         :type use_lazy_samples: bool
         :param cached: TRUE to cache loaded data
         :type cached: bool
-        :param copy_database_metadata: if not None copies the metadata of database to the metadata of sample using the str as prefix
-        :type copy_database_metadata: Union[str, None]
+        :param copy_database_metadata: if not None copies the metadata of database to the metadata of sample using the
+        value as prefix, defaults to None
+        :type copy_database_metadata: Union[str, None], optional
         """
         super().__init__()
 
