@@ -277,6 +277,7 @@ class UnderfolderDatabase(SkeletonDatabase):
                     output[new_key] = v
                 else:
                     output.add_key(new_key, v)
+                    output._cached[new_key] = v
 
         return output
 

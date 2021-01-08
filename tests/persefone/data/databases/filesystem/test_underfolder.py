@@ -181,6 +181,12 @@ class TestUnderscoreFolder(object):
                 for k, v in dataset.metadata.items():
                     assert f'{prefix}{k}' in sample.keys()
 
+                    sample_value = sample[f'{prefix}{k}']
+                    if isinstance(sample_value, np.ndarray):
+                        assert np.all(np.equal(sample_value, v))
+                    else:
+                        assert sample_value == v
+
 
 class TestUnderscoreFolderCreation(object):
 
