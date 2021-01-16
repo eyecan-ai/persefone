@@ -169,6 +169,24 @@ class TestUnderscoreFolder(object):
 
         assert counter == len(dataset)
 
+    def test_copy_database_metadata(self, underfolder_folder):
+        prefix = '__'
+        datasets = [
+            UnderfolderDatabase(folder=underfolder_folder, use_lazy_samples=False, copy_database_metadata=prefix),
+            UnderfolderDatabase(folder=underfolder_folder, use_lazy_samples=True, copy_database_metadata=prefix)
+        ]
+
+        for dataset in datasets:
+            for sample in dataset:
+                for k, v in dataset.metadata.items():
+                    assert f'{prefix}{k}' in sample.keys()
+
+                    sample_value = sample[f'{prefix}{k}']
+                    if isinstance(sample_value, np.ndarray):
+                        assert np.all(np.equal(sample_value, v))
+                    else:
+                        assert sample_value == v
+
 
 class TestUnderscoreFolderCreation(object):
 
