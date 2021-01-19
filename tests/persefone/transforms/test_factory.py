@@ -216,6 +216,18 @@ class TestTransformsFactory(object):
                     'p': 0.05,
                     'always_apply': False
                 }
+            },
+            {
+                'name': 'albumentations.augmentations.transforms.RandomResizedCrop',
+                'params': {
+                    'height': 200,
+                    'width': 300,
+                    'scale': [0.7, 1.],
+                    'ratio': [0.5, 1.5],
+                    'interpolation': AlbumentationTransformsFactory.INTERPOLATIONS['linear'],
+                    'always_apply': False,
+                    'p': 0.2
+                }
             }
 
 

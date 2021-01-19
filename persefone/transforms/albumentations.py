@@ -67,6 +67,7 @@ class AlbumentationTransformsFactory(AbstractFactory):
             'blur': {'f': cls._build_blur_transform, 'targets': cls._targets_map()['spatial_full']},
             'invert': {'f': cls._build_invert_transform, 'targets': cls._targets_map()['spatial_full']},
             'noise_gaussian': {'f': cls._build_noise_gaussian, 'targets': cls._targets_map()['spatial_full']},
+            'random_resized_crop': {'f': cls._build_random_resized_crop, 'targets': cls._targets_map()['spatial_full']}
         }
 
     @classmethod
@@ -274,6 +275,18 @@ class AlbumentationTransformsFactory(AbstractFactory):
             var_limit=get_arg(params, 'var_limit', [10., 50.]),
             always_apply=get_arg(params, 'always_apply', False),
             p=get_arg(params, 'p', 0.5)
+        )
+
+    @classmethod
+    def _build_random_resized_crop(cls, **params):
+        return A.RandomResizedCrop(
+            height=params.get('height', 256),
+            width=params.get('width', 256),
+            scale=params.get('scale', (0.08, 1.)),
+            ratio=params.get('ratio', (0.75, 4/3)),
+            interpolation=cls._get_interpolation_value(params.get('interpolation', 'linear')),
+            always_apply=params.get('always_apply', False),
+            p=params.get('p', 1)
         )
 
     @classmethod
