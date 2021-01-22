@@ -106,13 +106,14 @@ class SkeletonDatabase(object):
 
 class UnderfolderDatabase(SkeletonDatabase):
     DATA_SUBFOLDER = 'data'
+    DATASET_METADATA_PREFIX = '_'
 
     def __init__(self,
                  folder: str,
                  data_tags: Union[None, Dict] = None,
                  use_lazy_samples: bool = False,
                  cached: bool = False,
-                 copy_database_metadata: Union[str, None] = None):
+                 copy_database_metadata: bool = False):
         """ Creates a database based on an UNderscore Notation Folder
 
         :param folder: input folder
@@ -123,8 +124,8 @@ class UnderfolderDatabase(SkeletonDatabase):
         :type use_lazy_samples: bool
         :param cached: TRUE to cache loaded data
         :type cached: bool
-        :param copy_database_metadata: if not None copies the metadata of database to the metadata of sample using the
-        value as prefix, defaults to None
+        :param copy_database_metadata: if True copies the metadata of database to the metadata of sample using the
+        DATASET_METADATA_PREFIX as prefix, defaults to False
         :type copy_database_metadata: Union[str, None], optional
         """
         super().__init__()
@@ -271,9 +272,9 @@ class UnderfolderDatabase(SkeletonDatabase):
                     output.add_key(remap, filename)
 
         # copy database metadata to sample metadata
-        if self._copy_database_metadata is not None:
+        if self._copy_database_metadata:
             for k, v in self.metadata.items():
-                new_key = f'{self._copy_database_metadata}{k}'
+                new_key = f'{self.DATASET_METADATA_PREFIX}{k}'
                 if not self._use_lazy_samples:
                     output[new_key] = v
                 else:

@@ -170,12 +170,12 @@ class TestUnderscoreFolder(object):
         assert counter == len(dataset)
 
     def test_copy_database_metadata(self, underfolder_folder):
-        prefix = '__'
         datasets = [
-            UnderfolderDatabase(folder=underfolder_folder, use_lazy_samples=False, copy_database_metadata=prefix),
-            UnderfolderDatabase(folder=underfolder_folder, use_lazy_samples=True, copy_database_metadata=prefix)
+            UnderfolderDatabase(folder=underfolder_folder, use_lazy_samples=False, copy_database_metadata=True),
+            UnderfolderDatabase(folder=underfolder_folder, use_lazy_samples=True, copy_database_metadata=True)
         ]
 
+        prefix = UnderfolderDatabase.DATASET_METADATA_PREFIX
         for dataset in datasets:
             for sample in dataset:
                 for k, v in dataset.metadata.items():
