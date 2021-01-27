@@ -106,7 +106,6 @@ class SkeletonDatabase(object):
 
 class UnderfolderDatabase(SkeletonDatabase):
     DATA_SUBFOLDER = 'data'
-    DATASET_METADATA_PREFIX = ''
 
     def __init__(self,
                  folder: str,
