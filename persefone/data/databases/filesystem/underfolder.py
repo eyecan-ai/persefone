@@ -1,6 +1,6 @@
 
 import shutil
-# import warnings
+import warnings
 from tqdm import tqdm
 from json.encoder import JSONEncoder
 from pathlib import Path
@@ -106,7 +106,7 @@ class SkeletonDatabase(object):
 
 class UnderfolderDatabase(SkeletonDatabase):
     DATA_SUBFOLDER = 'data'
-    DATASET_METADATA_PREFIX = '_'
+    DATASET_METADATA_PREFIX = ''
 
     def __init__(self,
                  folder: str,
@@ -124,8 +124,7 @@ class UnderfolderDatabase(SkeletonDatabase):
         :type use_lazy_samples: bool
         :param cached: TRUE to cache loaded data
         :type cached: bool
-        :param copy_database_metadata: if True copies the metadata of database to the metadata of sample using the
-        DATASET_METADATA_PREFIX as prefix, defaults to False
+        :param copy_database_metadata: if True copies the metadata of database to the metadata of sample, defaults to False
         :type copy_database_metadata: Union[str, None], optional
         """
         super().__init__()
@@ -273,13 +272,17 @@ class UnderfolderDatabase(SkeletonDatabase):
 
         # copy database metadata to sample metadata
         if self._copy_database_metadata:
-            for k, v in self.metadata.items():
-                new_key = f'{self.DATASET_METADATA_PREFIX}{k}'
-                if not self._use_lazy_samples:
-                    output[new_key] = v
-                else:
-                    output.add_key(new_key, v)
-                    output._cached[new_key] = v
+            metadata_filenames = {x.stem: x for x in self._dataset_files}
+            for tag, filename in metadata_filenames.items():
+                remap = self._get_tag_remap(tag)
+                if remap is not None:
+                    if remap in output.keys():
+                        warnings.warn(f"Item with name '{remap}' is already present in sample, can't copy this dataset metadata.")
+                    else:
+                        if not self._use_lazy_samples:
+                            output[remap] = self.metadata[tag]
+                        else:
+                            output.add_key(remap, filename)
 
         return output
 

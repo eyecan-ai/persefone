@@ -1,8 +1,12 @@
 from pathlib import Path
+import re
+from persefone import data
+import warnings
 from persefone.data.databases.filesystem.underfolder import (
     UnderfolderDatabase, UnderfolderDatabaseGenerator, UnderfolderLazySample
 )
 import numpy as np
+import pytest
 
 
 class TestUnderscoreFolder(object):
@@ -169,23 +173,58 @@ class TestUnderscoreFolder(object):
 
         assert counter == len(dataset)
 
-    def test_copy_database_metadata(self, underfolder_folder):
+    def test_copy_database_metadata(self, underfolder_folder, underfoldertomix_folder):
         datasets = [
             UnderfolderDatabase(folder=underfolder_folder, use_lazy_samples=False, copy_database_metadata=True),
             UnderfolderDatabase(folder=underfolder_folder, use_lazy_samples=True, copy_database_metadata=True)
         ]
 
-        prefix = UnderfolderDatabase.DATASET_METADATA_PREFIX
         for dataset in datasets:
             for sample in dataset:
                 for k, v in dataset.metadata.items():
-                    assert f'{prefix}{k}' in sample.keys()
+                    assert k in sample.keys()
 
-                    sample_value = sample[f'{prefix}{k}']
+                    sample_value = sample[k]
                     if isinstance(sample_value, np.ndarray):
                         assert np.all(np.equal(sample_value, v))
                     else:
                         assert sample_value == v
+
+        # use 'underfoldertomix_folder' because it has 'pose' in both dataset metadata and sample
+        datasets = [
+            UnderfolderDatabase(folder=underfoldertomix_folder, use_lazy_samples=False, copy_database_metadata=True),
+            UnderfolderDatabase(folder=underfoldertomix_folder, use_lazy_samples=True, copy_database_metadata=True)
+        ]
+
+        for dataset in datasets:
+            dataset_pose = dataset.metadata['pose']
+
+            with pytest.warns(Warning, match='pose'):
+                for sample in dataset:
+                    assert not np.all(np.equal(dataset_pose, sample['pose']))
+
+        # remap copied database metadata
+        remap = {
+            'augmentations': 'aug',
+            'cfg': 'conf',
+            'numbers': 'n',
+            'pose': 'p'
+        }
+        datasets = [
+            UnderfolderDatabase(folder=underfolder_folder, use_lazy_samples=False, data_tags=remap, copy_database_metadata=True),
+            UnderfolderDatabase(folder=underfolder_folder, use_lazy_samples=True, data_tags=remap, copy_database_metadata=True)
+        ]
+
+        for dataset in datasets:
+            for sample in dataset:
+                assert 'augmentations' not in sample
+                assert 'cfg' not in sample
+                assert 'numbers' not in sample
+                assert 'pose' not in sample
+                assert 'aug' in sample
+                assert 'conf' in sample
+                assert 'n' in sample
+                assert 'p' in sample
 
 
 class TestUnderscoreFolderCreation(object):
