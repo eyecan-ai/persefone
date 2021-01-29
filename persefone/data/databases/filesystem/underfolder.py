@@ -1,6 +1,6 @@
 
 import shutil
-# import warnings
+import warnings
 from tqdm import tqdm
 from json.encoder import JSONEncoder
 from pathlib import Path
@@ -112,7 +112,7 @@ class UnderfolderDatabase(SkeletonDatabase):
                  data_tags: Union[None, Dict] = None,
                  use_lazy_samples: bool = False,
                  cached: bool = False,
-                 copy_database_metadata: Union[str, None] = None):
+                 copy_database_metadata: bool = False):
         """ Creates a database based on an UNderscore Notation Folder
 
         :param folder: input folder
@@ -123,8 +123,7 @@ class UnderfolderDatabase(SkeletonDatabase):
         :type use_lazy_samples: bool
         :param cached: TRUE to cache loaded data
         :type cached: bool
-        :param copy_database_metadata: if not None copies the metadata of database to the metadata of sample using the
-        value as prefix, defaults to None
+        :param copy_database_metadata: if True copies the metadata of database to the metadata of sample, defaults to False
         :type copy_database_metadata: Union[str, None], optional
         """
         super().__init__()
@@ -271,14 +270,18 @@ class UnderfolderDatabase(SkeletonDatabase):
                     output.add_key(remap, filename)
 
         # copy database metadata to sample metadata
-        if self._copy_database_metadata is not None:
-            for k, v in self.metadata.items():
-                new_key = f'{self._copy_database_metadata}{k}'
-                if not self._use_lazy_samples:
-                    output[new_key] = v
-                else:
-                    output.add_key(new_key, v)
-                    output._cached[new_key] = v
+        if self._copy_database_metadata:
+            metadata_filenames = {x.stem: x for x in self._dataset_files}
+            for tag, filename in metadata_filenames.items():
+                remap = self._get_tag_remap(tag)
+                if remap is not None:
+                    if remap in output.keys():
+                        warnings.warn(f"Item with name '{remap}' is already present in sample, can't copy this dataset metadata.")
+                    else:
+                        if not self._use_lazy_samples:
+                            output[remap] = self.metadata[tag]
+                        else:
+                            output.add_key(remap, filename)
 
         return output
 
