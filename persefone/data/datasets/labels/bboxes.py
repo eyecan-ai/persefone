@@ -1,10 +1,10 @@
 
 
 from persefone.utils.colors.palettes import MaterialPalette, Palette
-from typing import Any, List, Union
+from typing import Any, List, Union, Dict
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-import os
+import cv2
 
 
 class FieldsOptions(object):
@@ -295,9 +295,9 @@ class BoundingBoxLabelDrawer(object):
         :type text: str
         :param pos: lable position
         :type pos: List[int]
-        :param background: label box background coolor, defaults to None
+        :param background: label box background color, defaults to None
         :type background: List[int], optional
-        :param foreground: label box foreground coolor, defaults to None
+        :param foreground: label box foreground color, defaults to None
         :type foreground: List[int], optional
         :param label_parameters: label text parameters, defaults to BoundingBoxLabelDrawerParameters()
         :type label_parameters: BoundingBoxLabelDrawerParameters, optional
@@ -315,6 +315,66 @@ class BoundingBoxLabelDrawer(object):
 
         draw.rectangle([pos[0], pos[1], pos[0] + W, pos[1] + H], fill=background)
         draw.text((pos[0] + (W - w) // 2, pos[1] + (H - h) // 2), text, fill=foreground, font=font)
+
+        return image
+
+    def draw_arrowed_labels(self,
+                            image: np.ndarray,
+                            keypoints: Dict[int, np.ndarray],
+                            labels_cfg: Dict[int, Dict],
+                            delta: np.ndarray,
+                            length: float,
+                            arrow_thickness: int,
+                            foreground: List[int] = None,
+                            label_parameters: BoundingBoxLabelDrawerParameters = BoundingBoxLabelDrawerParameters()
+                            ) -> Image.Image:
+        """ Draws labels box conncted with arrows to keypoints. Only one label+keypoints per class is allowed
+
+        :param image: input image
+        :type image: np.ndarray
+        :param keypoints: keypoints dictionary, the key is the class, the value is the xy coordinate
+        :type keypoints: Dict[int, np.ndarray]
+        :param labels_cfg: labels dictionary, the key is the class, the value is a dictionary containing
+        keys 'name' which is the label text and 'pos' which the xy coordinate
+        :type labels_cfg: Dict[int, Dict]
+        :param delta: delta for starting position of the arrow
+        :type delta: np.ndarray
+        :param length: length of the arrow from label to keypoint, must be in [0, 1]
+        :type length: float
+        :param arrow_thickness: thickness of the arrows
+        :type arrow_thickness: int
+        :param foreground: label box foreground coolor, defaults to None
+        :type foreground: List[int], optional
+        :param label_parameters: label text parameters, defaults to BoundingBoxLabelDrawerParameters()
+        :type label_parameters: BoundingBoxLabelDrawerParameters, optional
+        :return: modified image
+        :rtype: Image.Image
+        """
+
+        for label, cfg in labels_cfg.items():
+            text = cfg['name']
+            pos = cfg['pos']
+            start = np.array(pos).astype(int) + delta.astype(int)
+            anchor = keypoints[label]
+            direction = anchor - start
+            anchor = start + direction * length
+            cv2.arrowedLine(
+                image,
+                tuple(start.astype(int)),
+                tuple(anchor.astype(int)),
+                self._palette.get_color(label).rgb,
+                arrow_thickness
+            )
+            image = np.array(
+                self.draw_label(
+                    Image.fromarray(image),
+                    text,
+                    pos,
+                    background=self._palette.get_color(label).rgb,
+                    foreground=foreground,
+                    label_parameters=label_parameters
+                )
+            )
 
         return image
 
