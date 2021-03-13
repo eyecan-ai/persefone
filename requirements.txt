@@ -8,7 +8,7 @@ Pillow>=7.2.0
 pyyaml>=5.3.1
 opencv-python-headless
 #opencv-contrib-python
-albumentations==0.5.1
+albumentations>=0.5.2
 scikit-learn>=0.23.2
 deprecated>=1.2.10
 deepdiff>=5.0.2
