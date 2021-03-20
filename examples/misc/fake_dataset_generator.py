@@ -41,10 +41,10 @@ def generate_fake_dataset(output_folder, size, image_size):
         mask_name = f'{name}_mask.png'
         instances_name = f'{name}_inst.png'
         metadata_name = f'{name}_metadata.yml'
-
         cv2.imwrite(str(output_folder / image_name), sample['rgb'])
         cv2.imwrite(str(output_folder / mask_name), sample['mask'])
         cv2.imwrite(str(output_folder / instances_name), sample['instances'])
+
         yaml.safe_dump(metadata, open(str(output_folder / metadata_name), 'w'))
 
 
